@@ -9,53 +9,55 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @State private var selectedTab = 1
+    @State private var isLoggedIn = false
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        Group {
+            if !isLoggedIn {
+                LoginView(isLoggedIn: $isLoggedIn)
+                    .transition(.opacity)
+            } else {
+                VStack(spacing: 0) {
+                    HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+                    
+                    TabView(selection: $selectedTab) {
+                        BusScheduleView()
+                            .tag(0)
+                        
+                        TimetableView(isLoggedIn: $isLoggedIn)
+                            .tag(1)
+                        
+                        Text("TODO: 課題")
+                            .tag(2)
+                        
+                        Text("TODO: 揭示板")
+                            .tag(3)
                     }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .edgesIgnoringSafeArea(.bottom)
+                    
+                    TabBarView(selectedTab: $selectedTab)
                 }
-                .onDelete(perform: deleteItems)
+                .transition(.opacity)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
+        }
+        .animation(.easeInOut(duration: 0.5), value: isLoggedIn)
+        .onAppear {
+            // アプリ起動時にログイン状態を確認
+            checkLoginStatus()
         }
     }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+    
+    // ログイン状態を確認
+    private func checkLoginStatus() {
+        // UserServiceからユーザー情報を取得
+        let user = UserService.shared.getCurrentUser()
+        // ユーザー情報があればログイン状態とする
+        isLoggedIn = user != nil
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
