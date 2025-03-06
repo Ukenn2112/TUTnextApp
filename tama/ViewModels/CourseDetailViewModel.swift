@@ -1,0 +1,87 @@
+import SwiftUI
+import Combine
+
+class CourseDetailViewModel: ObservableObject {
+    @Published var isLoading = false
+    @Published var errorMessage: String? = nil
+    @Published var courseDetail: CourseDetailResponse? = nil
+    @Published var memo: String = ""
+    
+    private var cancellables = Set<AnyCancellable>()
+    private let course: CourseModel
+    
+    init(course: CourseModel) {
+        self.course = course
+        self.memo = ""
+    }
+    
+    // 課程詳細情報を取得
+    func fetchCourseDetail() {
+        isLoading = true
+        errorMessage = nil
+        
+        CourseDetailService.shared.fetchCourseDetail(course: course) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isLoading = false
+                
+                switch result {
+                case .success(let detailResponse):
+                    self.courseDetail = detailResponse
+                    self.memo = detailResponse.memo
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                    print("課程詳細の取得に失敗しました: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // メモを保存
+    func saveMemo() {
+        // TODO: メモ保存APIの実装
+        print("メモを保存: \(memo)")
+    }
+    
+    // 出欠データを取得
+    var attendanceData: [AttendanceData] {
+        guard let detail = courseDetail else {
+            return [
+                AttendanceData(type: "出席", count: 0, color: .green),
+                AttendanceData(type: "欠席", count: 0, color: .red),
+                AttendanceData(type: "遅早", count: 0, color: .yellow)
+            ]
+        }
+        
+        return [
+            AttendanceData(type: "出席", count: detail.attendance.present, color: .green),
+            AttendanceData(type: "欠席", count: detail.attendance.absent, color: .red),
+            AttendanceData(type: "遅早", count: detail.attendance.late + detail.attendance.early, color: .yellow)
+        ]
+    }
+    
+    // 掲示件数
+    var announcementCount: Int {
+        return courseDetail?.announcements.count ?? 0
+    }
+    
+    // 合計出欠回数
+    var totalAttendance: Int {
+        return attendanceData.reduce(0) { $0 + $1.count }
+    }
+}
+
+// 出欠情報の構造体
+struct AttendanceData: Identifiable {
+    let id = UUID()
+    let type: String
+    let count: Int
+    let color: Color
+    
+    // パーセンテージを計算するプロパティ
+    func percentage(total: Int) -> String {
+        guard total > 0 else { return "0%" }
+        let value = Double(count) / Double(total) * 100
+        return String(format: "%.0f%%", value)  // 小数点以下を切り捨てて表示
+    }
+} 
