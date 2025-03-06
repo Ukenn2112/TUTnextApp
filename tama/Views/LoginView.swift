@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LoginView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var isLoggedIn: Bool
     @State private var account = ""
     @State private var password = ""
@@ -9,6 +10,13 @@ struct LoginView: View {
     
     // 定义允许的字符集
     private let allowedCharacters = CharacterSet.alphanumerics.union(.punctuationCharacters)
+    
+    // 添加错误信息颜色计算属性
+    private var errorColor: Color {
+        colorScheme == .dark ? 
+            Color.red.opacity(0.8) : // 暗黑模式下使用较亮的红色
+            Color.red
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +27,7 @@ struct LoginView: View {
                 // タイトル
                 Text("TUTnext へようこそ！👋")
                     .font(.system(size: 25, weight: .bold))
+                    .foregroundColor(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
                     .padding(.bottom, 30)  // 标题和表单之间的间距
@@ -26,7 +35,7 @@ struct LoginView: View {
                 // エラーメッセージ（存在する場合）
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
-                        .foregroundColor(.red)
+                        .foregroundColor(errorColor)
                         .font(.system(size: 14))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 30)
@@ -42,11 +51,13 @@ struct LoginView: View {
                         .autocapitalization(.none)  // 禁用自动大写
                         .disableAutocorrection(true)  // 禁用自动纠正
                         .font(.system(size: 16))
+                        .foregroundColor(.primary)
                     
                     SecureField("パスワード", text: $password)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .textContentType(.password)  // 指定内容类型为密码
                         .font(.system(size: 16))
+                        .foregroundColor(.primary)
                 }
                 .padding(.horizontal, 30)
                 
@@ -57,7 +68,7 @@ struct LoginView: View {
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle())
-                            .tint(.white)
+                            .tint(colorScheme == .dark ? .black : .white)
                     } else {
                         Text("多摩大アカウントでサインイン")
                             .font(.system(size: 16, weight: .medium))
@@ -65,9 +76,16 @@ struct LoginView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
-                .background(Color.black)
-                .foregroundColor(.white)
+                .background(colorScheme == .dark ? Color.white : Color.black)
+                .foregroundColor(colorScheme == .dark ? Color.black : Color.white)
                 .cornerRadius(25)
+                .shadow(
+                    color: (colorScheme == .dark ? Color.white : Color.black)
+                        .opacity(colorScheme == .dark ? 0.1 : 0.15),
+                    radius: 5,
+                    x: 0,
+                    y: colorScheme == .dark ? -2 : 2
+                )
                 .padding(.horizontal, 30)
                 .padding(.top, 15)
                 .disabled(account.isEmpty || password.isEmpty || isLoading)
@@ -75,11 +93,11 @@ struct LoginView: View {
                 // 利用規約
                 HStack(spacing: 0) {
                     Text("登録をすることで ")
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                     Text("利用規約")
                         .foregroundColor(.blue)
                     Text(" に同意したことになります")
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
                 .font(.system(size: 12))
                 .padding(.top, 20)
@@ -87,6 +105,7 @@ struct LoginView: View {
             
             Spacer()  // 底部弹性空间
         }
+        .background(Color(UIColor.systemBackground))
     }
     
     private func performLogin() {
@@ -144,7 +163,11 @@ struct LoginView: View {
 }
 
 #Preview {
-    NavigationView {
-        LoginView(isLoggedIn: .constant(false))
-    }
-} 
+    LoginView(isLoggedIn: .constant(false))
+        .preferredColorScheme(.light)
+}
+
+#Preview {
+    LoginView(isLoggedIn: .constant(false))
+        .preferredColorScheme(.dark)
+}

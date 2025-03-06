@@ -60,4 +60,12 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
+}
+
+#Preview {
+    ContentView()
+        .preferredColorScheme(.light)
+        .environment(\.colorScheme, .light)
 }

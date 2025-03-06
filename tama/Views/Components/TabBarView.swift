@@ -1,12 +1,14 @@
 import SwiftUI
 
 struct TabBarView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedTab: Int
     
     var body: some View {
         VStack(spacing: 0) {
             // 分隔线
             Divider()
+                .background(Color.primary.opacity(colorScheme == .dark ? 0.1 : 0.2))
             
             // 标签栏
             HStack {
@@ -14,6 +16,7 @@ struct TabBarView: View {
                     image: "bus",
                     text: "バス",
                     isSelected: selectedTab == 0,
+                    colorScheme: colorScheme,
                     action: { selectedTab = 0 }
                 )
                 
@@ -21,6 +24,7 @@ struct TabBarView: View {
                     image: "calendar",
                     text: "時間割",
                     isSelected: selectedTab == 1,
+                    colorScheme: colorScheme,
                     action: { selectedTab = 1 }
                 )
                 
@@ -28,6 +32,7 @@ struct TabBarView: View {
                     image: "pencil.line",
                     text: "課題",
                     isSelected: selectedTab == 2,
+                    colorScheme: colorScheme,
                     action: { selectedTab = 2 }
                 )
                 
@@ -35,15 +40,16 @@ struct TabBarView: View {
                     image: "list.clipboard",
                     text: "揭示板",
                     isSelected: selectedTab == 3,
+                    colorScheme: colorScheme,
                     action: { selectedTab = 3 }
                 )
             }
             .padding(.vertical, 6)
-            .background(Color.white)
+            .background(Color(UIColor.systemBackground))
             
             // 底部安全区域占位
             if getSafeAreaBottom() > 0 {
-                Color.white
+                Color(UIColor.systemBackground)
                     .frame(height: 0)
             }
         }
@@ -62,6 +68,7 @@ struct TabBarButton: View {
     let image: String
     let text: String
     let isSelected: Bool
+    let colorScheme: ColorScheme
     let action: () -> Void
     
     var body: some View {
@@ -73,11 +80,18 @@ struct TabBarButton: View {
                     .font(.system(size: 9))
             }
             .frame(maxWidth: .infinity)
-            .foregroundColor(isSelected ? .black : .gray)
+            .foregroundColor(isSelected ? 
+                           (colorScheme == .dark ? .white : .black) :
+                           .secondary)
         }
     }
 }
 
 #Preview {
-    TabBarView(selectedTab: .constant(1))
+    Group {
+        TabBarView(selectedTab: .constant(1))
+            .preferredColorScheme(.light)
+        TabBarView(selectedTab: .constant(1))
+            .preferredColorScheme(.dark)
+    }
 } 

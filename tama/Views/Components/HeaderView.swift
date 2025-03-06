@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HeaderView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedTab: Int
     @Binding var isLoggedIn: Bool
     @State private var showingUserSettings = false
@@ -21,7 +22,7 @@ struct HeaderView: View {
                 Button(action: {}) {
                     Image(systemName: "bell")
                         .font(.system(size: 20))
-                        .foregroundColor(.black)
+                        .foregroundColor(.primary)
                 }
                 
                 // 用户头像
@@ -37,7 +38,7 @@ struct HeaderView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(Color.white)
+        .background(Color(UIColor.systemBackground))
         .sheet(isPresented: $showingUserSettings) {
             UserSettingsView(isLoggedIn: $isLoggedIn)
         }
@@ -60,15 +61,17 @@ struct HeaderView: View {
                     Text(semester.shortYearString)
                         .font(.system(size: 15, weight: .bold))
                         .padding(6)
-                        .background(Color.pink.opacity(0.15))
+                        .background(Color.pink.opacity(colorScheme == .dark ? 0.25 : 0.15))
                         .cornerRadius(10)
                     
                     Text(semester.fullDisplayName)
                         .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.primary)
                 }
             } else {
                 Text(getTitleText())
                     .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.primary)
                     .padding(.horizontal, 10)
             }
         }

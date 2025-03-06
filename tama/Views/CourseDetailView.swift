@@ -8,6 +8,7 @@ struct CourseDetailView: View {
     @State var selectedColorIndex: Int
     let onColorChange: (Int) -> Void
     @Binding var isLoggedIn: Bool
+    @Environment(\.colorScheme) private var colorScheme
     
     // シラバスシートの表示状態
     @State private var showingSyllabus = false
@@ -88,6 +89,14 @@ struct CourseDetailView: View {
         return URL(string: urlString)
     }
     
+    // 添加一个计算属性来处理颜色的暗度调整
+    private var adjustedHeaderColor: Color {
+        let baseColor = presetColors[selectedColorIndex]
+        return colorScheme == .dark ? 
+            baseColor.opacity(0.8) : // 暗黑模式下降低不透明度
+            baseColor
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // ヘッダー
@@ -95,25 +104,26 @@ struct CourseDetailView: View {
                 HStack(alignment: .center) {
                     Text(periodInfo)
                         .font(.system(size: 14))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                     Spacer()
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 20))
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                     }
                 }
                 .padding(.top, 10)
                 Text(course.name)
                     .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.primary)
                 Text("\(course.teacher)\n\(course.room)")
                     .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .lineSpacing(4)
             }
             .padding(.horizontal)
             .padding(.vertical, 12)
-            .background(presetColors[selectedColorIndex])
+            .background(adjustedHeaderColor)
             
             if viewModel.isLoading {
                 ProgressView("読み込み中...")
@@ -273,7 +283,7 @@ struct CourseDetailView: View {
                             
                             TextEditor(text: $viewModel.memo)
                                 .font(.system(size: 14))
-                                .foregroundColor(viewModel.memo.isEmpty ? .gray : .black)
+                                .foregroundColor(viewModel.memo.isEmpty ? .secondary : .primary)
                                 .frame(minHeight: 40)
                                 .overlay(
                                     Group {
@@ -316,11 +326,11 @@ struct CourseDetailView: View {
                                     Spacer()
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 14))
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                 }
                                 .padding(.vertical, 12)
                             }
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                             .sheet(isPresented: $showSafariView) {
                                 if let url = syllabusURL {
                                     SafariWebView(url: url)
@@ -375,6 +385,7 @@ struct CourseDetailView: View {
                 }
             }
         }
+        .background(Color(UIColor.systemBackground))
         .onAppear {
             viewModel.fetchCourseDetail()
         }

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BusScheduleView: View {
+    // MARK: - プロパティ
     @State private var selectedScheduleType: BusSchedule.ScheduleType = .weekday
     @State private var selectedRouteType: BusSchedule.RouteType = .fromSeisenToNagayama
     @State private var currentTime = Date()
@@ -9,24 +10,26 @@ struct BusScheduleView: View {
     @State private var secondsTimer: Timer? = nil
     @State private var selectedTimeEntry: BusSchedule.TimeEntry? = nil
     @State private var cardInfoAppeared: Bool = false
+    @Environment(\.colorScheme) private var colorScheme
     
-    // 获取校车时刻表数据
+    // 校車時刻表データ
     private let busSchedule = BusScheduleService.shared.getBusScheduleData()
     
+    // MARK: - ボディ
     var body: some View {
         VStack(spacing: 0) {
-            // 时刻表类型选择器（平日/周六）
+            // 時刻表タイプセレクタ（平日/水曜日/土曜日）
             scheduleTypeSelector
             
-            // 路线选择器
+            // 路線セレクタ
             routeTypeSelector
             
-            // 时刻表内容（包含悬浮的时间卡片）
+            // 時刻表コンテンツ（浮動時間カードを含む）
             ZStack(alignment: .top) {
                 scheduleContent
-                    .padding(.top, 90) // 为悬浮卡片留出空间
+                    .padding(.top, 90) // 浮動カードのスペースを確保
                 
-                // 悬浮的当前时间显示卡片
+                // 浮動現在時刻表示カード
                 currentTimeView
                     .padding(.horizontal)
                     .padding(.top, 10)
@@ -40,51 +43,57 @@ struct BusScheduleView: View {
                     selectedTimeEntry = nil
                 }
         )
-        .background(Color(.systemGroupedBackground))
+        .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
-        .onAppear {
-            // 启动定时器，每分钟更新当前时间
-            timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-                currentTime = Date()
-                updateScrollToHour()
-            }
-            
-            // 秒単位のタイマーを追加（1秒ごとに更新）
-            secondsTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-                currentTime = Date()
-                // 選択した時間が経過したかチェック
-                checkIfSelectedTimePassed()
-            }
-            
-            // 检查当前是否为周三，如果是则自动选择水曜日时刻表
-            let calendar = Calendar.current
-            let weekday = calendar.component(.weekday, from: Date())
-            if weekday == 4 { // 4 表示周三
-                selectedScheduleType = .wednesday
-            }
-            
-            // 初始化滚动位置
+        .onAppear(perform: setupTimers)
+        .onDisappear(perform: cleanupTimers)
+    }
+    
+    // MARK: - セットアップとクリーンアップ
+    private func setupTimers() {
+        // 1分ごとに現在時刻を更新するタイマー
+        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [self] _ in
+            currentTime = Date()
             updateScrollToHour()
         }
-        .onDisappear {
-            // 视图消失时停止定时器
-            timer?.invalidate()
-            timer = nil
-            secondsTimer?.invalidate() // 秒単位のタイマーも停止
-            secondsTimer = nil
+        
+        // 1秒ごとに更新する秒単位のタイマー
+        secondsTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [self] _ in
+            currentTime = Date()
+            checkIfSelectedTimePassed()
+        }
+        
+        // 水曜日かどうかチェックし、水曜日なら自動的に水曜日時刻表を選択
+        checkIfWednesday()
+        
+        // スクロール位置を初期化
+        updateScrollToHour()
+    }
+    
+    private func cleanupTimers() {
+        timer?.invalidate()
+        timer = nil
+        secondsTimer?.invalidate()
+        secondsTimer = nil
+    }
+    
+    private func checkIfWednesday() {
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: Date())
+        if weekday == 4 { // 4は水曜日
+            selectedScheduleType = .wednesday
         }
     }
     
-    // 更新滚动位置
+    // スクロール位置を更新
     private func updateScrollToHour() {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour], from: currentTime)
-        if let currentHour = components.hour {
-            scrollToHour = currentHour
-        }
+        scrollToHour = components.hour
     }
     
-    // 时刻表类型选择器（平日/周六/水曜日）
+    // MARK: - UIコンポーネント
+    // 時刻表タイプセレクタ（平日/水曜日/土曜日）
     private var scheduleTypeSelector: some View {
         HStack {
             Picker("スケジュールタイプ", selection: $selectedScheduleType) {
@@ -95,15 +104,14 @@ struct BusScheduleView: View {
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal)
             .onChange(of: selectedScheduleType) { _, _ in
-                // スケジュールタイプが変更されたら選択をリセット
                 selectedTimeEntry = nil
             }
         }
         .padding(.vertical, 12)
-        .background(Color.white)
+        .background(Color(UIColor.systemBackground))
     }
     
-    // 路线选择器
+    // 路線セレクタ
     private var routeTypeSelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 15) {
@@ -116,15 +124,14 @@ struct BusScheduleView: View {
             .padding(.vertical, 5)
         }
         .padding(.vertical, 8)
-        .background(Color.white)
-        .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
+        .background(Color(UIColor.systemBackground))
+        .shadow(color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.2), radius: 2, x: 0, y: 1)
     }
     
-    // 路线按钮
+    // 路線ボタン
     private func routeButton(title: String, type: BusSchedule.RouteType) -> some View {
         Button(action: {
             selectedRouteType = type
-            // 路線タイプが変更されたら選択をリセット
             selectedTimeEntry = nil
         }) {
             Text(title)
@@ -135,7 +142,7 @@ struct BusScheduleView: View {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(selectedRouteType == type ?
                               Color.blue.opacity(0.9) :
-                                Color.gray.opacity(0.15))
+                                Color.gray.opacity(colorScheme == .dark ? 0.25 : 0.15))
                         .shadow(color: selectedRouteType == type ?
                                 Color.blue.opacity(0.3) :
                                     Color.clear,
@@ -147,12 +154,12 @@ struct BusScheduleView: View {
         .animation(.easeInOut(duration: 0.2), value: selectedRouteType)
     }
     
-    // 时刻表内容
+    // 時刻表コンテンツ
     private var scheduleContent: some View {
         ScrollViewReader { scrollProxy in
             ScrollView {
                 VStack(alignment: .center, spacing: 16) {
-                    // 时刻表
+                    // 時刻表
                     scheduleTableView
                         .onChange(of: scrollToHour) { oldValue, newValue in
                             if let hour = newValue {
@@ -162,14 +169,14 @@ struct BusScheduleView: View {
                             }
                         }
                     
-                    // 特殊班次说明
+                    // 特別便の説明
                     specialNotesView
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(UIColor.systemBackground))
             .onAppear {
-                // 视图出现时滚动到当前时间
+                // ビュー表示時に現在時刻にスクロール
                 if let hour = scrollToHour {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         withAnimation {
@@ -181,7 +188,7 @@ struct BusScheduleView: View {
         }
     }
     
-    // 当前时间显示
+    // 現在時刻表示
     private var currentTimeView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -196,8 +203,23 @@ struct BusScheduleView: View {
             
             Spacer()
             
-            // 下一班车信息
-            if let nextBus = selectedTimeEntry ?? getNextBus() {
+            // 選択した時間が現在時刻と同じかチェック
+            if let selectedTime = selectedTimeEntry,
+               isTimeEqual(selectedTime, to: currentTime) {
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("バスの出発時刻です")
+                        .font(.subheadline)
+                        .foregroundColor(.orange)
+                        .transition(.opacity)
+                    
+                    Text("0分0秒")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.orange)
+                        .transition(.opacity)
+                }
+            }
+            // 次のバス情報
+            else if let nextBus = selectedTimeEntry ?? getNextBus() {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(selectedTimeEntry != nil ? "選択したバスまで" : "次のバスまで")
                         .font(.subheadline)
@@ -245,162 +267,45 @@ struct BusScheduleView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.2), radius: 3, x: 0, y: 1)
         )
-        // タップイベントを親ビューに伝播させないようにする
+        // タップイベントを親ビューに伝播させない
         .contentShape(Rectangle())
-        .onTapGesture {
-            // 何もしない（タップイベントを消費する）
-        }
+        .onTapGesture { }
         .animation(.easeInOut(duration: 0.2), value: selectedTimeEntry)
     }
     
-    // 获取倒计时文本（秒単位まで精確に）
-    private func getCountdownText(to nextBus: BusSchedule.TimeEntry) -> String {
-        let calendar = Calendar.current
-        
-        // 创建下一班车的日期
-        var nextBusDateComponents = calendar.dateComponents([.year, .month, .day], from: currentTime)
-        nextBusDateComponents.hour = nextBus.hour
-        nextBusDateComponents.minute = nextBus.minute
-        nextBusDateComponents.second = 0
-        
-        guard let nextBusDate = calendar.date(from: nextBusDateComponents) else {
-            return ""
-        }
-        
-        // 如果下一班车时间早于当前时间，可能是第二天的班车
-        if nextBusDate < currentTime {
-            // 添加一天
-            guard let tomorrowDate = calendar.date(byAdding: .day, value: 1, to: nextBusDate) else {
-                return ""
-            }
-            
-            let components = calendar.dateComponents([.hour, .minute, .second], from: currentTime, to: tomorrowDate)
-            if let hour = components.hour, let minute = components.minute, let second = components.second {
-                if hour > 0 {
-                    return "\(hour)時間\(minute)分\(second)秒"
-                } else {
-                    return "\(minute)分\(second)秒"
-                }
-            }
-        } else {
-            // 计算时间差
-            let components = calendar.dateComponents([.hour, .minute, .second], from: currentTime, to: nextBusDate)
-            if let hour = components.hour, let minute = components.minute, let second = components.second {
-                if hour > 0 {
-                    return "\(hour)時間\(minute)分\(second)秒"
-                } else {
-                    return "\(minute)分\(second)秒"
-                }
-            }
-        }
-        
-        return ""
-    }
-    
-    // 时刻表视图
+    // 時刻表ビュー
     private var scheduleTableView: some View {
         VStack(spacing: 0) {
-            // 表头
-            HStack(spacing: 0) {
-                Text("時間")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                    .frame(width: 70, alignment: .center)
-                    .padding(.vertical, 12)
-                
-                Divider()
-                    .frame(width: 1)
-                    .background(Color.gray.opacity(0.3))
-                
-                Text("発車時刻")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 12)
-            }
-            .background(Color.gray.opacity(0.05))
+            // ヘッダー
+            tableHeader
             
             Divider()
                 .background(Color.gray.opacity(0.3))
             
-            // 水曜日特別メッセージ（水曜日スケジュールが選択されている場合）
+            // 水曜日特別メッセージ
             if selectedScheduleType == .wednesday {
-                HStack {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundColor(.blue)
-                    
-                    Text("水曜日は特別ダイヤで運行しています")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                }
-                .padding()
-                .background(Color.blue.opacity(0.1))
-                
-                Divider()
-                    .background(Color.gray.opacity(0.3))
+                wednesdaySpecialMessage
             }
             
-            // 时刻表内容
+            // 時刻表コンテンツ
             ForEach(getFilteredSchedule().hourSchedules, id: \.hour) { hourSchedule in
                 if !hourSchedule.times.isEmpty {
-                    VStack(spacing: 0) {
-                        HStack(spacing: 0) {
-                            // 小时
-                            Text("\(hourSchedule.hour)")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.primary)
-                                .frame(width: 70, alignment: .center)
-                                .padding(.vertical, 12)
-                            
-                            Divider()
-                                .frame(width: 1)
-                                .background(Color.gray.opacity(0.3))
-                            
-                            // 分钟列表 - 改进对齐方式
-                            VStack(alignment: .center) {
-                                LazyVGrid(columns: Array(repeating: GridItem(.fixed(50), spacing: 8), count: 5), alignment: .center, spacing: 12) {
-                                    ForEach(hourSchedule.times, id: \.minute) { time in
-                                        timeEntryView(time)
-                                    }
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 12)
-                            // 空白部分をタップした場合も選択を解除
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedTimeEntry = nil
-                            }
-                        }
-                        
-                        Divider()
-                            .background(Color.gray.opacity(0.3))
-                    }
-                    .id("hour_\(hourSchedule.hour)")
-                    .background(
-                        isCurrentHour(hourSchedule.hour) ?
-                        Color.green.opacity(0.1) :
-                            (hourSchedule.hour % 2 == 0 ? Color.white : Color.gray.opacity(0.03))
-                    )
+                    hourScheduleRow(hourSchedule)
                 }
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.1), radius: 3, x: 0, y: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        // タップイベントを親ビューに伝播させないようにする
+        // タップイベントを親ビューに伝播させない
         .contentShape(Rectangle())
         .onTapGesture {
-            // 時刻表の空白部分をタップした場合も選択を解除
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedTimeEntry = nil
                 cardInfoAppeared = false
@@ -408,14 +313,97 @@ struct BusScheduleView: View {
         }
     }
     
-    // 判断是否为当前小时
-    private func isCurrentHour(_ hour: Int) -> Bool {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.hour], from: currentTime)
-        return components.hour == hour
+    // テーブルヘッダー
+    private var tableHeader: some View {
+        HStack(spacing: 0) {
+            Text("時間")
+                .font(.headline)
+                .foregroundColor(.secondary)
+                .frame(width: 70, alignment: .center)
+                .padding(.vertical, 12)
+            
+            Divider()
+                .frame(width: 1)
+                .background(Color.gray.opacity(0.3))
+            
+            Text("発車時刻")
+                .font(.headline)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 12)
+        }
+        .background(Color.gray.opacity(colorScheme == .dark ? 0.15 : 0.05))
     }
     
-    // 单个时间条目视图
+    // 水曜日特別メッセージ
+    private var wednesdaySpecialMessage: some View {
+        HStack {
+            Image(systemName: "info.circle.fill")
+                .foregroundColor(.blue)
+            
+            Text("水曜日は特別ダイヤで運行しています")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
+            
+            Spacer()
+        }
+        .padding()
+        .background(Color.blue.opacity(0.1))
+        .overlay(
+            Divider()
+                .background(Color.gray.opacity(0.3))
+                .offset(y: 24),
+            alignment: .bottom
+        )
+    }
+    
+    // 時間ごとの行
+    private func hourScheduleRow(_ hourSchedule: BusSchedule.HourSchedule) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                // 時間
+                Text("\(hourSchedule.hour)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+                    .frame(width: 70, alignment: .center)
+                    .padding(.vertical, 12)
+                
+                Divider()
+                    .frame(width: 1)
+                    .background(Color.gray.opacity(0.3))
+                
+                // 分リスト - 配置改善
+                VStack(alignment: .center) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(50), spacing: 8), count: 5), alignment: .center, spacing: 12) {
+                        ForEach(hourSchedule.times, id: \.minute) { time in
+                            timeEntryView(time)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 12)
+                // 空白部分をタップした場合も選択を解除
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedTimeEntry = nil
+                }
+            }
+            
+            Divider()
+                .background(Color.gray.opacity(0.3))
+        }
+        .id("hour_\(hourSchedule.hour)")
+        .background(
+            isCurrentHour(hourSchedule.hour) ?
+            Color.green.opacity(colorScheme == .dark ? 0.2 : 0.1) :
+                (hourSchedule.hour % 2 == 0 ? 
+                 Color(UIColor.systemBackground) : 
+                 Color.gray.opacity(colorScheme == .dark ? 0.1 : 0.03))
+        )
+    }
+    
+    // 個別の時間エントリービュー
     private func timeEntryView(_ time: BusSchedule.TimeEntry) -> some View {
         HStack(spacing: 2) {
             Text("\(String(format: "%02d", time.minute))")
@@ -441,36 +429,41 @@ struct BusScheduleView: View {
         }
         .frame(height: 36)
         .onTapGesture {
-            // 同じ時刻を再度タップした場合は選択を解除
-            if selectedTimeEntry == time {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedTimeEntry = nil
-                    cardInfoAppeared = false
-                }
-            } else {
-                // それ以外の場合は選択状態にする
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedTimeEntry = time
-                    cardInfoAppeared = false
-                    
-                    // 少し遅延させてから表示アニメーションを開始
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            cardInfoAppeared = true
-                        }
+            handleTimeEntryTap(time)
+        }
+    }
+    
+    // 時間エントリータップ処理
+    private func handleTimeEntryTap(_ time: BusSchedule.TimeEntry) {
+        // 同じ時刻を再度タップした場合は選択を解除
+        if selectedTimeEntry == time {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedTimeEntry = nil
+                cardInfoAppeared = false
+            }
+        } else {
+            // それ以外の場合は選択状態にする
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedTimeEntry = time
+                cardInfoAppeared = false
+                
+                // 少し遅延させてから表示アニメーションを開始
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        cardInfoAppeared = true
                     }
                 }
             }
         }
     }
     
-    // 特殊班次说明视图
+    // 特別便の説明ビュー
     private var specialNotesView: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("備考")
                 .font(.headline)
                 .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading) // 左揃えを明示的に指定
+                .frame(maxWidth: .infinity, alignment: .leading)
             
             ForEach(busSchedule.specialNotes, id: \.symbol) { note in
                 HStack(alignment: .top, spacing: 8) {
@@ -485,50 +478,54 @@ struct BusScheduleView: View {
                         .font(.system(size: 14))
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading) // 説明文を左揃えに
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             
             // 水曜日の場合は特別メッセージを表示しない
             if selectedScheduleType != .wednesday {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                    
-                    Text("水曜日は特別ダイヤで運行しています")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.red)
-                    
-                    Spacer() // 右側にスペースを追加して左揃えを確保
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.red.opacity(0.1))
-                .cornerRadius(8)
+                wednesdayWarningMessage
             }
         }
         .padding()
-        .frame(width: UIScreen.main.bounds.width - 32) // 画面幅から左右のパディングを引いた幅に設定
+        .frame(width: UIScreen.main.bounds.width - 32)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.1), radius: 3, x: 0, y: 1)
         )
-        // タップイベントを親ビューに伝播させないようにする
+        // タップイベントを親ビューに伝播させない
         .contentShape(Rectangle())
-        .onTapGesture {
-            // 何もしない（タップイベントを消費する）
-        }
+        .onTapGesture { }
     }
     
-    // 日期格式化器
+    // 水曜日警告メッセージ
+    private var wednesdayWarningMessage: some View {
+        HStack {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.red)
+            
+            Text("水曜日は特別ダイヤで運行しています")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.red)
+            
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    // MARK: - ヘルパーメソッド
+    // 日付フォーマッター
     private var timeFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter
     }
     
-    // 获取筛选后的时刻表
+    // フィルタリングされた時刻表を取得
     private func getFilteredSchedule() -> BusSchedule.DaySchedule {
         let schedules: [BusSchedule.DaySchedule]
         
@@ -541,12 +538,12 @@ struct BusScheduleView: View {
             schedules = busSchedule.wednesdaySchedules
         }
         
-        // 查找匹配的路线时刻表
+        // 一致する路線時刻表を検索
         if let schedule = schedules.first(where: { $0.routeType == selectedRouteType }) {
             return schedule
         }
         
-        // 如果没有找到匹配的路线，返回第一个时刻表（防止崩溃）
+        // 一致する路線が見つからない場合、最初の時刻表を返す（クラッシュ防止）
         return schedules.first ?? BusSchedule.DaySchedule(
             routeType: .fromSeisenToNagayama,
             scheduleType: selectedScheduleType,
@@ -554,7 +551,26 @@ struct BusScheduleView: View {
         )
     }
     
-    // 判断是否为当前或下一班车
+    // 現在の時間かどうかを判断
+    private func isCurrentHour(_ hour: Int) -> Bool {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour], from: currentTime)
+        return components.hour == hour
+    }
+    
+    // 時間が等しいかどうかを判断（時と分）
+    private func isTimeEqual(_ timeEntry: BusSchedule.TimeEntry, to date: Date) -> Bool {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        
+        guard let hour = components.hour, let minute = components.minute else {
+            return false
+        }
+        
+        return timeEntry.hour == hour && timeEntry.minute == minute
+    }
+    
+    // 現在または次のバスかどうかを判断
     private func isCurrentOrNextBus(_ time: BusSchedule.TimeEntry) -> Bool {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: currentTime)
@@ -563,17 +579,17 @@ struct BusScheduleView: View {
             return false
         }
         
-        // 如果是同一小时，且分钟大于等于当前分钟
+        // 同じ時間で、分が現在以上の場合
         if time.hour == currentHour && time.minute >= currentMinute {
             return true
         }
         
-        // 如果是下一个小时的第一班车
+        // 次の時間の最初のバスの場合
         if time.hour == currentHour + 1 {
-            // 获取当前小时的所有班次
+            // 現在の時間のすべての便を取得
             let currentHourSchedule = getFilteredSchedule().hourSchedules.first { $0.hour == currentHour }
             
-            // 如果当前小时没有更晚的班次，且这是下一小时的第一班车
+            // 現在の時間にそれ以降の便がなく、これが次の時間の最初のバスの場合
             if let currentHourSchedule = currentHourSchedule,
                !currentHourSchedule.times.contains(where: { $0.minute > currentMinute }),
                let nextHourSchedule = getFilteredSchedule().hourSchedules.first(where: { $0.hour == currentHour + 1 }),
@@ -586,7 +602,7 @@ struct BusScheduleView: View {
         return false
     }
     
-    // 获取下一班车
+    // 次のバスを取得
     private func getNextBus() -> BusSchedule.TimeEntry? {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: currentTime)
@@ -597,13 +613,13 @@ struct BusScheduleView: View {
         
         let schedule = getFilteredSchedule()
         
-        // 查找当前小时内的下一班车
+        // 現在の時間内の次のバスを検索（分は現在より大きい必要がある）
         if let currentHourSchedule = schedule.hourSchedules.first(where: { $0.hour == currentHour }),
-           let nextBus = currentHourSchedule.times.first(where: { $0.minute >= currentMinute }) {
+           let nextBus = currentHourSchedule.times.first(where: { $0.minute > currentMinute }) {
             return nextBus
         }
         
-        // 查找后续小时的第一班车
+        // 後続の時間の最初のバスを検索
         if currentHour < 23 {
             for hour in (currentHour + 1)...23 {
                 if let hourSchedule = schedule.hourSchedules.first(where: { $0.hour == hour }),
@@ -613,11 +629,62 @@ struct BusScheduleView: View {
             }
         }
         
-        // 如果当前是23点以后，或者没有找到后续班车，则返回nil
+        // 現在が23時以降、または後続のバスが見つからない場合はnilを返す
         return nil
     }
     
-    // 检查选择的时间是否已经过期
+    // カウントダウンテキストを取得（秒単位まで正確に）
+    private func getCountdownText(to nextBus: BusSchedule.TimeEntry) -> String {
+        let calendar = Calendar.current
+        
+        // 次のバスの日付を作成
+        var nextBusDateComponents = calendar.dateComponents([.year, .month, .day], from: currentTime)
+        nextBusDateComponents.hour = nextBus.hour
+        nextBusDateComponents.minute = nextBus.minute
+        nextBusDateComponents.second = 0
+        
+        guard let nextBusDate = calendar.date(from: nextBusDateComponents) else {
+            return ""
+        }
+        
+        // 現在時刻かどうかをチェック（時と分が同じ）
+        let currentComponents = calendar.dateComponents([.hour, .minute], from: currentTime)
+        if let currentHour = currentComponents.hour, let currentMinute = currentComponents.minute,
+           currentHour == nextBus.hour && currentMinute == nextBus.minute {
+            return "0分0秒"
+        }
+        
+        // 次のバスの時間が現在時刻より早い場合、翌日のバスの可能性がある
+        if nextBusDate < currentTime {
+            // 1日追加
+            guard let tomorrowDate = calendar.date(byAdding: .day, value: 1, to: nextBusDate) else {
+                return ""
+            }
+            
+            return formatTimeDifference(from: currentTime, to: tomorrowDate)
+        } else {
+            // 時間差を計算
+            return formatTimeDifference(from: currentTime, to: nextBusDate)
+        }
+    }
+    
+    // 時間差をフォーマット
+    private func formatTimeDifference(from: Date, to: Date) -> String {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute, .second], from: from, to: to)
+        
+        if let hour = components.hour, let minute = components.minute, let second = components.second {
+            if hour > 0 {
+                return "\(hour)時間\(minute)分\(second)秒"
+            } else {
+                return "\(minute)分\(second)秒"
+            }
+        }
+        
+        return ""
+    }
+    
+    // 選択した時間が経過したかチェック
     private func checkIfSelectedTimePassed() {
         guard let selectedTime = selectedTimeEntry else { return }
         
@@ -626,10 +693,10 @@ struct BusScheduleView: View {
         
         guard let currentHour = components.hour, let currentMinute = components.minute else { return }
         
-        // 如果选择的时间已经过期（当前时间已经超过了选择的时间）
+        // 選択した時間が経過した場合（現在時刻が選択した時間以上）
         if (selectedTime.hour < currentHour) || 
-           (selectedTime.hour == currentHour && selectedTime.minute < currentMinute) {
-            // 自动解除选择
+           (selectedTime.hour == currentHour && selectedTime.minute <= currentMinute) {
+            // 自動的に選択を解除
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedTimeEntry = nil
                 cardInfoAppeared = false
@@ -640,4 +707,10 @@ struct BusScheduleView: View {
 
 #Preview {
     BusScheduleView()
+        .preferredColorScheme(.dark)
+}
+
+#Preview {
+    BusScheduleView()
+        .preferredColorScheme(.light)
 }

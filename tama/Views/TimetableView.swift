@@ -4,6 +4,7 @@ struct TimetableView: View {
     // MARK: - Properties
     @StateObject private var viewModel = TimetableViewModel()
     @Binding var isLoggedIn: Bool  // 添加登录状态绑定
+    @Environment(\.colorScheme) private var colorScheme // 添加这一行
     
     private let presetColors: [Color] = [
         .white,
@@ -82,6 +83,7 @@ struct TimetableView: View {
                 } else {
                     Text(day)
                         .font(.system(size: 14))
+                        .foregroundColor(.primary)
                         .frame(width: layout.cellWidth, height: 10)
                 }
             }
@@ -117,13 +119,14 @@ struct TimetableView: View {
         VStack(spacing: 2) {
             Text(startTime)
                 .font(.system(size: 11))
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
             Text(period)
                 .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .center)
             Text(endTime)
                 .font(.system(size: 11))
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
         }
         .frame(width: layout.timeColumnWidth, height: layout.cellHeight)
     }
@@ -178,6 +181,7 @@ struct TimeSlotCell: View {
     let cellHeight: CGFloat
     let onColorChange: (Int) -> Void
     @Binding var isLoggedIn: Bool  // 添加isLoggedIn绑定
+    @Environment(\.colorScheme) private var colorScheme // 添加这一行
     
     // 現在の時限かどうかを判断するプロパティを追加
     let isCurrentDay: Bool
@@ -185,38 +189,49 @@ struct TimeSlotCell: View {
     
     @State private var showingDetail = false
     
+    // 添加颜色调整的计算属性
+    private var adjustedBackgroundColor: Color {
+        guard let course = course else {
+            return colorScheme == .dark ? Color(UIColor.systemGray6) : .white
+        }
+        let baseColor = presetColors[course.colorIndex]
+        return colorScheme == .dark ? baseColor.opacity(0.8) : baseColor
+    }
+    
     var body: some View {
         ZStack {
-            // 背景
+            // 修改背景色
             RoundedRectangle(cornerRadius: 8)
-                .fill(course != nil ? presetColors[course!.colorIndex] : .white)
+                .fill(adjustedBackgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(
-                            // 現在の曜日と時限の場合は緑色の枠線でハイライト
-                            (isCurrentDay && isCurrentPeriod) ? Color.green : Color.gray.opacity(0.2),
+                            (isCurrentDay && isCurrentPeriod) ? 
+                                Color.green : 
+                                (colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2)),
                             lineWidth: (isCurrentDay && isCurrentPeriod) ? 1.5 : 1
                         )
                 )
             
             if let course = course {
-                // 課程情報
+                // 修改课程信息文字颜色
                 VStack(spacing: 2) {
                     Text(course.name)
                         .font(.system(size: 12))
                         .lineLimit(3)
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.8)
+                        .foregroundColor(.primary)
                     Text(course.room)
                         .font(.system(size: 11))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 4)
             } else {
-                // 空単元格表示日期
+                // 修改空格子文字颜色
                 Text("\(day)\(period)")
                     .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
             }
         }
         .frame(width: cellWidth, height: cellHeight)

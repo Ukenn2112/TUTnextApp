@@ -4,6 +4,7 @@ struct UserSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var isLoggedIn: Bool
     @State private var user: User?
+    @Environment(\.colorScheme) private var colorScheme
     
     // MARK: - Body
     var body: some View {
@@ -18,13 +19,14 @@ struct UserSettingsView: View {
                                 .font(.system(size: 18))
                                 .foregroundColor(.white)
                                 .frame(width: 56, height: 56)
-                                .background(Color.red)
+                                .background(Color.red.opacity(colorScheme == .dark ? 0.8 : 1))
                                 .clipShape(Circle())
                             
                             // ユーザー情報
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(user?.fullName ?? "ユーザー名")
                                     .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.primary)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("@\(user?.username ?? "username")")
                                         .font(.system(size: 15))
@@ -85,12 +87,12 @@ struct UserSettingsView: View {
                         }) {
                             HStack {
                                 Image(systemName: "arrow.right.square.fill")
-                                    .foregroundColor(.red)
+                                    .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
                                     .font(.system(size: 20))
                                     .frame(width: 24, height: 24)
                                 
                                 Text("ログアウト")
-                                    .foregroundColor(.red)
+                                    .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
                                     .font(.system(size: 16))
                                 
                                 Spacer()
@@ -105,6 +107,7 @@ struct UserSettingsView: View {
                     VStack(spacing: 8) {
                         Text("TUTnext")
                             .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
                         
                         Text("バージョン \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"))")
                             .font(.system(size: 12))
@@ -195,6 +198,7 @@ struct UserSettingsView: View {
 // MARK: - Supporting Views
 
 struct SettingsSectionHeader: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     
     var body: some View {
@@ -209,6 +213,7 @@ struct SettingsSectionHeader: View {
 }
 
 struct SettingsRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     let icon: String
     let title: String
     let action: () -> Void
@@ -240,5 +245,10 @@ struct SettingsRow: View {
 }
 
 #Preview {
-    UserSettingsView(isLoggedIn: .constant(true))
+    Group {
+        UserSettingsView(isLoggedIn: .constant(true))
+            .preferredColorScheme(.light)
+        UserSettingsView(isLoggedIn: .constant(true))
+            .preferredColorScheme(.dark)
+    }
 } 
