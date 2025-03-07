@@ -177,7 +177,7 @@ class CourseDetailService {
         }
         
         // 授業メモの取得
-        let memo = data["jugyoMemo"] as? String ?? ""
+        // let memo = data["jugyoMemo"] as? String ?? ""
         
         // シラバス公開フラグの取得
         let syllabusPubFlg = data["syllabusPubFlg"] as? Bool ?? false
@@ -188,7 +188,7 @@ class CourseDetailService {
         return CourseDetailResponse(
             announcements: announcements,
             attendance: attendance,
-            memo: memo,
+            // memo: memo,
             syllabusPubFlg: syllabusPubFlg,
             syuKetuKanriFlg: syuKetuKanriFlg
         )

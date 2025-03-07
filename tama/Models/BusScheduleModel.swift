@@ -86,8 +86,8 @@ class BusScheduleService {
         // 平日時刻表 - 永山駅発
         let weekdayFromNagayamaSchedule = createWeekdayFromNagayamaSchedule()
         
-        // 平日時刻表 - 中学・高校、大学発
-        let weekdayFromSchoolSchedule = createWeekdayFromSchoolSchedule()
+        // 平日時刻表 - 聖蹟桜ヶ丘駅行
+        let weekdayToSeisenSchedule = createweekdayToSeisenSchedule()
         
         // 平日時刻表 - 永山駅行
         let weekdayToNagayamaSchedule = createWeekdayToNagayamaSchedule()
@@ -101,8 +101,8 @@ class BusScheduleService {
         // 水曜日時刻表 - 永山駅発（特別ダイヤ）
         let wednesdayFromNagayamaSchedule = createWednesdayFromNagayamaSchedule()
         
-        // 水曜日時刻表 - 中学・高校、大学発（特別ダイヤ）
-        let wednesdayFromSchoolSchedule = createWednesdayFromSchoolSchedule()
+        // 水曜日時刻表 - 聖蹟桜ヶ丘駅行（特別ダイヤ）
+        let wednesdayToSeisenSchedule = createwednesdayToSeisenSchedule()
         
         // 水曜日時刻表 - 永山駅行（特別ダイヤ）
         let wednesdayToNagayamaSchedule = createWednesdayToNagayamaSchedule()
@@ -114,7 +114,7 @@ class BusScheduleService {
             weekdaySchedules: [
                 weekdayFromSeisenSchedule,
                 weekdayFromNagayamaSchedule,
-                weekdayFromSchoolSchedule,
+                weekdayToSeisenSchedule,
                 weekdayToNagayamaSchedule
             ],
             saturdaySchedules: [
@@ -124,7 +124,7 @@ class BusScheduleService {
             wednesdaySchedules: [
                 wednesdayFromSeisenSchedule,
                 wednesdayFromNagayamaSchedule,
-                wednesdayFromSchoolSchedule,
+                wednesdayToSeisenSchedule,
                 wednesdayToNagayamaSchedule
             ],
             specialNotes: specialNotes
@@ -226,7 +226,7 @@ class BusScheduleService {
     }
     
     /// 平日時刻表 - 中学・高校、大学発
-    private func createWeekdayFromSchoolSchedule() -> BusSchedule.DaySchedule {
+    private func createweekdayToSeisenSchedule() -> BusSchedule.DaySchedule {
         return BusSchedule.DaySchedule(
             routeType: .fromSchoolToNagayama,
             scheduleType: .weekday,
@@ -410,7 +410,7 @@ class BusScheduleService {
     }
     
     /// 水曜日時刻表 - 中学・高校、大学発（特別ダイヤ）
-    private func createWednesdayFromSchoolSchedule() -> BusSchedule.DaySchedule {
+    private func createwednesdayToSeisenSchedule() -> BusSchedule.DaySchedule {
         return BusSchedule.DaySchedule(
             routeType: .fromSchoolToNagayama,
             scheduleType: .wednesday,

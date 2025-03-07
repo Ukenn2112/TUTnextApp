@@ -4,7 +4,7 @@ import Foundation
 struct CourseDetailResponse {
     let announcements: [AnnouncementModel]
     let attendance: AttendanceModel
-    let memo: String
+    // let memo: String
     let syllabusPubFlg: Bool
     let syuKetuKanriFlg: Bool
 }

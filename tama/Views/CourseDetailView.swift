@@ -272,38 +272,38 @@ struct CourseDetailView: View {
                         .padding(.horizontal)
                         
                         // メモセクション
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "note.text")
-                                    .foregroundColor(.gray)
-                                Text("メモ")
-                                    .font(.system(size: 16, weight: .bold))
-                            }
-                            .padding(.vertical, 12)
+                        // VStack(alignment: .leading, spacing: 8) {
+                        //     HStack {
+                        //         Image(systemName: "note.text")
+                        //             .foregroundColor(.gray)
+                        //         Text("メモ")
+                        //             .font(.system(size: 16, weight: .bold))
+                        //     }
+                        //     .padding(.vertical, 12)
                             
-                            TextEditor(text: $viewModel.memo)
-                                .font(.system(size: 14))
-                                .foregroundColor(viewModel.memo.isEmpty ? .secondary : .primary)
-                                .frame(minHeight: 40)
-                                .overlay(
-                                    Group {
-                                        if viewModel.memo.isEmpty {
-                                            Text("持ち物や小テスト情報など\n授業に関することをメモできます。")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(.gray)
-                                                .lineSpacing(4)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .padding(.horizontal, 5)
-                                                .padding(.top, 2)
-                                                .allowsHitTesting(false)
-                                        }
-                                    }
-                                )
-                                .padding(.bottom, 12)
+                        //     TextEditor(text: $viewModel.memo)
+                        //         .font(.system(size: 14))
+                        //         .foregroundColor(viewModel.memo.isEmpty ? .secondary : .primary)
+                        //         .frame(minHeight: 40)
+                        //         .overlay(
+                        //             Group {
+                        //                 if viewModel.memo.isEmpty {
+                        //                     Text("持ち物や小テスト情報など\n授業に関することをメモできます。")
+                        //                         .font(.system(size: 14))
+                        //                         .foregroundColor(.gray)
+                        //                         .lineSpacing(4)
+                        //                         .frame(maxWidth: .infinity, alignment: .leading)
+                        //                         .padding(.horizontal, 5)
+                        //                         .padding(.top, 2)
+                        //                         .allowsHitTesting(false)
+                        //                 }
+                        //             }
+                        //         )
+                        //         .padding(.bottom, 12)
                             
-                            Divider()
-                        }
-                        .padding(.horizontal)
+                        //     Divider()
+                        // }
+                        // .padding(.horizontal)
                         // リンクセクション
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {

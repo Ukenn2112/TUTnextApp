@@ -5,14 +5,14 @@ class CourseDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
     @Published var courseDetail: CourseDetailResponse? = nil
-    @Published var memo: String = ""
+    // @Published var memo: String = ""
     
     private var cancellables = Set<AnyCancellable>()
     private let course: CourseModel
     
     init(course: CourseModel) {
         self.course = course
-        self.memo = ""
+        // self.memo = ""
     }
     
     // 課程詳細情報を取得
@@ -28,7 +28,7 @@ class CourseDetailViewModel: ObservableObject {
                 switch result {
                 case .success(let detailResponse):
                     self.courseDetail = detailResponse
-                    self.memo = detailResponse.memo
+                    // self.memo = detailResponse.memo
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     print("課程詳細の取得に失敗しました: \(error.localizedDescription)")
@@ -38,10 +38,10 @@ class CourseDetailViewModel: ObservableObject {
     }
     
     // メモを保存
-    func saveMemo() {
-        // TODO: メモ保存APIの実装
-        print("メモを保存: \(memo)")
-    }
+    // func saveMemo() {
+    //     // TODO: メモ保存APIの実装
+    //     print("メモを保存: \(memo)")
+    // }
     
     // 出欠データを取得
     var attendanceData: [AttendanceData] {
