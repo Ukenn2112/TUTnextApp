@@ -89,7 +89,13 @@ struct BusScheduleView: View {
     private func updateScrollToHour() {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour], from: currentTime)
-        scrollToHour = components.hour
+        // 先将值设为nil，然后再设置为当前小时，确保触发onChange事件
+        scrollToHour = nil
+        
+        // 使用延迟确保nil值被处理后再设置新值
+        DispatchQueue.main.async {
+            self.scrollToHour = components.hour
+        }
     }
     
     // MARK: - UIコンポーネント
@@ -105,6 +111,7 @@ struct BusScheduleView: View {
             .padding(.horizontal)
             .onChange(of: selectedScheduleType) { _, _ in
                 selectedTimeEntry = nil
+                updateScrollToHour()
             }
         }
         .padding(.vertical, 12)
@@ -133,6 +140,7 @@ struct BusScheduleView: View {
         Button(action: {
             selectedRouteType = type
             selectedTimeEntry = nil
+            updateScrollToHour()
         }) {
             Text(title)
                 .font(.system(size: 14, weight: .medium))
@@ -164,7 +172,7 @@ struct BusScheduleView: View {
                         .onChange(of: scrollToHour) { oldValue, newValue in
                             if let hour = newValue {
                                 withAnimation {
-                                    scrollProxy.scrollTo("hour_\(hour)", anchor: .top)
+                                    scrollProxy.scrollTo("hour_\(hour)", anchor: UnitPoint(x: 0, y: 0.1))
                                 }
                             }
                         }
@@ -180,7 +188,7 @@ struct BusScheduleView: View {
                 if let hour = scrollToHour {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         withAnimation {
-                            scrollProxy.scrollTo("hour_\(hour)", anchor: .top)
+                            scrollProxy.scrollTo("hour_\(hour)", anchor: UnitPoint(x: 0, y: 0.1))
                         }
                     }
                 }
