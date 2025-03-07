@@ -28,7 +28,7 @@ struct ContentView: View {
                         TimetableView(isLoggedIn: $isLoggedIn)
                             .tag(1)
                         
-                        Text("TODO: 課題")
+                        AssignmentView(isLoggedIn: $isLoggedIn)
                             .tag(2)
                         
                         Text("TODO: 揭示板")
