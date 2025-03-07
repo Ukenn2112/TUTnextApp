@@ -114,7 +114,7 @@ struct UserSettingsView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 30)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 1000)
                 }
                 .background(Color(UIColor.systemGroupedBackground))
             }

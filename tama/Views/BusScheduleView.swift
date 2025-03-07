@@ -3,7 +3,7 @@ import SwiftUI
 struct BusScheduleView: View {
     // MARK: - プロパティ
     @State private var selectedScheduleType: BusSchedule.ScheduleType = .weekday
-    @State private var selectedRouteType: BusSchedule.RouteType = .fromSeisenToNagayama
+    @State private var selectedRouteType: BusSchedule.RouteType = .fromSeisekiToSchool
     @State private var currentTime = Date()
     @State private var timer: Timer? = nil
     @State private var scrollToHour: Int? = nil
@@ -12,27 +12,58 @@ struct BusScheduleView: View {
     @State private var cardInfoAppeared: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     
+    // APIから取得したバス時刻表データ
+    @State private var busSchedule: BusSchedule? = nil
+    @State private var errorMessage: String? = nil
+    
     // 校車時刻表データ
-    private let busSchedule = BusScheduleService.shared.getBusScheduleData()
+    private let busScheduleService = BusScheduleService.shared
     
     // MARK: - ボディ
     var body: some View {
         VStack(spacing: 0) {
-            // 時刻表タイプセレクタ（平日/水曜日/土曜日）
-            scheduleTypeSelector
-            
-            // 路線セレクタ
-            routeTypeSelector
-            
-            // 時刻表コンテンツ（浮動時間カードを含む）
-            ZStack(alignment: .top) {
-                scheduleContent
-                    .padding(.top, 90) // 浮動カードのスペースを確保
+            if let busSchedule = busSchedule {
+                // 臨時ダイヤメッセージがある場合は表示
+                if let messages = busSchedule.temporaryMessages, !messages.isEmpty {
+                    temporaryMessagesView(messages)
+                }
                 
-                // 浮動現在時刻表示カード
-                currentTimeView
-                    .padding(.horizontal)
-                    .padding(.top, 10)
+                // 時刻表タイプセレクタ（平日/水曜日/土曜日）
+                scheduleTypeSelector
+                
+                // 路線セレクタ
+                routeTypeSelector
+                
+                // 時刻表コンテンツ（浮動時間カードを含む）
+                ZStack(alignment: .top) {
+                    scheduleContent
+                        .padding(.top, 90) // 浮動カードのスペースを確保
+                    
+                    // 浮動現在時刻表示カード
+                    currentTimeView
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                }
+            } else if let errorMessage = errorMessage {
+                VStack(spacing: 16) {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .padding()
+                        .multilineTextAlignment(.center)
+                    
+                    Button(action: {
+                        self.errorMessage = nil
+                        self.fetchBusScheduleData()
+                    }) {
+                        Text("再試行")
+                    }
+                    .padding(.top, 16)
+                }
+            } else {
+                ProgressView("読み込み中...")
+                    .onAppear(perform: fetchBusScheduleData)
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .background(
@@ -47,6 +78,84 @@ struct BusScheduleView: View {
         .edgesIgnoringSafeArea(.bottom)
         .onAppear(perform: setupTimers)
         .onDisappear(perform: cleanupTimers)
+    }
+    
+    // MARK: - データ取得
+    private func fetchBusScheduleData() {
+        busScheduleService.fetchBusScheduleData { schedule, error in
+            if error != nil {
+                self.errorMessage = "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。"
+            } else {
+                self.busSchedule = schedule
+            }
+        }
+    }
+    
+    // MARK: - 臨時ダイヤメッセージビュー
+    private func temporaryMessagesView(_ messages: [BusSchedule.TemporaryMessage]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(messages, id: \.title) { message in
+                        messageCard(message)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .padding(.top, 4)
+            }
+        }
+        .background(Color(UIColor.systemBackground))
+    }
+    
+    // 個別のメッセージカード
+    private func messageCard(_ message: BusSchedule.TemporaryMessage) -> some View {
+        Group {
+            if let url = URL(string: message.url) {
+                messageCardContent(message, showChevron: true, url: url)
+            } else {
+                messageCardContent(message, showChevron: false, url: nil)
+            }
+        }
+    }
+    
+    // メッセージカードの共通コンテンツ
+    private func messageCardContent(_ message: BusSchedule.TemporaryMessage, showChevron: Bool, url: URL? = nil) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.system(size: 14))
+            
+            Text(message.title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            
+            if showChevron, let url = url {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9))
+                            .foregroundColor(.gray)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .frame(width: 260)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+        )
     }
     
     // MARK: - セットアップとクリーンアップ
@@ -122,17 +231,24 @@ struct BusScheduleView: View {
     private var routeTypeSelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 15) {
-                routeButton(title: "聖蹟桜ヶ丘駅発", type: .fromSeisenToNagayama)
-                routeButton(title: "永山駅発", type: .fromNagayamaToSeisen)
-                routeButton(title: "聖蹟桜ヶ丘駅行", type: .fromSchoolToNagayama)
-                routeButton(title: "永山駅行", type: .fromNagayamaToSchool)
+                // 出発駅グループ
+                routeButton(title: "聖蹟桜ヶ丘駅発", type: .fromSeisekiToSchool)
+                routeButton(title: "永山駅発", type: .fromNagayamaToSchool)
+                
+                // 分割線
+                Divider()
+                    .frame(height: 20)
+                    .background(Color.gray.opacity(0.3))
+                
+                // 目的駅グループ
+                routeButton(title: "聖蹟桜ヶ丘駅行", type: .fromSchoolToSeiseki)
+                routeButton(title: "永山駅行", type: .fromSchoolToNagayama)
             }
             .padding(.horizontal)
             .padding(.vertical, 5)
         }
         .padding(.vertical, 8)
         .background(Color(UIColor.systemBackground))
-        .shadow(color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.2), radius: 2, x: 0, y: 1)
     }
     
     // 路線ボタン
@@ -371,7 +487,7 @@ struct BusScheduleView: View {
             HStack(spacing: 0) {
                 // 時間
                 Text("\(hourSchedule.hour)")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 20, weight: .bold, design: .monospaced))
                     .foregroundColor(.primary)
                     .frame(width: 70, alignment: .center)
                     .padding(.vertical, 12)
@@ -413,9 +529,10 @@ struct BusScheduleView: View {
     
     // 個別の時間エントリービュー
     private func timeEntryView(_ time: BusSchedule.TimeEntry) -> some View {
-        HStack(spacing: 2) {
+        ZStack(alignment: .topTrailing) {
+            // 时间数字
             Text("\(String(format: "%02d", time.minute))")
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 16, weight: .medium, design: .monospaced))
                 .foregroundColor(isCurrentOrNextBus(time) || selectedTimeEntry == time ? .white : .primary)
                 .frame(width: 36, height: 36, alignment: .center)
                 .background(
@@ -426,6 +543,7 @@ struct BusScheduleView: View {
                         )
                 )
             
+            // 特殊标记
             if let note = time.specialNote {
                 Text(note)
                     .font(.system(size: 10, weight: .bold))
@@ -433,9 +551,10 @@ struct BusScheduleView: View {
                     .frame(width: 18, height: 18)
                     .background(Color.red.opacity(0.8))
                     .cornerRadius(9)
+                    .offset(x: 8, y: -4) // 将标记放在右上角
             }
         }
-        .frame(height: 36)
+        .frame(width: 50, height: 36) // 固定宽度，确保所有时间条目大小一致
         .onTapGesture {
             handleTimeEntryTap(time)
         }
@@ -473,7 +592,7 @@ struct BusScheduleView: View {
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
-            ForEach(busSchedule.specialNotes, id: \.symbol) { note in
+            ForEach(busSchedule?.specialNotes ?? [], id: \.symbol) { note in
                 HStack(alignment: .top, spacing: 8) {
                     Text(note.symbol)
                         .font(.system(size: 12, weight: .bold))
@@ -535,6 +654,10 @@ struct BusScheduleView: View {
     
     // フィルタリングされた時刻表を取得
     private func getFilteredSchedule() -> BusSchedule.DaySchedule {
+        guard let busSchedule = busSchedule else {
+            return BusSchedule.DaySchedule(routeType: .fromSeisekiToSchool, scheduleType: selectedScheduleType, hourSchedules: [])
+        }
+        
         let schedules: [BusSchedule.DaySchedule]
         
         switch selectedScheduleType {
@@ -553,7 +676,7 @@ struct BusScheduleView: View {
         
         // 一致する路線が見つからない場合、最初の時刻表を返す（クラッシュ防止）
         return schedules.first ?? BusSchedule.DaySchedule(
-            routeType: .fromSeisenToNagayama,
+            routeType: .fromSeisekiToSchool,
             scheduleType: selectedScheduleType,
             hourSchedules: []
         )

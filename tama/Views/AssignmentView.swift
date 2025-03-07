@@ -16,7 +16,9 @@ struct AssignmentView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading {
-                ProgressView()
+                ProgressView("読み込み中...")
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let errorMessage = viewModel.errorMessage {
                 VStack {
                     Text("エラーが発生しました")
@@ -56,7 +58,7 @@ struct AssignmentView: View {
                     Button {
                         viewModel.loadAssignments()
                     } label: {
-                        Text("再読み込み")
+                        Text("再試行")
                             .padding()
                             .background(Color.blue)
                             .foregroundColor(.white)
@@ -80,7 +82,6 @@ struct AssignmentView: View {
                     }
                     .padding(.vertical, 8)
                     .background(Color(UIColor.systemBackground))
-                    .shadow(color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.2), radius: 2, x: 0, y: 2)
                     
                     // 課題リスト
                     ScrollView {
