@@ -707,10 +707,4 @@ struct BusScheduleView: View {
 
 #Preview {
     BusScheduleView()
-        .preferredColorScheme(.dark)
-}
-
-#Preview {
-    BusScheduleView()
-        .preferredColorScheme(.light)
 }

@@ -65,27 +65,31 @@ struct LoginView: View {
                 Button(action: {
                     performLogin()
                 }) {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .tint(colorScheme == .dark ? .black : .white)
-                    } else {
-                        Text("多摩大アカウントでサインイン")
-                            .font(.system(size: 16, weight: .medium))
+                    ZStack {
+                        Rectangle()
+                            .fill(colorScheme == .dark ? Color.white : Color.black)
+                            .cornerRadius(25)
+                            .frame(height: 50)
+                            .shadow(
+                                color: (colorScheme == .dark ? Color.white : Color.black)
+                                    .opacity(colorScheme == .dark ? 0.1 : 0.15),
+                                radius: 5,
+                                x: 0,
+                                y: colorScheme == .dark ? -2 : 2
+                            )
+                        
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .tint(colorScheme == .dark ? .black : .white)
+                        } else {
+                            Text("多摩大アカウントでサインイン")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(colorScheme == .dark ? Color.black : Color.white)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(colorScheme == .dark ? Color.white : Color.black)
-                .foregroundColor(colorScheme == .dark ? Color.black : Color.white)
-                .cornerRadius(25)
-                .shadow(
-                    color: (colorScheme == .dark ? Color.white : Color.black)
-                        .opacity(colorScheme == .dark ? 0.1 : 0.15),
-                    radius: 5,
-                    x: 0,
-                    y: colorScheme == .dark ? -2 : 2
-                )
                 .padding(.horizontal, 30)
                 .padding(.top, 15)
                 .disabled(account.isEmpty || password.isEmpty || isLoading)
@@ -164,10 +168,4 @@ struct LoginView: View {
 
 #Preview {
     LoginView(isLoggedIn: .constant(false))
-        .preferredColorScheme(.light)
-}
-
-#Preview {
-    LoginView(isLoggedIn: .constant(false))
-        .preferredColorScheme(.dark)
 }

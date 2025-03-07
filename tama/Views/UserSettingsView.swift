@@ -245,10 +245,5 @@ struct SettingsRow: View {
 }
 
 #Preview {
-    Group {
-        UserSettingsView(isLoggedIn: .constant(true))
-            .preferredColorScheme(.light)
-        UserSettingsView(isLoggedIn: .constant(true))
-            .preferredColorScheme(.dark)
-    }
+    UserSettingsView(isLoggedIn: .constant(true))
 } 

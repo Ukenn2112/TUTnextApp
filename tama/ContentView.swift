@@ -58,14 +58,14 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView()
-        .preferredColorScheme(.dark)
-        .environment(\.colorScheme, .dark)
-}
-
-#Preview {
+#Preview("index (light)") {
     ContentView()
         .preferredColorScheme(.light)
         .environment(\.colorScheme, .light)
+}
+
+#Preview("index (dark)") {
+    ContentView()
+        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
 }

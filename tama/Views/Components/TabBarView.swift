@@ -88,10 +88,5 @@ struct TabBarButton: View {
 }
 
 #Preview {
-    Group {
-        TabBarView(selectedTab: .constant(1))
-            .preferredColorScheme(.light)
-        TabBarView(selectedTab: .constant(1))
-            .preferredColorScheme(.dark)
-    }
+    TabBarView(selectedTab: .constant(1))
 } 
