@@ -34,10 +34,6 @@ struct AssignmentView: View {
                         viewModel.loadAssignments()
                     } label: {
                         Text("再読み込み")
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
                     }
                 }
                 .padding()
@@ -59,10 +55,6 @@ struct AssignmentView: View {
                         viewModel.loadAssignments()
                     } label: {
                         Text("再試行")
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
                     }
                 }
                 .padding()

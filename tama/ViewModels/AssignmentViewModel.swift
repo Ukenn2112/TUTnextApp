@@ -45,15 +45,7 @@ class AssignmentViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        #if DEBUG
-        // 開発環境ではモックデータを使用
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.assignments = self.assignmentService.getMockAssignments()
-            self.isLoading = false
-        }
-        #else
-        // 本番環境では実際のAPIを呼び出す
+        // すべての環境で実際のAPIを呼び出す
         assignmentService.getAssignments { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
@@ -61,18 +53,19 @@ class AssignmentViewModel: ObservableObject {
                 
                 switch result {
                 case .success(let assignments):
-                    self.assignments = assignments
+                    // 截止日期从近到远排序
+                    self.assignments = assignments.sorted { $0.dueDate < $1.dueDate }
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
             }
         }
-        #endif
     }
     
     // 期限切れの課題をフィルタリング
     var overdueAssignments: [Assignment] {
         return assignments.filter { $0.isOverdue && $0.isPending }
+            .sorted { $0.dueDate > $1.dueDate } // 期限切れは新しい順（より最近期限切れになったもの順）
     }
     
     // 今日期限の課題をフィルタリング
@@ -82,7 +75,7 @@ class AssignmentViewModel: ObservableObject {
             !assignment.isOverdue && 
             assignment.isPending && 
             calendar.isDateInToday(assignment.dueDate)
-        }
+        }.sorted { $0.dueDate < $1.dueDate } // 時間順
     }
     
     // 今週期限の課題をフィルタリング（今日を除く）
@@ -96,7 +89,7 @@ class AssignmentViewModel: ObservableObject {
             assignment.isPending && 
             !calendar.isDateInToday(assignment.dueDate) &&
             assignment.dueDate <= endOfWeek
-        }
+        }.sorted { $0.dueDate < $1.dueDate } // 日付順
     }
     
     // 今月期限の課題をフィルタリング（今週を除く）
@@ -116,7 +109,7 @@ class AssignmentViewModel: ObservableObject {
             assignment.isPending && 
             assignment.dueDate > endOfWeek &&
             assignment.dueDate <= endOfMonth
-        }
+        }.sorted { $0.dueDate < $1.dueDate } // 日付順
     }
     
     // 課題の詳細ページを開く

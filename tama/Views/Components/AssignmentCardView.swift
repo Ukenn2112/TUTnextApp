@@ -5,6 +5,28 @@ struct AssignmentCardView: View {
     var onTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     
+    // 根据课题状态返回适当的颜色
+    private var timeColor: Color {
+        if assignment.isOverdue {
+            return .red
+        } else if assignment.isUrgent {
+            return .orange
+        } else {
+            return .primary
+        }
+    }
+    
+    // 根据课题状态返回适当的背景颜色
+    private var timeBackgroundColor: Color {
+        if assignment.isOverdue {
+            return Color.red.opacity(0.1)
+        } else if assignment.isUrgent {
+            return Color.orange.opacity(0.1)
+        } else {
+            return Color.gray.opacity(0.1)
+        }
+    }
+    
     var body: some View {
         Button {
             onTap()
@@ -25,12 +47,12 @@ struct AssignmentCardView: View {
                         Text(assignment.remainingTimeText)
                             .font(.caption)
                     }
-                    .foregroundColor(assignment.isOverdue ? .red : .primary)
+                    .foregroundColor(timeColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(assignment.isOverdue ? Color.red.opacity(0.1) : Color.gray.opacity(0.1))
+                            .fill(timeBackgroundColor)
                     )
                 }
                 
@@ -46,7 +68,7 @@ struct AssignmentCardView: View {
                 
                 HStack {
                     // 期限日を表示
-                    Text(formatDate(assignment.dueDate))
+                    Text("\(formatDate(assignment.dueDate)) 締切")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -95,6 +117,7 @@ struct AssignmentCardView: View {
 #Preview {
     let calendar = Calendar.current
     let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+    let urgentDate = calendar.date(byAdding: .hour, value: 1, to: Date())!
     
     let assignment = Assignment(
         id: "1",
@@ -126,6 +149,22 @@ struct AssignmentCardView: View {
             )
         ) {
             print("Tapped overdue assignment")
+        }
+        .padding()
+        
+        AssignmentCardView(
+            assignment: Assignment(
+                id: "3",
+                title: "緊急の課題",
+                courseId: "CS103",
+                courseName: "アルゴリズム",
+                dueDate: urgentDate,
+                description: "残り時間が2時間未満の緊急課題です。",
+                status: .pending,
+                url: "https://example.com/assignments/3"
+            )
+        ) {
+            print("Tapped urgent assignment")
         }
         .padding()
     }

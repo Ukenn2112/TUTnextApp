@@ -172,8 +172,8 @@ struct BusScheduleView: View {
             checkIfSelectedTimePassed()
         }
         
-        // 水曜日かどうかチェックし、水曜日なら自動的に水曜日時刻表を選択
-        checkIfWednesday()
+        // 平日か水曜日か土曜日かを自動で選択
+        checkIfWeekday()
         
         // スクロール位置を初期化
         updateScrollToHour()
@@ -186,11 +186,13 @@ struct BusScheduleView: View {
         secondsTimer = nil
     }
     
-    private func checkIfWednesday() {
+    private func checkIfWeekday() {
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: Date())
         if weekday == 4 { // 4は水曜日
             selectedScheduleType = .wednesday
+        } else if weekday == 7 { // 7は土曜日
+            selectedScheduleType = .saturday
         }
     }
     

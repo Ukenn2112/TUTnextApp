@@ -69,6 +69,70 @@ class APIService {
         }
     }
     
+    // 直接コールバックを返す新しいリクエストメソッド
+    func request(
+        request: URLRequest,
+        logTag: String,
+        replacingPercentEncoding: Bool = false,
+        completion: @escaping (Data?, URLResponse?, Error?) -> Void
+    ) {
+        // リクエストデータをログに出力
+        if let url = request.url?.absoluteString {
+            print("【\(logTag)】リクエスト: \(url)")
+        }
+        
+        if let httpBody = request.httpBody,
+           let jsonStr = String(data: httpBody, encoding: .utf8) {
+            print("【\(logTag)】リクエストボディ: \(jsonStr)")
+        }
+        
+        var urlRequest = request
+        
+        // リクエストにCookieを追加
+        urlRequest = CookieService.shared.addCookies(to: urlRequest)
+        
+        // APIリクエストの実行
+        URLSession.shared.dataTask(with: urlRequest) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            // エラー処理
+            if let error = error {
+                print("【\(logTag)】エラー: \(error.localizedDescription)")
+                completion(nil, response, error)
+                return
+            }
+            
+            // HTTPレスポンス処理
+            self.handleHTTPResponse(response: response, logTag: logTag)
+            
+            // データ確認
+            guard let data = data else {
+                print("【\(logTag)】データなし")
+                completion(nil, response, NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "No data received"]))
+                return
+            }
+            
+            // 生のレスポンスデータをログに出力
+            self.logRawResponse(data: data, logTag: logTag)
+            
+            if replacingPercentEncoding {
+                // レスポンスデータの処理
+                guard let decodedData = self.processResponseData(
+                    data: data, 
+                    replacingPercentEncoding: replacingPercentEncoding, 
+                    logTag: logTag
+                ) else {
+                    completion(nil, response, NSError(domain: "APIService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to process response data"]))
+                    return
+                }
+                
+                completion(decodedData, response, nil)
+            } else {
+                completion(data, response, nil)
+            }
+        }.resume()
+    }
+    
     // リクエストログ出力
     private func logRequest(endpoint: String, body: [String: Any], logTag: String) {
         print("【\(logTag)】リクエスト: \(endpoint)")
