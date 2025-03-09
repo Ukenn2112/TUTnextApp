@@ -25,6 +25,14 @@ class UserService {
         UserDefaults.standard.removeObject(forKey: "currentUser")
     }
     
+    // 全未読揭示数を更新
+    func updateAllKeijiMidokCnt(keijiCnt: Int) {
+        if var user = getCurrentUser() {
+            user.allKeijiMidokCnt = keijiCnt
+            saveUser(user)
+        }
+    }
+
     // APIレスポンスからユーザーオブジェクトを作成
     func createUser(from userData: [String: Any]) -> User? {
         guard let userId = userData["userId"] as? String,
@@ -46,7 +54,8 @@ class UserService {
             id: gaksekiCd,
             username: userId,
             fullName: userName,
-            encryptedPassword: encodedPassword
+            encryptedPassword: encodedPassword,
+            allKeijiMidokCnt: 0
         )
     }
 } 

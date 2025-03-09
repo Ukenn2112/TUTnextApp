@@ -120,6 +120,8 @@ class TimetableService {
                     if success {
                         if let data = json["data"] as? [String: Any],
                            let courseList = data["jgkmDtoList"] as? [[String: Any]] {
+                            print("【時間割】全未読揭示数: \(data["keijiCnt"] as? Int ?? 0)")
+                            UserService.shared.updateAllKeijiMidokCnt(keijiCnt: data["keijiCnt"] as? Int ?? 0)
                             
                             print("【時間割】コース数: \(courseList.count)")
                             

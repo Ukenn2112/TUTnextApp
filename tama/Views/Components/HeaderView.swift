@@ -6,7 +6,13 @@ struct HeaderView: View {
     @Binding var isLoggedIn: Bool
     @State private var showingUserSettings = false
     @State private var user: User?
+    @State private var showSafariView = false
+    @State private var keijiBoardURL: URL?
     let semester: Semester = .current  // 使用当前学期数据
+    
+    // NotificationCenterを使用してUserDefaultsの変更を監視
+    private let userDefaultsObserver = NotificationCenter.default
+        .publisher(for: UserDefaults.didChangeNotification)
     
     // ビュー表示時にユーザー情報を読み込む
     var body: some View {
@@ -18,12 +24,36 @@ struct HeaderView: View {
             
             // 右侧按钮
             HStack(spacing: 16) {
-                // 通知铃铛
-                Button(action: {}) {
-                    Image(systemName: "bell")
-                        .font(.system(size: 20))
-                        .foregroundColor(.primary)
+                // 掲示板
+                Button(action: { showSafariView = true }) {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "list.clipboard")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                        
+                        // 未読通知バッジ
+                        if let unreadCount = user?.allKeijiMidokCnt, unreadCount > 0 {
+                            let displayText = unreadCount > 99 ? "99+" : "\(unreadCount)"
+                            
+                            Text(displayText)
+                                .font(.system(size: 7, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(minWidth: 16, minHeight: 16)
+                                .background(
+                                    Circle()
+                                        .fill(Color.red)
+                                        .shadow(color: Color.black.opacity(0.2), radius: 1, x: 0, y: 1)
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white, lineWidth: 1)
+                                )
+                                .offset(x: -10, y: 14)
+                                .animation(.spring(), value: unreadCount)
+                        }
+                    }
                 }
+                .offset(y: -2)
                 
                 // 用户头像
                 Button(action: { showingUserSettings = true }) {
@@ -39,6 +69,9 @@ struct HeaderView: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(Color(UIColor.systemBackground))
+        .sheet(isPresented: $showSafariView) {
+            SafariWebView(url: createKeijiBoardURL() ?? URL(string: "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml")!)
+        }
         .sheet(isPresented: $showingUserSettings) {
             UserSettingsView(isLoggedIn: $isLoggedIn)
         }
@@ -46,11 +79,74 @@ struct HeaderView: View {
             // ビュー表示時にUserServiceからユーザー情報を取得
             loadUserData()
         }
+        .onReceive(userDefaultsObserver) { _ in
+            // UserDefaultsが変更されたときにユーザー情報を再読み込み
+            loadUserData()
+        }
+    }
+    
+    // 掲示板URLを生成する関数
+    private func createKeijiBoardURL() -> URL? {
+        guard let user = UserService.shared.getCurrentUser(),
+              let encryptedPassword = user.encryptedPassword else {
+            return nil
+        }
+        
+        let webApiLoginInfo: [String: Any] = [
+            "password": "",
+            "funcId": "Bsd507",
+            "autoLoginAuthCd": "",
+            "formId": "Bsd50701",
+            "encryptedPassword": encryptedPassword,
+            "userId": user.username,
+            "parameterMap": ""
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return nil
+        }
+        
+        // カスタムエンコーディング
+        let customEncoded = jsonString
+            .replacingOccurrences(of: " ", with: "%20")
+            .replacingOccurrences(of: "\"", with: "%22")
+            .replacingOccurrences(of: "\\", with: "%5C")
+            .replacingOccurrences(of: "'", with: "%27")
+            .replacingOccurrences(of: "+", with: "%2B")
+            .replacingOccurrences(of: ",", with: "%2C")
+            .replacingOccurrences(of: "/", with: "%2F")
+            .replacingOccurrences(of: ":", with: "%3A")
+            .replacingOccurrences(of: ";", with: "%3B")
+            .replacingOccurrences(of: "=", with: "%3D")
+            .replacingOccurrences(of: "?", with: "%3F")
+            .replacingOccurrences(of: "{", with: "%7B")
+            .replacingOccurrences(of: "}", with: "%7D")
+        
+        let encodedLoginInfo = customEncoded
+            .replacingOccurrences(of: "%2522", with: "%22")
+            .replacingOccurrences(of: "%255C", with: "%5C")
+        
+        let urlString = "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
+        return URL(string: urlString)
     }
     
     // ユーザーデータを読み込む
     private func loadUserData() {
-        user = UserService.shared.getCurrentUser()
+        // UserDefaultsから直接データを取得して最新の状態を確保
+        if let userData = UserDefaults.standard.data(forKey: "currentUser"),
+           let updatedUser = try? JSONDecoder().decode(User.self, from: userData) {
+            // 前回と異なる場合のみ更新（特に未読通知数が変わった場合）
+            if user?.allKeijiMidokCnt != updatedUser.allKeijiMidokCnt {
+                print("未読通知数が更新されました: \(updatedUser.allKeijiMidokCnt ?? 0)")
+                user = updatedUser
+            } else if user == nil {
+                user = updatedUser
+            }
+        } else {
+            // UserServiceからも取得を試みる
+            user = UserService.shared.getCurrentUser()
+        }
     }
     
     // 获取当前标题
@@ -81,7 +177,6 @@ struct HeaderView: View {
         switch selectedTab {
         case 0: return "スクールバス"
         case 2: return "课题"
-        case 3: return "揭示板"
         default: return ""
         }
     }

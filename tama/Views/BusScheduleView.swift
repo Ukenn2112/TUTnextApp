@@ -36,8 +36,9 @@ struct BusScheduleView: View {
                 
                 // 時刻表コンテンツ（浮動時間カードを含む）
                 ZStack(alignment: .top) {
+                    let topPadding: CGFloat = selectedTimeEntry == nil ? 90 : 110
                     scheduleContent
-                        .padding(.top, 90) // 浮動カードのスペースを確保
+                        .padding(.top, topPadding) // 浮動カードのスペースを確保
                     
                     // 浮動現在時刻表示カード
                     currentTimeView
@@ -475,12 +476,6 @@ struct BusScheduleView: View {
         }
         .padding()
         .background(Color.blue.opacity(0.1))
-        .overlay(
-            Divider()
-                .background(Color.gray.opacity(0.3))
-                .offset(y: 24),
-            alignment: .bottom
-        )
     }
     
     // 時間ごとの行

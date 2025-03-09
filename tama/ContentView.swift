@@ -30,9 +30,6 @@ struct ContentView: View {
                         
                         AssignmentView(isLoggedIn: $isLoggedIn)
                             .tag(2)
-                        
-                        Text("TODO: 揭示板")
-                            .tag(3)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     .edgesIgnoringSafeArea(.bottom)

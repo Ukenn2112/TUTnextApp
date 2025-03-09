@@ -35,14 +35,6 @@ struct TabBarView: View {
                     colorScheme: colorScheme,
                     action: { selectedTab = 2 }
                 )
-                
-                TabBarButton(
-                    image: "list.clipboard",
-                    text: "揭示板",
-                    isSelected: selectedTab == 3,
-                    colorScheme: colorScheme,
-                    action: { selectedTab = 3 }
-                )
             }
             .padding(.vertical, 6)
             .background(Color(UIColor.systemBackground))

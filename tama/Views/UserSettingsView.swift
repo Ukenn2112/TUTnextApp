@@ -1,122 +1,129 @@
 import SwiftUI
+import SafariServices
 
 struct UserSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var isLoggedIn: Bool
     @State private var user: User?
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showSafari: Bool = false
+    @State private var urlToOpen: URL? = nil
     
     // MARK: - Body
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // ユーザー情報セクション
+            ZStack {
+                ScrollView {
                     VStack(spacing: 0) {
-                        HStack(spacing: 16) {
-                            // プロフィール画像（イニシャルアバター）
-                            Text(getInitials())
-                                .font(.system(size: 18))
-                                .foregroundColor(.white)
-                                .frame(width: 56, height: 56)
-                                .background(Color.red.opacity(colorScheme == .dark ? 0.8 : 1))
-                                .clipShape(Circle())
-                            
-                            // ユーザー情報
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(user?.fullName ?? "ユーザー名")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("@\(user?.username ?? "username")")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                    }
-                    .padding(.bottom, 12)
-                    
-                    // 設定セクション
-                    VStack(spacing: 0) {
-                        // アカウント設定
-                        SettingsSectionHeader(title: "アカウント設定")
-                        
-                        SettingsRow(icon: "person.fill", title: "プロフィール編集") {
-                            // プロフィール編集画面へ
-                        }
-                        
-                        SettingsRow(icon: "bell.fill", title: "通知設定") {
-                            // 通知設定画面へ
-                        }
-                        
-                        SettingsRow(icon: "lock.fill", title: "プライバシー設定") {
-                            // プライバシー設定画面へ
-                        }
-                        
-                        // アプリ設定
-                        SettingsSectionHeader(title: "アプリ設定")
-                        
-                        SettingsRow(icon: "globe", title: "言語") {
-                            // 言語設定画面へ
-                        }
-                        
-                        SettingsRow(icon: "moon.fill", title: "ダークモード") {
-                            // ダークモード設定
-                        }
-                        
-                        // サポート
-                        SettingsSectionHeader(title: "サポート")
-                        
-                        SettingsRow(icon: "questionmark.circle.fill", title: "ヘルプセンター") {
-                            // ヘルプセンターへ
-                        }
-                        
-                        SettingsRow(icon: "exclamationmark.bubble.fill", title: "フィードバック") {
-                            // フィードバック送信
-                        }
-                        
-                        // ログアウト
-                        Button(action: {
-                            logout()
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.right.square.fill")
-                                    .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
-                                    .font(.system(size: 20))
-                                    .frame(width: 24, height: 24)
+                        // ユーザー情報セクション
+                        VStack(spacing: 0) {
+                            HStack(spacing: 16) {
+                                // プロフィール画像（イニシャルアバター）
+                                Text(getInitials())
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.white)
+                                    .frame(width: 56, height: 56)
+                                    .background(Color.red.opacity(colorScheme == .dark ? 0.8 : 1))
+                                    .clipShape(Circle())
                                 
-                                Text("ログアウト")
-                                    .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
-                                    .font(.system(size: 16))
+                                // ユーザー情報
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(user?.fullName ?? "ユーザー名")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("@\(user?.username ?? "username")")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
                                 
                                 Spacer()
                             }
                             .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, 16)
                             .background(Color(UIColor.secondarySystemGroupedBackground))
                         }
-                    }
-                    
-                    // アプリ情報
-                    VStack(spacing: 8) {
-                        Text("TUTnext")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
+                        .padding(.bottom, 12)
                         
-                        Text("バージョン \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"))")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                        // 設定セクション
+                        VStack(spacing: 0) {
+                            // アカウント設定
+                            SettingsSectionHeader(title: "アカウント設定")
+                            
+                            SettingsRow(icon: "person.fill", title: "プロフィール編集") {
+                                // プロフィール編集画面へ
+                            }
+                            
+                            SettingsRow(icon: "bell.fill", title: "通知設定") {
+                                // 通知設定画面へ
+                            }
+                            
+                            SettingsRow(icon: "lock.fill", title: "パスワード変更") {
+                                openPasswordChangeURL()
+                            }
+                            
+                            // アプリ設定
+                            SettingsSectionHeader(title: "アプリ設定")
+                            
+                            SettingsRow(icon: "globe", title: "言語") {
+                                // 言語設定画面へ
+                            }
+                            
+                            SettingsRow(icon: "moon.fill", title: "ダークモード") {
+                                // ダークモード設定
+                            }
+                            
+                            // サポート
+                            SettingsSectionHeader(title: "サポート")
+                            
+                            SettingsRow(icon: "questionmark.circle.fill", title: "ヘルプセンター") {
+                                // ヘルプセンターへ
+                            }
+                            
+                            SettingsRow(icon: "exclamationmark.bubble.fill", title: "フィードバック") {
+                                // フィードバック送信
+                            }
+                            
+                            // ログアウト
+                            Button(action: {
+                                logout()
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.right.square.fill")
+                                        .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
+                                        .font(.system(size: 20))
+                                        .frame(width: 24, height: 24)
+                                    
+                                    Text("ログアウト")
+                                        .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
+                                        .font(.system(size: 16))
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                            }
+                        }
+                        
+                        // アプリ情報
+                        VStack(spacing: 8) {
+                            Text("TUTnext")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Text("バージョン \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"))")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 30)
+                        .padding(.bottom, 50)
+                        
+                        // 画面下部の余白を埋めるためのスペーサー
+                        Spacer(minLength: UIScreen.main.bounds.height * 0.1)
                     }
-                    .padding(.top, 30)
-                    .padding(.bottom, 1000)
                 }
-                .background(Color(UIColor.systemGroupedBackground))
             }
             .navigationBarTitle("設定", displayMode: .inline)
             .navigationBarItems(leading: Button(action: {
@@ -127,6 +134,11 @@ struct UserSettingsView: View {
             })
             .onAppear {
                 loadUserData()
+            }
+            .sheet(isPresented: $showSafari) {
+                if let url = urlToOpen {
+                    SafariWebView(url: url)
+                }
             }
         }
     }
@@ -192,6 +204,13 @@ struct UserSettingsView: View {
         }
         
         return "?"
+    }
+    
+    // パスワード変更URLを開く
+    private func openPasswordChangeURL() {
+        let passwordChangeURL = URL(string: "https://google.tama.ac.jp/unicornidm/user/tama/password/")!
+        urlToOpen = passwordChangeURL
+        showSafari = true
     }
 }
 
