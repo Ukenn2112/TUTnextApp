@@ -1,5 +1,6 @@
 import SwiftUI
 import SafariServices
+import MessageUI
 
 struct UserSettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -8,6 +9,7 @@ struct UserSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showSafari: Bool = false
     @State private var urlToOpen: URL? = nil
+    @State private var showMailComposer: Bool = false
     
     // MARK: - Body
     var body: some View {
@@ -51,8 +53,12 @@ struct UserSettingsView: View {
                             // アカウント設定
                             SettingsSectionHeader(title: "アカウント設定")
                             
-                            SettingsRow(icon: "person.fill", title: "プロフィール編集") {
-                                // プロフィール編集画面へ
+                            SettingsRow(icon: "person.fill", title: "スマホサイトへ") {
+                                // T-Nextスマホサイトへ
+                                if let tnextURL = createTnextURL() {
+                                    urlToOpen = tnextURL
+                                    showSafari = true
+                                }
                             }
                             
                             SettingsRow(icon: "bell.fill", title: "通知設定") {
@@ -77,12 +83,8 @@ struct UserSettingsView: View {
                             // サポート
                             SettingsSectionHeader(title: "サポート")
                             
-                            SettingsRow(icon: "questionmark.circle.fill", title: "ヘルプセンター") {
-                                // ヘルプセンターへ
-                            }
-                            
                             SettingsRow(icon: "exclamationmark.bubble.fill", title: "フィードバック") {
-                                // フィードバック送信
+                                sendFeedback()
                             }
                             
                             // ログアウト
@@ -117,7 +119,7 @@ struct UserSettingsView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.top, 30)
+                        .padding(.top, 40)
                         .padding(.bottom, 50)
                         
                         // 画面下部の余白を埋めるためのスペーサー
@@ -139,6 +141,9 @@ struct UserSettingsView: View {
                 if let url = urlToOpen {
                     SafariWebView(url: url)
                 }
+            }
+            .sheet(isPresented: $showMailComposer) {
+                MailComposerView(isShowing: $showMailComposer)
             }
         }
     }
@@ -212,6 +217,60 @@ struct UserSettingsView: View {
         urlToOpen = passwordChangeURL
         showSafari = true
     }
+
+    // T-nextへのURLを生成する関数
+    private func createTnextURL() -> URL? {
+        let webApiLoginInfo: [String: Any] = [
+            "password": "",
+            "autoLoginAuthCd": "",
+            "encryptedPassword": user?.encryptedPassword ?? "",
+            "userId": user?.username ?? "",
+            "parameterMap": ""
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return nil
+        }
+        
+        // カスタムエンコーディング
+        let customEncoded = jsonString
+            .replacingOccurrences(of: " ", with: "%20")
+            .replacingOccurrences(of: "\"", with: "%22")
+            .replacingOccurrences(of: "\\", with: "%5C")
+            .replacingOccurrences(of: "'", with: "%27")
+            .replacingOccurrences(of: "+", with: "%2B")
+            .replacingOccurrences(of: ",", with: "%2C")
+            .replacingOccurrences(of: "/", with: "%2F")
+            .replacingOccurrences(of: ":", with: "%3A")
+            .replacingOccurrences(of: ";", with: "%3B")
+            .replacingOccurrences(of: "=", with: "%3D")
+            .replacingOccurrences(of: "?", with: "%3F")
+            .replacingOccurrences(of: "{", with: "%7B")
+            .replacingOccurrences(of: "}", with: "%7D")
+        
+        let encodedLoginInfo = customEncoded
+            .replacingOccurrences(of: "%2522", with: "%22")
+            .replacingOccurrences(of: "%255C", with: "%5C")
+        
+        let urlString = "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
+        return URL(string: urlString)
+    }
+
+    // フィードバック送信処理
+    private func sendFeedback() {
+        if MFMailComposeViewController.canSendMail() {
+            showMailComposer = true
+        } else {
+            // メール送信ができない場合の処理
+            let emailAddress = "admin@ukenn.top"
+            let subject = "TUTnext アプリフィードバック"
+            
+            if let url = URL(string: "mailto:\(emailAddress)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                UIApplication.shared.open(url)
+            }
+        }
+    }
 }
 
 // MARK: - Supporting Views
@@ -260,6 +319,61 @@ struct SettingsRow: View {
             .background(Color(UIColor.secondarySystemGroupedBackground))
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct MailComposerView: UIViewControllerRepresentable {
+    @Binding var isShowing: Bool
+    @State private var user: User?
+    
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let composer = MFMailComposeViewController()
+        composer.mailComposeDelegate = context.coordinator
+        
+        // メールの件名を設定
+        composer.setSubject("TUTnext アプリフィードバック")
+        
+        // 宛先を設定
+        composer.setToRecipients(["admin@ukenn.top"])
+        
+        // メール本文のテンプレート
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "不明"
+        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "不明"
+        let deviceModel = UIDevice.current.model
+        let systemVersion = UIDevice.current.systemVersion
+        let emailBody = """
+        
+        
+        ------------------------------
+        【システム情報】
+        ユーザー名: \(user?.username ?? "不明")
+        アプリバージョン: \(appVersion) (\(buildNumber))
+        デバイス: \(deviceModel)
+        OS: iOS \(systemVersion)
+        ------------------------------
+        """
+        
+        composer.setMessageBody(emailBody, isHTML: false)
+        
+        return composer
+    }
+    
+    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
+        var parent: MailComposerView
+        
+        init(_ parent: MailComposerView) {
+            self.parent = parent
+        }
+        
+        func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+            parent.isShowing = false
+        }
     }
 }
 

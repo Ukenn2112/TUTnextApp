@@ -7,8 +7,10 @@ class UserService {
     
     // ユーザーデータを保存
     func saveUser(_ user: User) {
-        if let encodedData = try? JSONEncoder().encode(user) {
-            UserDefaults.standard.set(encodedData, forKey: "currentUser")
+        DispatchQueue.main.async {
+            if let encodedData = try? JSONEncoder().encode(user) {
+                UserDefaults.standard.set(encodedData, forKey: "currentUser")
+            }
         }
     }
     
@@ -22,14 +24,18 @@ class UserService {
     
     // ユーザーデータを削除（ログアウト時）
     func clearCurrentUser() {
-        UserDefaults.standard.removeObject(forKey: "currentUser")
+        DispatchQueue.main.async {
+            UserDefaults.standard.removeObject(forKey: "currentUser")
+        }
     }
     
     // 全未読揭示数を更新
     func updateAllKeijiMidokCnt(keijiCnt: Int) {
         if var user = getCurrentUser() {
             user.allKeijiMidokCnt = keijiCnt
-            saveUser(user)
+            DispatchQueue.main.async {
+                self.saveUser(user)
+            }
         }
     }
 
