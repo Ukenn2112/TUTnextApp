@@ -168,4 +168,5 @@ struct LoginView: View {
 
 #Preview {
     LoginView(isLoggedIn: .constant(false))
+        .environmentObject(AppearanceManager())
 }

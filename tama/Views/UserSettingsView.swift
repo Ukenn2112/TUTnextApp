@@ -7,9 +7,11 @@ struct UserSettingsView: View {
     @Binding var isLoggedIn: Bool
     @State private var user: User?
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var appearanceManager: AppearanceManager
     @State private var showSafari: Bool = false
     @State private var urlToOpen: URL? = nil
     @State private var showMailComposer: Bool = false
+    @State private var showingDarkModeSheet = false
     
     // MARK: - Body
     var body: some View {
@@ -76,9 +78,32 @@ struct UserSettingsView: View {
                                 // 言語設定画面へ
                             }
                             
-                            SettingsRow(icon: "moon.fill", title: "ダークモード") {
-                                // ダークモード設定
+                            Button(action: { showingDarkModeSheet = true }) {
+                                HStack {
+                                    Image(systemName: "moon.fill")
+                                        .foregroundColor(.primary)
+                                        .font(.system(size: 20))
+                                        .frame(width: 24, height: 24)
+                                    
+                                    Text("ダークモード")
+                                        .foregroundColor(.primary)
+                                        .font(.system(size: 16))
+                                    
+                                    Spacer()
+                                    
+                                    Text(getDarkModeText())
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 14))
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 14))
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
                             }
+                            .buttonStyle(PlainButtonStyle())
                             
                             // サポート
                             SettingsSectionHeader(title: "サポート")
@@ -145,10 +170,29 @@ struct UserSettingsView: View {
             .sheet(isPresented: $showMailComposer) {
                 MailComposerView(isShowing: $showMailComposer)
             }
+            .sheet(isPresented: $showingDarkModeSheet) {
+                DarkModeSettingsView(appearanceManager: appearanceManager)
+            }
+            .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
+            .onChange(of: appearanceManager.isDarkMode) { newValue in
+                print("Settings view updated isDarkMode: \(newValue)")
+            }
         }
+        .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
     }
     
     // MARK: - Methods
+    
+    private func getDarkModeText() -> String {
+        switch appearanceManager.type {
+        case .iSystem:
+            return "システムに従う"
+        case .iHight:
+            return "ライト"
+        case .iDark:
+            return "ダーク"
+        }
+    }
     
     // ユーザーデータの読み込み
     private func loadUserData() {
@@ -273,6 +317,153 @@ struct UserSettingsView: View {
     }
 }
 
+struct DarkModeSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var appearanceManager: AppearanceManager
+    @Environment(\.colorScheme) private var colorScheme // 現在のカラースキームを監視
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                // 背景色
+                Color(UIColor.systemGroupedBackground)
+                    .edgesIgnoringSafeArea(.all)
+                
+                VStack(spacing: 24) {
+                    // ヘッダーイメージ
+                    HStack(spacing: 20) {
+                        Image(systemName: "sun.max.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(colorScheme == .light ? .orange : .gray)
+                        
+                        Image(systemName: "moon.stars.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(colorScheme == .dark ? .blue : .gray)
+                    }
+                    .padding(.top, 20)
+                    
+                    // オプションカード
+                    VStack(spacing: 16) {
+                        // システム設定に従う
+                        appearanceOptionCard(
+                            title: "システムに従う",
+                            icon: "gear",
+                            description: "デバイスの設定に合わせて自動的に切り替えます",
+                            isSelected: appearanceManager.type == .iSystem,
+                            action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    appearanceManager.type = .iSystem
+                                    // システムの場合は現在のシステム設定を反映
+                                    let systemIsDark = appearanceManager.getCurrentInterfaceStyle() == .dark
+                                    if appearanceManager.isDarkMode != systemIsDark {
+                                        appearanceManager.isDarkMode = systemIsDark
+                                    }
+                                }
+                            }
+                        )
+                        
+                        // ライトモード
+                        appearanceOptionCard(
+                            title: "ライトモード",
+                            icon: "sun.max.fill",
+                            description: "明るい外観を常に使用します",
+                            isSelected: appearanceManager.type == .iHight,
+                            action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    appearanceManager.type = .iHight
+                                    appearanceManager.isDarkMode = false
+                                }
+                            }
+                        )
+                        
+                        // ダークモード
+                        appearanceOptionCard(
+                            title: "ダークモード",
+                            icon: "moon.stars.fill",
+                            description: "暗い外観を常に使用します",
+                            isSelected: appearanceManager.type == .iDark,
+                            action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    appearanceManager.type = .iDark
+                                    appearanceManager.isDarkMode = true
+                                }
+                            }
+                        )
+                    }
+                    .padding(.horizontal, 16)
+                    
+                    Spacer()
+                }
+            }
+            .navigationTitle("外観モード")
+            .navigationBarItems(trailing: Button(action: {
+                dismiss()
+            }) {
+                Text("完了")
+                    .fontWeight(.medium)
+                    .foregroundColor(.blue)
+            })
+            // 状態変更を監視して即座に見た目を更新
+            .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
+            .onChange(of: appearanceManager.isDarkMode) { newValue in
+                print("DarkMode sheet updated: \(newValue)")
+            }
+        }
+    }
+    
+    // カスタムカードビュー
+    private func appearanceOptionCard(title: String, icon: String, description: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                // アイコン
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.blue.opacity(0.2) : Color(UIColor.secondarySystemBackground))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 22))
+                        .foregroundColor(isSelected ? .blue : .gray)
+                }
+                
+                // テキスト
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Text(description)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                // 選択インジケーター
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.blue)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 // MARK: - Supporting Views
 
 struct SettingsSectionHeader: View {
@@ -324,7 +515,6 @@ struct SettingsRow: View {
 
 struct MailComposerView: UIViewControllerRepresentable {
     @Binding var isShowing: Bool
-    @State private var user: User?
     
     func makeUIViewController(context: Context) -> MFMailComposeViewController {
         let composer = MFMailComposeViewController()
@@ -346,7 +536,6 @@ struct MailComposerView: UIViewControllerRepresentable {
         
         ------------------------------
         【システム情報】
-        ユーザー名: \(user?.username ?? "不明")
         アプリバージョン: \(appVersion) (\(buildNumber))
         デバイス: \(deviceModel)
         OS: iOS \(systemVersion)
@@ -379,4 +568,5 @@ struct MailComposerView: UIViewControllerRepresentable {
 
 #Preview {
     UserSettingsView(isLoggedIn: .constant(true))
+        .environmentObject(AppearanceManager())
 } 

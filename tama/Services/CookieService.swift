@@ -25,8 +25,10 @@ class CookieService {
         let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
         if !cookies.isEmpty {
             cookies.forEach { cookie in
-                cookieStorage.setCookie(cookie)
-                print("保存されたCookie: \(cookie.name) = \(cookie.value), ドメイン: \(cookie.domain)")
+                DispatchQueue.main.async {
+                    self.cookieStorage.setCookie(cookie)
+                    print("保存されたCookie: \(cookie.name) = \(cookie.value), ドメイン: \(cookie.domain)")
+                }
             }
             
             // 持久化存储Cookie
@@ -51,8 +53,12 @@ class CookieService {
     
     // 清除所有Cookie
     func clearCookies() {
-        cookieStorage.cookies?.forEach { cookie in
-            cookieStorage.deleteCookie(cookie)
+        if let cookies = cookieStorage.cookies {
+            cookies.forEach { cookie in
+                DispatchQueue.main.async {
+                    self.cookieStorage.deleteCookie(cookie)
+                }
+            }
         }
         defaults.removeObject(forKey: cookieKey)
     }
@@ -72,7 +78,9 @@ class CookieService {
             return serializedProperties
         }
         
-        defaults.set(cookieData, forKey: cookieKey)
+        DispatchQueue.main.async {
+            self.defaults.set(cookieData, forKey: self.cookieKey)
+        }
     }
     
     // 恢复保存的Cookie
@@ -87,7 +95,9 @@ class CookieService {
             }
             
             if let cookie = HTTPCookie(properties: cookieProperties) {
-                cookieStorage.setCookie(cookie)
+                DispatchQueue.main.async {
+                    self.cookieStorage.setCookie(cookie)
+                }
             }
         }
     }

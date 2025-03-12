@@ -11,6 +11,7 @@ import SwiftData
 struct ContentView: View {
     @State private var selectedTab = 1
     @State private var isLoggedIn = false
+    @EnvironmentObject private var appearanceManager: AppearanceManager
     
     var body: some View {
         Group {
@@ -44,6 +45,16 @@ struct ContentView: View {
             // アプリ起動時にログイン状態を確認
             checkLoginStatus()
         }
+        // アプリ全体のダークモード設定
+        .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
+        .onChange(of: appearanceManager.isDarkMode) { newValue in
+            print("ContentView detected isDarkMode change: \(newValue)")
+        }
+        // 通知センターでの変更監視も追加
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppearanceDidChangeNotification"))) { _ in
+            // 通知を受け取ったら強制的に再描画
+            print("ContentView received appearance change notification")
+        }
     }
     
     // ログイン状態を確認
@@ -55,14 +66,7 @@ struct ContentView: View {
     }
 }
 
-#Preview("index (light)") {
+#Preview() {
     ContentView()
-        .preferredColorScheme(.light)
-        .environment(\.colorScheme, .light)
-}
-
-#Preview("index (dark)") {
-    ContentView()
-        .preferredColorScheme(.dark)
-        .environment(\.colorScheme, .dark)
+        .environmentObject(AppearanceManager())
 }
