@@ -6,11 +6,34 @@ class UserService {
     private init() {}
     
     // ユーザーデータを保存
-    func saveUser(_ user: User) {
+    func saveUser(_ user: User, completion: (() -> Void)? = nil) {
         DispatchQueue.main.async {
             if let encodedData = try? JSONEncoder().encode(user) {
                 UserDefaults.standard.set(encodedData, forKey: "currentUser")
+                // 確実に保存が完了するようにsynchronizeを呼び出す
+                UserDefaults.standard.synchronize()
+                // 保存完了後にコールバックを実行
+                completion?()
             }
+        }
+    }
+    
+    // デバイストークンを保存
+    func saveDeviceToken(_ token: String) {
+        DispatchQueue.main.async {
+            UserDefaults.standard.set(token, forKey: "deviceToken")
+        }
+    }
+    
+    // デバイストークンを取得
+    func getDeviceToken() -> String? {
+        return UserDefaults.standard.string(forKey: "deviceToken")
+    }
+    
+    // デバイストークンを削除
+    func clearDeviceToken() {
+        DispatchQueue.main.async {
+            UserDefaults.standard.removeObject(forKey: "deviceToken")
         }
     }
     
@@ -30,12 +53,14 @@ class UserService {
     }
     
     // 全未読揭示数を更新
-    func updateAllKeijiMidokCnt(keijiCnt: Int) {
+    func updateAllKeijiMidokCnt(keijiCnt: Int, completion: (() -> Void)? = nil) {
         if var user = getCurrentUser() {
             user.allKeijiMidokCnt = keijiCnt
-            DispatchQueue.main.async {
-                self.saveUser(user)
+            saveUser(user) {
+                completion?()
             }
+        } else {
+            completion?()
         }
     }
 

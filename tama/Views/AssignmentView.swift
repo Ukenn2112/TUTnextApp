@@ -5,6 +5,8 @@ struct AssignmentView: View {
     @StateObject private var viewModel = AssignmentViewModel()
     @State private var selectedFilter: AssignmentFilter = .all
     @Environment(\.colorScheme) private var colorScheme
+    // 前台通知观察者
+    @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
     
     enum AssignmentFilter {
         case all, today, thisWeek, thisMonth, overdue
@@ -94,6 +96,22 @@ struct AssignmentView: View {
         }
         .onAppear {
             viewModel.loadAssignments()
+            // 应用程序从后台恢复时刷新页面
+            willEnterForegroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: .main
+            ) { [self] _ in
+                print("AssignmentView: アプリがフォアグラウンドに復帰しました")
+                viewModel.loadAssignments()
+            }
+        }
+        .onDisappear {
+            // 移除通知观察者
+            if let observer = willEnterForegroundObserver {
+                NotificationCenter.default.removeObserver(observer)
+                willEnterForegroundObserver = nil
+            }
         }
     }
     

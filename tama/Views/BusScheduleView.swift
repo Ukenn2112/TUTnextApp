@@ -11,6 +11,8 @@ struct BusScheduleView: View {
     @State private var selectedTimeEntry: BusSchedule.TimeEntry? = nil
     @State private var cardInfoAppeared: Bool = false
     @Environment(\.colorScheme) private var colorScheme
+    // 前台通知观察者
+    @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
     
     // APIから取得したバス時刻表データ
     @State private var busSchedule: BusSchedule? = nil
@@ -62,7 +64,6 @@ struct BusScheduleView: View {
                 }
             } else {
                 ProgressView("読み込み中...")
-                    .onAppear(perform: fetchBusScheduleData)
                     .progressViewStyle(CircularProgressViewStyle())
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -83,6 +84,7 @@ struct BusScheduleView: View {
     
     // MARK: - データ取得
     private func fetchBusScheduleData() {
+        print("BusScheduleView: fetchBusScheduleData が呼び出されました")
         busScheduleService.fetchBusScheduleData { schedule, error in
             if error != nil {
                 self.errorMessage = "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。"
@@ -161,6 +163,19 @@ struct BusScheduleView: View {
     
     // MARK: - セットアップとクリーンアップ
     private func setupTimers() {
+        fetchBusScheduleData()
+        setupTimeUpdater()
+        // 应用程序从后台恢复时刷新页面
+        willEnterForegroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [self] _ in
+            print("BusScheduleView: アプリがフォアグラウンドに復帰しました")
+            fetchBusScheduleData()
+            currentTime = Date()
+        }
+        
         // 1分ごとに現在時刻を更新するタイマー
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [self] _ in
             currentTime = Date()
@@ -185,6 +200,11 @@ struct BusScheduleView: View {
         timer = nil
         secondsTimer?.invalidate()
         secondsTimer = nil
+        // 移除通知观察者
+        if let observer = willEnterForegroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+            willEnterForegroundObserver = nil
+        }
     }
     
     private func checkIfWeekday() {
@@ -830,6 +850,24 @@ struct BusScheduleView: View {
                 cardInfoAppeared = false
             }
         }
+    }
+    
+    // キャッシュの有効性をチェックし、必要に応じて更新
+    private func checkCacheAndRefreshIfNeeded() {
+        // すでにデータを読み込み中の場合は何もしない
+        guard busSchedule != nil else { return }
+        
+        if !busScheduleService.isCacheValid() {
+            print("BusScheduleView: キャッシュが無効なため、データを更新します")
+            fetchBusScheduleData()
+        } else {
+            print("BusScheduleView: 有効なキャッシュデータが存在します")
+        }
+    }
+    
+    private func setupTimeUpdater() {
+        // バスページに入った時にキャッシュの有効性をチェック（既にデータがある場合）
+        checkCacheAndRefreshIfNeeded()
     }
 }
 

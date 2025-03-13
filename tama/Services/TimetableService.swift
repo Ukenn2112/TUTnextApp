@@ -121,14 +121,15 @@ class TimetableService {
                         if let data = json["data"] as? [String: Any],
                            let courseList = data["jgkmDtoList"] as? [[String: Any]] {
                             print("【時間割】全未読揭示数: \(data["keijiCnt"] as? Int ?? 0)")
-                            UserService.shared.updateAllKeijiMidokCnt(keijiCnt: data["keijiCnt"] as? Int ?? 0)
-                            
-                            print("【時間割】コース数: \(courseList.count)")
                             
                             // 時間割データの変換
                             let timetableData = self.convertToTimetableData(courseList)
-                            print("【時間割】変換後データ: \(timetableData.keys) 曜日, 合計\(timetableData.values.flatMap { $0.values }.count)コース")
-                            completion(.success(timetableData))
+                            
+                            // 未読件数を更新してから時間割データを返す
+                            UserService.shared.updateAllKeijiMidokCnt(keijiCnt: data["keijiCnt"] as? Int ?? 0) {
+                                print("【時間割】変換後データ: \(timetableData.keys) 曜日, 合計\(timetableData.values.flatMap { $0.values }.count)コース")
+                                completion(.success(timetableData))
+                            }
                         } else {
                             print("【時間割】データ解析失敗")
                             completion(.failure(TimetableError.dataParsingFailed))

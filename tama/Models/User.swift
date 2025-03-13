@@ -6,4 +6,5 @@ struct User: Codable {
     var fullName: String
     var encryptedPassword: String?
     var allKeijiMidokCnt: Int?
+    var deviceToken: String?
 } 

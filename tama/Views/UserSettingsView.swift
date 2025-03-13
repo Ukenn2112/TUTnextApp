@@ -8,6 +8,7 @@ struct UserSettingsView: View {
     @State private var user: User?
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var appearanceManager: AppearanceManager
+    @EnvironmentObject private var notificationService: NotificationService
     @State private var showSafari: Bool = false
     @State private var urlToOpen: URL? = nil
     @State private var showMailComposer: Bool = false
@@ -63,9 +64,35 @@ struct UserSettingsView: View {
                                 }
                             }
                             
-                            SettingsRow(icon: "bell.fill", title: "通知設定") {
-                                // 通知設定画面へ
+                            Button(action: {
+                                handleNotificationSettings()
+                            }) {
+                                HStack {
+                                    Image(systemName: notificationService.isAuthorized ? "bell.fill" : "bell.slash")
+                                        .foregroundColor(.primary)
+                                        .font(.system(size: 20))
+                                        .frame(width: 24, height: 24)
+                                    
+                                    Text("通知設定")
+                                        .foregroundColor(.primary)
+                                        .font(.system(size: 16))
+                                    
+                                    Spacer()
+                                    
+                                    // 通知状態を表示
+                                    Text(getNotificationStatusText())
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 14))
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 14))
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
                             }
+                            .buttonStyle(PlainButtonStyle())
                             
                             SettingsRow(icon: "lock.fill", title: "パスワード変更") {
                                 openPasswordChangeURL()
@@ -161,6 +188,19 @@ struct UserSettingsView: View {
             })
             .onAppear {
                 loadUserData()
+                // 通知権限の状態を確認
+                notificationService.checkAuthorizationStatus()
+                
+                // 通知センターに通知を登録
+                NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+                    // アプリがアクティブになったときに通知権限を確認
+                    print("アプリがアクティブになりました。通知権限を確認します。")
+                    self.notificationService.checkAuthorizationStatus()
+                }
+            }
+            .onDisappear {
+                // 通知センターから通知を削除
+                NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
             }
             .sheet(isPresented: $showSafari) {
                 if let url = urlToOpen {
@@ -182,6 +222,44 @@ struct UserSettingsView: View {
     }
     
     // MARK: - Methods
+    
+    // 通知状態のテキストを取得
+    private func getNotificationStatusText() -> String {
+        if notificationService.isAuthorized {
+            if notificationService.isRegistered {
+                return "オン"
+            } else {
+                return "設定中..."
+            }
+        } else {
+            return "オフ"
+        }
+    }
+    
+    // 通知設定の処理
+    private func handleNotificationSettings() {
+        // 通知の登録状態に基づいて処理を分岐
+        if notificationService.isAuthorized && !notificationService.isRegistered {
+            // 権限はあるがデバイストークンがない場合は登録処理を実行
+            print("リモート通知の登録を開始します")
+            notificationService.registerForRemoteNotifications()
+        } else {
+            // すでに登録処理が行われている場合は設定アプリを開く
+            print("設定アプリを開きます")
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url) { success in
+                    if success {
+                        // 設定アプリから戻ってきたときに通知権限を再確認するため、
+                        // 少し遅延させて確認する
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            print("設定アプリから戻りました。通知権限を確認します。")
+                            self.notificationService.checkAuthorizationStatus()
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     private func getDarkModeText() -> String {
         switch appearanceManager.type {
@@ -569,4 +647,5 @@ struct MailComposerView: UIViewControllerRepresentable {
 #Preview {
     UserSettingsView(isLoggedIn: .constant(true))
         .environmentObject(AppearanceManager())
+        .environmentObject(NotificationService.shared)
 } 

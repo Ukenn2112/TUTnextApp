@@ -17,29 +17,51 @@ class BusScheduleService {
     /// 最後にデータを取得した時間
     private var lastFetchTime: Date?
     
+    /// APIリクエストが現在進行中かどうか
+    private var isRequestInProgress = false
+    
     /// プライベートイニシャライザ（シングルトンパターン）
     private init() {}
     
     /// バス時刻表データを取得（非同期）
     func fetchBusScheduleData(completion: @escaping (BusSchedule?, Error?) -> Void) {
+        // リクエストが進行中の場合は、重複リクエストを避ける
+        if isRequestInProgress {
+            print("BusScheduleService: リクエストが既に進行中です")
+            return
+        }
+        
         // キャッシュが有効な場合はキャッシュを返す
         if let cachedSchedule = cachedSchedule, 
            let lastFetchTime = lastFetchTime,
            Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime {
+            print("BusScheduleService: キャッシュされたデータを使用します（取得時間: \(formatDate(lastFetchTime))）")
             completion(cachedSchedule, nil)
             return
         }
         
+        print("BusScheduleService: APIから新しいデータを取得します")
+        isRequestInProgress = true
+        
         // APIからデータを取得
         guard let url = URL(string: apiURL) else {
-            completion(nil, NSError(domain: "BusScheduleService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"]))
+            let error = NSError(domain: "BusScheduleService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+            print("BusScheduleService: エラー - \(error.localizedDescription)")
+            isRequestInProgress = false
+            completion(nil, error)
             return
         }
         
         let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             guard let self = self else { return }
             
+            // データ取得完了後、進行中フラグをリセット
+            defer {
+                self.isRequestInProgress = false
+            }
+            
             if let error = error {
+                print("BusScheduleService: ネットワークエラー - \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(nil, error)
                 }
@@ -47,8 +69,10 @@ class BusScheduleService {
             }
             
             guard let data = data else {
+                let error = NSError(domain: "BusScheduleService", code: 2, userInfo: [NSLocalizedDescriptionKey: "No data received"])
+                print("BusScheduleService: エラー - \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(nil, NSError(domain: "BusScheduleService", code: 2, userInfo: [NSLocalizedDescriptionKey: "No data received"]))
+                    completion(nil, error)
                 }
                 return
             }
@@ -64,10 +88,13 @@ class BusScheduleService {
                 self.cachedSchedule = busSchedule
                 self.lastFetchTime = Date()
                 
+                print("BusScheduleService: 新しいデータの取得に成功しました（取得時間: \(self.formatDate(self.lastFetchTime!))）")
+                
                 DispatchQueue.main.async {
                     completion(busSchedule, nil)
                 }
             } catch {
+                print("BusScheduleService: デコードエラー - \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(nil, error)
                 }
@@ -83,11 +110,29 @@ class BusScheduleService {
         if let cachedSchedule = cachedSchedule, 
            let lastFetchTime = lastFetchTime,
            Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime {
+            print("BusScheduleService: 同期取得 - キャッシュされたデータを使用します（取得時間: \(formatDate(lastFetchTime))）")
             return cachedSchedule
         }
         
+        print("BusScheduleService: 同期取得 - キャッシュが無効なためダミーデータを返します")
         // キャッシュがない場合はダミーデータを返す
         return createDummyBusSchedule()
+    }
+    
+    /// キャッシュの有効性をチェック
+    func isCacheValid() -> Bool {
+        guard let _ = cachedSchedule, let lastFetchTime = lastFetchTime else {
+            return false
+        }
+        
+        return Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime
+    }
+    
+    /// 日付をフォーマット
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
+        return formatter.string(from: date)
     }
     
     // MARK: - プライベートヘルパーメソッド

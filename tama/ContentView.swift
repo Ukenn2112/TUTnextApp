@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var selectedTab = 1
     @State private var isLoggedIn = false
     @EnvironmentObject private var appearanceManager: AppearanceManager
+    @EnvironmentObject private var notificationService: NotificationService
     
     var body: some View {
         Group {
@@ -69,4 +70,5 @@ struct ContentView: View {
 #Preview() {
     ContentView()
         .environmentObject(AppearanceManager())
+        .environmentObject(NotificationService.shared)
 }

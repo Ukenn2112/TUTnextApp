@@ -5,6 +5,8 @@ struct TimetableView: View {
     @StateObject private var viewModel = TimetableViewModel()
     @Binding var isLoggedIn: Bool  // 添加登录状态绑定
     @Environment(\.colorScheme) private var colorScheme // 添加这一行
+    // 前台通知观察者
+    @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
     
     private let presetColors: [Color] = [
         .white,
@@ -67,6 +69,22 @@ struct TimetableView: View {
             .edgesIgnoringSafeArea(.bottom)
             .onAppear {
                 viewModel.fetchTimetableData()
+                // 应用程序从后台恢复时刷新页面
+                willEnterForegroundObserver = NotificationCenter.default.addObserver(
+                    forName: UIApplication.willEnterForegroundNotification,
+                    object: nil,
+                    queue: .main
+                ) { [self] _ in
+                    print("TimetableView: アプリがフォアグラウンドに復帰しました")
+                    viewModel.fetchTimetableData()
+                }
+            }
+            .onDisappear {
+                // 移除通知观察者
+                if let observer = willEnterForegroundObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                    willEnterForegroundObserver = nil
+                }
             }
         }
     }

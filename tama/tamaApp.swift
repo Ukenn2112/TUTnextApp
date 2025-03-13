@@ -11,6 +11,10 @@ import SwiftData
 @main
 struct tamaApp: App {
     @StateObject private var appearanceManager = AppearanceManager()
+    @StateObject private var notificationService = NotificationService.shared
+    
+    // AppDelegateを使用
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     @Environment(\.colorScheme) var colorScheme
     
@@ -18,9 +22,12 @@ struct tamaApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appearanceManager)
+                .environmentObject(notificationService)
                 .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
                 .onAppear {
                     appearanceManager.startObservingSystemAppearance()
+                    // アプリ起動時に通知権限をチェック
+                    notificationService.checkAuthorizationStatus()
                 }
         }
     }

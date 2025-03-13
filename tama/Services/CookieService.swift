@@ -32,7 +32,9 @@ class CookieService {
             }
             
             // 持久化存储Cookie
-            persistCookies()
+            DispatchQueue.main.async {
+                self.persistCookies()
+            }
         }
     }
     
@@ -60,7 +62,9 @@ class CookieService {
                 }
             }
         }
-        defaults.removeObject(forKey: cookieKey)
+        DispatchQueue.main.async {
+            self.defaults.removeObject(forKey: self.cookieKey)
+        }
     }
     
     // 持久化存储Cookie
