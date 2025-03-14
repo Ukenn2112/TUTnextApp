@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 struct BusScheduleView: View {
     // MARK: - プロパティ
@@ -13,6 +14,14 @@ struct BusScheduleView: View {
     @Environment(\.colorScheme) private var colorScheme
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
+    
+    // 位置情報関連
+    @State private var locationManager: CLLocationManager?
+    @State private var locationDelegate: LocationManagerDelegate? // デリゲートへの強い参照を保持するプロパティ
+    @State private var userInSchoolArea: Bool = false
+    // 学校の位置情報（多摩大学の座標）35.630604, 139.464382
+    private let schoolLocation = CLLocationCoordinate2D(latitude: 35.630604, longitude: 139.464382)
+    private let geofenceRadius: CLLocationDistance = 400
     
     // APIから取得したバス時刻表データ
     @State private var busSchedule: BusSchedule? = nil
@@ -78,8 +87,20 @@ struct BusScheduleView: View {
         )
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
-        .onAppear(perform: setupTimers)
-        .onDisappear(perform: cleanupTimers)
+        .onAppear {
+            print("BusScheduleView: onAppear")
+            setupTimers()
+            
+            // バスページが開かれるたびに位置情報を更新
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // 位置情報マネージャーを初期化して監視を開始
+                self.setupLocationManager()
+            }
+        }
+        .onDisappear {
+            print("BusScheduleView: onDisappear - 位置情報の監視を停止します")
+            cleanupTimers()
+        }
     }
     
     // MARK: - データ取得
@@ -90,6 +111,135 @@ struct BusScheduleView: View {
                 self.errorMessage = "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。"
             } else {
                 self.busSchedule = schedule
+            }
+        }
+    }
+    
+    // MARK: - 位置情報関連
+    private func setupLocationManager() {
+        print("BusScheduleView: setupLocationManager が呼び出されました")
+        
+        // 既存のlocationManagerがある場合は一度クリア
+        if locationManager != nil {
+            locationManager?.delegate = nil
+            locationManager = nil
+            locationDelegate = nil
+        }
+        
+        // 新しいlocationManagerを作成
+        locationManager = CLLocationManager()
+        
+        // デリゲートオブジェクトを作成して保持
+        locationDelegate = LocationManagerDelegate(
+            didUpdateLocation: { location in
+                self.checkIfUserInSchoolArea(location)
+            },
+            didEnterRegion: {
+                self.userInSchoolArea = true
+                self.updateRouteBasedOnLocation()
+            },
+            didExitRegion: {
+                self.userInSchoolArea = false
+                self.updateRouteBasedOnLocation()
+            }
+        )
+        
+        // デリゲートを設定（nilチェックを追加）
+        guard let locationManager = locationManager, let locationDelegate = locationDelegate else {
+            print("BusScheduleView: locationManagerまたはlocationDelegateがnilです")
+            return
+        }
+        
+        locationManager.delegate = locationDelegate
+        
+        // 位置情報の使用許可をリクエスト
+        locationManager.requestWhenInUseAuthorization()
+        
+        // 位置情報の精度を設定
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        
+        // 地理围栏（ジオフェンス）の設定
+        setupGeofence()
+        
+        // 位置情報の更新を開始
+        locationManager.startUpdatingLocation()
+    }
+    
+    private func setupGeofence() {
+        guard let locationManager = locationManager else {
+            print("BusScheduleView: setupGeofence - locationManagerがnilです")
+            return
+        }
+        
+        // 既存の全てのジオフェンスを削除
+        locationManager.monitoredRegions.forEach { region in
+            if region is CLCircularRegion {
+                locationManager.stopMonitoring(for: region)
+            }
+        }
+        
+        // 学校エリアのジオフェンスを作成
+        let schoolRegion = CLCircularRegion(
+            center: schoolLocation,
+            radius: geofenceRadius,
+            identifier: "SchoolArea"
+        )
+        
+        // ジオフェンスを有効化（入場・退場両方を監視）
+        schoolRegion.notifyOnEntry = true
+        schoolRegion.notifyOnExit = true
+        
+        // ジオフェンスの監視を開始
+        locationManager.startMonitoring(for: schoolRegion)
+        
+        print("BusScheduleView: 学校エリアのジオフェンスを設定しました（半径\(geofenceRadius)m）")
+    }
+    
+    private func checkIfUserInSchoolArea(_ location: CLLocation) {
+        // ユーザーの現在位置と学校の位置の距離を計算
+        let schoolRegionCenter = CLLocation(latitude: schoolLocation.latitude, longitude: schoolLocation.longitude)
+        let distance = location.distance(from: schoolRegionCenter)
+        
+        // 距離が半径以内かどうかをチェック
+        let isInSchoolArea = distance <= geofenceRadius
+        print("BusScheduleView: checkIfUserInSchoolArea - 距離: \(distance)メートル, 半径: \(geofenceRadius)メートル")
+        print("BusScheduleView: checkIfUserInSchoolArea - 現在の位置: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+        print("BusScheduleView: checkIfUserInSchoolArea - 学校の位置: \(schoolLocation.latitude), \(schoolLocation.longitude)")
+        print("BusScheduleView: checkIfUserInSchoolArea - 結果: \(isInSchoolArea)")
+        
+        // 状態が変化した場合のみ更新
+        if isInSchoolArea != userInSchoolArea {
+            userInSchoolArea = isInSchoolArea
+            updateRouteBasedOnLocation()
+        }
+    }
+    
+    private func updateRouteBasedOnLocation() {
+        // ユーザーが学校エリア内にいる場合
+        if userInSchoolArea {
+            // 現在の選択が「学校発」の路線（聖蹟桜ヶ丘駅行または永山駅行）かどうかをチェック
+            let isAlreadySchoolDeparture = selectedRouteType == .fromSchoolToSeiseki || selectedRouteType == .fromSchoolToNagayama
+            
+            // 既に「学校発」の路線が選択されている場合は、ユーザーの選択を尊重して変更しない
+            if !isAlreadySchoolDeparture {
+                withAnimation {
+                    selectedRouteType = .fromSchoolToNagayama
+                    // 路線が変更されたときにスクロール位置を更新
+                    updateScrollToHour()
+                }
+            }
+        } else {
+            // 学校エリア外にいる場合
+            // 現在の選択が「駅発」の路線（聖蹟桜ヶ丘駅発または永山駅発）かどうかをチェック
+            let isAlreadyStationDeparture = selectedRouteType == .fromSeisekiToSchool || selectedRouteType == .fromNagayamaToSchool
+            
+            // 既に「駅発」の路線が選択されている場合は、ユーザーの選択を尊重して変更しない
+            if !isAlreadyStationDeparture {
+                withAnimation {
+                    selectedRouteType = .fromSeisekiToSchool
+                    // 路線が変更されたときにスクロール位置を更新
+                    updateScrollToHour()
+                }
             }
         }
     }
@@ -165,6 +315,10 @@ struct BusScheduleView: View {
     private func setupTimers() {
         fetchBusScheduleData()
         setupTimeUpdater()
+        
+        // 位置情報マネージャーの初期化と位置の確認
+        setupLocationManager()
+        
         // 应用程序从后台恢复时刷新页面
         willEnterForegroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
@@ -174,6 +328,9 @@ struct BusScheduleView: View {
             print("BusScheduleView: アプリがフォアグラウンドに復帰しました")
             fetchBusScheduleData()
             currentTime = Date()
+            
+            // フォアグラウンドに復帰したときにも位置情報を更新
+            updateLocationImmediately()
         }
         
         // 1分ごとに現在時刻を更新するタイマー
@@ -200,6 +357,25 @@ struct BusScheduleView: View {
         timer = nil
         secondsTimer?.invalidate()
         secondsTimer = nil
+        
+        // 位置情報の更新を停止
+        if let locationManager = locationManager {
+            print("BusScheduleView: 位置情報の監視を停止します")
+            locationManager.stopUpdatingLocation()
+            
+            // 監視中のすべての地理围栏を停止
+            locationManager.monitoredRegions.forEach { region in
+                locationManager.stopMonitoring(for: region)
+            }
+            
+            // デリゲートを解放
+            locationManager.delegate = nil
+        }
+        
+        // 位置情報マネージャーとデリゲートの参照を解放
+        locationDelegate = nil
+        locationManager = nil
+        
         // 移除通知观察者
         if let observer = willEnterForegroundObserver {
             NotificationCenter.default.removeObserver(observer)
@@ -252,23 +428,34 @@ struct BusScheduleView: View {
     
     // 路線セレクタ
     private var routeTypeSelector: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 15) {
-                // 出発駅グループ
-                routeButton(title: "聖蹟桜ヶ丘駅発", type: .fromSeisekiToSchool)
-                routeButton(title: "永山駅発", type: .fromNagayamaToSchool)
-                
-                // 分割線
-                Divider()
-                    .frame(height: 20)
-                    .background(Color.gray.opacity(0.3))
-                
-                // 目的駅グループ
-                routeButton(title: "聖蹟桜ヶ丘駅行", type: .fromSchoolToSeiseki)
-                routeButton(title: "永山駅行", type: .fromSchoolToNagayama)
+        ScrollViewReader { scrollProxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 15) {
+                    // 出発駅グループ
+                    routeButton(title: "聖蹟桜ヶ丘駅発", type: .fromSeisekiToSchool)
+                        .id("fromSeisekiToSchool")
+                    routeButton(title: "永山駅発", type: .fromNagayamaToSchool)
+                        .id("fromNagayamaToSchool")
+                    
+                    // 分割線
+                    Divider()
+                        .frame(height: 20)
+                        .background(Color.gray.opacity(0.3))
+                    
+                    // 目的駅グループ
+                    routeButton(title: "聖蹟桜ヶ丘駅行", type: .fromSchoolToSeiseki)
+                        .id("fromSchoolToSeiseki")
+                    routeButton(title: "永山駅行", type: .fromSchoolToNagayama)
+                        .id("fromSchoolToNagayama")
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 5)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 5)
+            .onChange(of: selectedRouteType) { newValue in
+                withAnimation {
+                    scrollProxy.scrollTo(newValue.rawValue, anchor: .center)
+                }
+            }
         }
         .padding(.vertical, 8)
         .background(Color(UIColor.systemBackground))
@@ -868,6 +1055,139 @@ struct BusScheduleView: View {
     private func setupTimeUpdater() {
         // バスページに入った時にキャッシュの有効性をチェック（既にデータがある場合）
         checkCacheAndRefreshIfNeeded()
+    }
+    
+    // 即座に位置情報を更新するメソッド
+    private func updateLocationImmediately() {
+        // locationManagerがnilの場合は初期化から
+        if locationManager == nil || locationDelegate == nil {
+            setupLocationManager()
+            return
+        }
+        
+        guard let locationManager = locationManager, let locationDelegate = locationDelegate else {
+            print("BusScheduleView: locationManagerまたはlocationDelegateがnilです")
+            return
+        }
+        
+        print("BusScheduleView: 位置情報の即時更新をリクエストします")
+        
+        // デリゲートが正しく設定されているか確認
+        if locationManager.delegate == nil {
+            locationManager.delegate = locationDelegate
+        }
+        
+        // 現在の認証状態を確認
+        let authStatus = locationManager.authorizationStatus
+        
+        switch authStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            // 既に許可されている場合は、位置情報を更新
+            // 継続的な更新を開始（requestLocationの代わりに）
+            locationManager.startUpdatingLocation()
+            
+            // 現在地が取得できる場合はすぐにチェック
+            if let currentLocation = locationManager.location {
+                checkIfUserInSchoolArea(currentLocation)
+            }
+        case .notDetermined:
+            // まだ決定されていない場合は許可をリクエスト
+            locationManager.requestWhenInUseAuthorization()
+        case .denied, .restricted:
+            // 拒否または制限されている場合は何もしない
+            print("BusScheduleView: 位置情報の使用が許可されていません")
+        @unknown default:
+            break
+        }
+    }
+}
+
+// MARK: - 位置情報デリゲート
+// 位置情報マネージャーのデリゲートを処理するクラス
+class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
+    private let didUpdateLocation: (CLLocation) -> Void
+    private let didEnterRegion: () -> Void
+    private let didExitRegion: () -> Void
+    
+    init(
+        didUpdateLocation: @escaping (CLLocation) -> Void,
+        didEnterRegion: @escaping () -> Void,
+        didExitRegion: @escaping () -> Void
+    ) {
+        self.didUpdateLocation = didUpdateLocation
+        self.didEnterRegion = didEnterRegion
+        self.didExitRegion = didExitRegion
+        super.init()
+    }
+    
+    // 位置が更新されたときに呼ばれる
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.last {
+            didUpdateLocation(location)
+        }
+    }
+    
+    // 領域に入ったときに呼ばれる
+    func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
+        if region.identifier == "SchoolArea" {
+            didEnterRegion()
+        }
+    }
+    
+    // 領域から出たときに呼ばれる
+    func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
+        if region.identifier == "SchoolArea" {
+            didExitRegion()
+        }
+    }
+    
+    // 位置情報の利用許可状態が変わったときに呼ばれる
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        switch status {
+        case .authorizedWhenInUse, .authorizedAlways:
+            // 位置情報の使用が許可された場合
+            manager.startUpdatingLocation()
+            // 学校エリアにすでにいるかどうかをチェック
+            if let location = manager.location {
+                didUpdateLocation(location)
+            }
+        case .denied, .restricted:
+            // 位置情報の使用が拒否または制限された場合
+            print("位置情報の使用が拒否または制限されました")
+        case .notDetermined:
+            // まだ決定されていない場合
+            manager.requestWhenInUseAuthorization()
+        @unknown default:
+            break
+        }
+    }
+    
+    // エラーが発生した場合に呼ばれる
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        if let error = error as? CLError {
+            switch error.code {
+            case .denied:
+                // 位置情報の使用が拒否された場合
+                print("位置情報の使用が拒否されました")
+            case .network:
+                // ネットワークエラーの場合
+                print("位置情報の取得中にネットワークエラーが発生しました")
+            case .locationUnknown:
+                // 位置が不明な場合
+                print("位置を特定できません")
+            default:
+                // その他のエラー
+                print("位置情報の取得に失敗しました: \(error.localizedDescription)")
+            }
+        } else {
+            // CLError以外のエラー
+            print("位置情報の取得に失敗しました: \(error.localizedDescription)")
+        }
+        
+        // エラーが発生しても、継続的に位置情報の更新を試みる
+        // 重要：requestLocationはエラー後に再度位置情報を取得しないため
+        // 継続的な監視が必要な場合はstartUpdatingLocation()を呼び出す
+        // manager.startUpdatingLocation()
     }
 }
 
