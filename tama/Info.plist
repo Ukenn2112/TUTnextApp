@@ -4,19 +4,10 @@
 <dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>現在地に基づいてバスの時刻表の表示順を最適化するために位置情報を使用します。</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~iphone</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 </dict>
 </plist>

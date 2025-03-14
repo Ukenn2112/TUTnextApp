@@ -95,31 +95,117 @@ class NotificationService: NSObject, ObservableObject {
     }
     
     // デバイストークンをサーバーに送信
-    func sendDeviceTokenToServer(token: String, username: String) {
-        print("デバイストークンをサーバーに送信: \(token) \(username)")
-        // TODO: サーバーにデバイストークンを送信する実装
-        // APIService.shared.registerDeviceToken(token: token) { result in
-        //     switch result {
-        //     case .success:
-        //         print("デバイストークンの登録に成功しました")
-        //     case .failure(let error):
-        //         print("デバイストークンの登録に失敗しました: \(error.localizedDescription)")
-        //     }
-        // }
+    func sendDeviceTokenToServer(token: String, username: String, encryptedPassword: String) {
+        print("デバイストークンをサーバーに送信: \(token)")
+        
+        // APIエンドポイント
+        let endpoint = "https://tama.qaq.tw/push/send"
+        
+        guard let url = URL(string: endpoint) else {
+            print("デバイストークンの送信に失敗: 無効なURL")
+            return
+        }
+        
+        // リクエストボディの作成
+        let body: [String: Any] = [
+            "username": username,
+            "encryptedPassword": encryptedPassword,
+            "deviceToken": token
+        ]
+        
+        // URLRequestの作成
+        guard let request = APIService.shared.createRequest(url: url, method: "POST", body: body) else {
+            print("デバイストークンの送信に失敗: リクエスト作成エラー")
+            return
+        }
+        
+        // APIリクエストの実行
+        APIService.shared.request(
+            request: request,
+            logTag: "デバイストークン登録",
+            replacingPercentEncoding: false
+        ) { data, response, error in
+            if let error = error {
+                print("デバイストークンの登録に失敗しました: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let data = data else {
+                print("デバイストークンの登録に失敗: データなし")
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let status = json["status"] as? Bool,
+                   let message = json["message"] as? String {
+                    
+                    if status {
+                        print("デバイストークンの登録に成功しました: \(message)")
+                    } else {
+                        print("デバイストークンの登録に失敗しました: \(message)")
+                    }
+                }
+            } catch {
+                print("デバイストークンの登録レスポンス解析に失敗: \(error.localizedDescription)")
+            }
+        }
     }
     
     // デバイストークンをサーバーから登録解除
     func unregisterDeviceTokenFromServer(token: String) {
         print("デバイストークンをサーバーから登録解除: \(token)")
-        // TODO: サーバーからデバイストークンを登録解除する実装
-        // APIService.shared.unregisterDeviceToken(token: token) { result in
-        //     switch result {
-        //     case .success:
-        //         print("デバイストークンの登録解除に成功しました")
-        //     case .failure(let error):
-        //         print("デバイストークンの登録解除に失敗しました: \(error.localizedDescription)")
-        //     }
-        // }
+        
+        // APIエンドポイント
+        let endpoint = "https://tama.qaq.tw/push/unregister"
+        
+        guard let url = URL(string: endpoint) else {
+            print("デバイストークンの登録解除に失敗: 無効なURL")
+            return
+        }
+        
+        // リクエストボディの作成
+        let body: [String: Any] = [
+            "deviceToken": token
+        ]
+        
+        // URLRequestの作成
+        guard let request = APIService.shared.createRequest(url: url, method: "POST", body: body) else {
+            print("デバイストークンの登録解除に失敗: リクエスト作成エラー")
+            return
+        }
+        
+        // APIリクエストの実行
+        APIService.shared.request(
+            request: request,
+            logTag: "デバイストークン登録解除",
+            replacingPercentEncoding: false
+        ) { data, response, error in
+            if let error = error {
+                print("デバイストークンの登録解除に失敗しました: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let data = data else {
+                print("デバイストークンの登録解除に失敗: データなし")
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let status = json["status"] as? Bool,
+                   let message = json["message"] as? String {
+                    
+                    if status {
+                        print("デバイストークンの登録解除に成功しました: \(message)")
+                    } else {
+                        print("デバイストークンの登録解除に失敗しました: \(message)")
+                    }
+                }
+            } catch {
+                print("デバイストークンの登録解除レスポンス解析に失敗: \(error.localizedDescription)")
+            }
+        }
     }
     
     // アプリがフォアグラウンドに戻ったときに呼び出す
@@ -162,9 +248,16 @@ extension NotificationService {
         
         // UserServiceにデバイストークンを保存
         UserService.shared.saveDeviceToken(token)
+
+        // ユーザー情報を取得
+        let currentUser = UserService.shared.getCurrentUser() ?? nil
         
         // サーバーにデバイストークンを送信
-        sendDeviceTokenToServer(token: token, username: UserService.shared.getCurrentUser()?.username ?? "")
+        sendDeviceTokenToServer(
+            token: token, 
+            username: currentUser?.username ?? "",
+            encryptedPassword: currentUser?.encryptedPassword ?? ""
+        )
     }
     
     // デバイストークン取得失敗時

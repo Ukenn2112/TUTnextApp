@@ -56,13 +56,24 @@ struct UserSettingsView: View {
                             // アカウント設定
                             SettingsSectionHeader(title: "アカウント設定")
                             
-                            SettingsRow(icon: "person.fill", title: "スマホサイトへ") {
+                            SettingsRow(icon: "smartphone", title: "スマホサイトへ") {
                                 // T-Nextスマホサイトへ
                                 if let tnextURL = createTnextURL() {
                                     urlToOpen = tnextURL
                                     showSafari = true
                                 }
                             }
+                            
+                            SettingsRow(icon: "lock.fill", title: "パスワード変更") {
+                                openPasswordChangeURL()
+                            }
+                            
+                            // アプリ設定
+                            SettingsSectionHeader(title: "アプリ設定")
+//
+//                            SettingsRow(icon: "globe", title: "言語") {
+//                                // 言語設定画面へ
+//                            }
                             
                             Button(action: {
                                 handleNotificationSettings()
@@ -93,17 +104,6 @@ struct UserSettingsView: View {
                                 .background(Color(UIColor.secondarySystemGroupedBackground))
                             }
                             .buttonStyle(PlainButtonStyle())
-                            
-                            SettingsRow(icon: "lock.fill", title: "パスワード変更") {
-                                openPasswordChangeURL()
-                            }
-                            
-                            // アプリ設定
-                            SettingsSectionHeader(title: "アプリ設定")
-                            
-                            SettingsRow(icon: "globe", title: "言語") {
-                                // 言語設定画面へ
-                            }
                             
                             Button(action: { showingDarkModeSheet = true }) {
                                 HStack {
@@ -648,4 +648,4 @@ struct MailComposerView: UIViewControllerRepresentable {
     UserSettingsView(isLoggedIn: .constant(true))
         .environmentObject(AppearanceManager())
         .environmentObject(NotificationService.shared)
-} 
+}
