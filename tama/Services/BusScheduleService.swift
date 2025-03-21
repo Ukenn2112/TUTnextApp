@@ -230,11 +230,11 @@ class BusScheduleService {
     /// 特別便の説明を作成
     private func createSpecialNotes() -> [BusSchedule.SpecialNote] {
         return [
-            BusSchedule.SpecialNote(symbol: "◯", description: "印の付いた便は、永山駅経由学校行です。"),
-            BusSchedule.SpecialNote(symbol: "*", description: "印のついた便は、永山駅経由聖蹟桜ヶ丘駅行です。"),
-            BusSchedule.SpecialNote(symbol: "C", description: "中学生乗車限定"),
-            BusSchedule.SpecialNote(symbol: "K", description: "高校生乗車限定"),
-            BusSchedule.SpecialNote(symbol: "M", description: "大学生用マイクロバス（火・水・木のみ）")
+            BusSchedule.SpecialNote(symbol: "◯", description: NSLocalizedString("印の付いた便は、永山駅経由学校行です。", comment: "")),
+            BusSchedule.SpecialNote(symbol: "*", description: NSLocalizedString("印のついた便は、永山駅経由聖蹟桜ヶ丘駅行です。", comment: "")),
+            BusSchedule.SpecialNote(symbol: "C", description: NSLocalizedString("中学生乗車限定", comment: "")),
+            BusSchedule.SpecialNote(symbol: "K", description: NSLocalizedString("高校生乗車限定", comment: "")),
+            BusSchedule.SpecialNote(symbol: "M", description: NSLocalizedString("大学生用マイクロバス（火・水・木のみ）", comment: ""))
         ]
     }
     

@@ -47,16 +47,16 @@ class CourseDetailViewModel: ObservableObject {
     var attendanceData: [AttendanceData] {
         guard let detail = courseDetail else {
             return [
-                AttendanceData(type: "出席", count: 0, color: .green),
-                AttendanceData(type: "欠席", count: 0, color: .red),
-                AttendanceData(type: "遅早", count: 0, color: .yellow)
+                AttendanceData(type: NSLocalizedString("出席", comment: ""), count: 0, color: .green),
+                AttendanceData(type: NSLocalizedString("欠席", comment: ""), count: 0, color: .red),
+                AttendanceData(type: NSLocalizedString("遅早", comment: ""), count: 0, color: .yellow)
             ]
         }
         
         return [
-            AttendanceData(type: "出席", count: detail.attendance.present, color: .green),
-            AttendanceData(type: "欠席", count: detail.attendance.absent, color: .red),
-            AttendanceData(type: "遅早", count: detail.attendance.late + detail.attendance.early, color: .yellow)
+            AttendanceData(type: NSLocalizedString("出席", comment: ""), count: detail.attendance.present, color: .green),
+            AttendanceData(type: NSLocalizedString("欠席", comment: ""), count: detail.attendance.absent, color: .red),
+            AttendanceData(type: NSLocalizedString("遅早", comment: ""), count: detail.attendance.late + detail.attendance.early, color: .yellow)
         ]
     }
     

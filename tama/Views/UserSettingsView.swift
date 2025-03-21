@@ -9,6 +9,7 @@ struct UserSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
+    @EnvironmentObject private var languageService: LanguageService
     @State private var showSafari: Bool = false
     @State private var urlToOpen: URL? = nil
     @State private var showMailComposer: Bool = false
@@ -54,9 +55,9 @@ struct UserSettingsView: View {
                         // 設定セクション
                         VStack(spacing: 0) {
                             // アカウント設定
-                            SettingsSectionHeader(title: "アカウント設定")
+                            SettingsSectionHeader(title: NSLocalizedString("アカウント設定", comment: ""))
                             
-                            SettingsRow(icon: "smartphone", title: "スマホサイトへ") {
+                            SettingsRow(icon: "smartphone", title: NSLocalizedString("スマホサイトへ", comment: "")) {
                                 // T-Nextスマホサイトへ
                                 if let tnextURL = createTnextURL() {
                                     urlToOpen = tnextURL
@@ -64,16 +65,12 @@ struct UserSettingsView: View {
                                 }
                             }
                             
-                            SettingsRow(icon: "lock.fill", title: "パスワード変更") {
+                            SettingsRow(icon: "lock.fill", title: NSLocalizedString("パスワード変更", comment: "")) {
                                 openPasswordChangeURL()
                             }
                             
                             // アプリ設定
-                            SettingsSectionHeader(title: "アプリ設定")
-//
-//                            SettingsRow(icon: "globe", title: "言語") {
-//                                // 言語設定画面へ
-//                            }
+                            SettingsSectionHeader(title: NSLocalizedString("アプリ設定", comment: ""))
                             
                             Button(action: {
                                 handleNotificationSettings()
@@ -92,6 +89,35 @@ struct UserSettingsView: View {
                                     
                                     // 通知状態を表示
                                     Text(getNotificationStatusText())
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 14))
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 14))
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            Button(action: {
+                                languageService.openLanguageSettings()
+                            }) {
+                                HStack {
+                                    Image(systemName: "globe")
+                                        .foregroundColor(.primary)
+                                        .font(.system(size: 20))
+                                        .frame(width: 24, height: 24)
+                                    
+                                    Text("言語")
+                                        .foregroundColor(.primary)
+                                        .font(.system(size: 16))
+                                    
+                                    Spacer()
+                                    
+                                    Text(languageService.currentLanguage)
                                         .foregroundColor(.secondary)
                                         .font(.system(size: 14))
                                     
@@ -133,9 +159,9 @@ struct UserSettingsView: View {
                             .buttonStyle(PlainButtonStyle())
                             
                             // サポート
-                            SettingsSectionHeader(title: "サポート")
+                            SettingsSectionHeader(title: NSLocalizedString("サポート", comment: ""))
                             
-                            SettingsRow(icon: "exclamationmark.bubble.fill", title: "フィードバック") {
+                            SettingsRow(icon: "exclamationmark.bubble.fill", title: NSLocalizedString("フィードバック", comment: "")) {
                                 sendFeedback()
                             }
                             
@@ -227,12 +253,12 @@ struct UserSettingsView: View {
     private func getNotificationStatusText() -> String {
         if notificationService.isAuthorized {
             if notificationService.isRegistered {
-                return "オン"
+                return NSLocalizedString("オン", comment: "")
             } else {
-                return "設定中..."
+                return NSLocalizedString("設定中...", comment: "")
             }
         } else {
-            return "オフ"
+            return NSLocalizedString("オフ", comment: "")
         }
     }
     
@@ -264,11 +290,11 @@ struct UserSettingsView: View {
     private func getDarkModeText() -> String {
         switch appearanceManager.type {
         case .iSystem:
-            return "システムに従う"
+            return NSLocalizedString("システムに従う", comment: "")
         case .iHight:
-            return "ライト"
+            return NSLocalizedString("ライト", comment: "")
         case .iDark:
-            return "ダーク"
+            return NSLocalizedString("ダーク", comment: "")
         }
     }
     
@@ -424,9 +450,9 @@ struct DarkModeSettingsView: View {
                     VStack(spacing: 16) {
                         // システム設定に従う
                         appearanceOptionCard(
-                            title: "システムに従う",
+                            title:  NSLocalizedString("システムに従う", comment: ""),
                             icon: "gear",
-                            description: "デバイスの設定に合わせて自動的に切り替えます",
+                            description: NSLocalizedString("デバイスの設定に合わせて自動的に切り替えます", comment: ""),
                             isSelected: appearanceManager.type == .iSystem,
                             action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -442,9 +468,9 @@ struct DarkModeSettingsView: View {
                         
                         // ライトモード
                         appearanceOptionCard(
-                            title: "ライトモード",
+                            title: NSLocalizedString("ライトモード", comment: ""),
                             icon: "sun.max.fill",
-                            description: "明るい外観を常に使用します",
+                            description: NSLocalizedString("明るい外観を常に使用します", comment: ""),
                             isSelected: appearanceManager.type == .iHight,
                             action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -456,9 +482,9 @@ struct DarkModeSettingsView: View {
                         
                         // ダークモード
                         appearanceOptionCard(
-                            title: "ダークモード",
+                            title: NSLocalizedString("ダークモード", comment: ""),
                             icon: "moon.stars.fill",
-                            description: "暗い外観を常に使用します",
+                            description: NSLocalizedString("暗い外観を常に使用します", comment: ""),
                             isSelected: appearanceManager.type == .iDark,
                             action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -648,4 +674,5 @@ struct MailComposerView: UIViewControllerRepresentable {
     UserSettingsView(isLoggedIn: .constant(true))
         .environmentObject(AppearanceManager())
         .environmentObject(NotificationService.shared)
+        .environmentObject(LanguageService.shared)
 }

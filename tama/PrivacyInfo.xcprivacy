@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+   PrivacyInfo.xcprivacy
+   tama
+
+   Created by 维安雨轩 on 2025/03/15.
+   Copyright (c) 2025 ___ORGANIZATIONNAME___. All rights reserved.
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyRequiredAPIUsageReasonAPI</key>
+    <dict>
+        <key>https://next.tama.ac.jp/uprx/webapi/up/pk/Pky001Resource/login</key>
+        <string>ユーザー認証とアプリ機能へのアクセス提供のために使用されます。</string>
+        <key>https://next.tama.ac.jp/uprx/webapi/up/pk/Pky002Resource/logout</key>
+        <string>ユーザーセッションを安全に終了するために使用されます。</string>
+        <key>https://next.tama.ac.jp/uprx/webapi/up/ap/Apa004Resource/getJugyoDetailInfo</key>
+        <string>ユーザーの授業情報と詳細を取得するために使用されます。</string>
+        <key>https://tama.qaq.tw/bus/app_data</key>
+        <string>キャンパスバスの時刻表情報を提供するために使用されます。</string>
+        <key>https://tama.qaq.tw/kadai</key>
+        <string>ユーザーの課題と提出物情報を取得するために使用されます。</string>
+        <key>https://tama.qaq.tw/push/send</key>
+        <string>アプリ通知の登録と配信のために使用されます。</string>
+        <key>https://tama.qaq.tw/push/unregister</key>
+        <string>ユーザーのアプリ通知登録を解除するために使用されます。</string>
+    </dict>
+</dict>
+</plist>

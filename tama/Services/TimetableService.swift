@@ -160,7 +160,15 @@ class TimetableService {
         var timetableData: [String: [String: CourseModel]] = [:]
         
         // 曜日の変換マップ
-        let weekdayMap = [1: "月", 2: "火", 3: "水", 4: "木", 5: "金", 6: "土", 7: "日"]
+        let weekdayMap = [
+            1: NSLocalizedString("月", comment: ""),
+            2: NSLocalizedString("火", comment: ""),
+            3: NSLocalizedString("水", comment: ""),
+            4: NSLocalizedString("木", comment: ""),
+            5: NSLocalizedString("金", comment: ""),
+            6: NSLocalizedString("土", comment: ""),
+            7: NSLocalizedString("日", comment: "")
+        ]
         
         for courseData in courseList {
             guard let courseName = courseData["jugyoName"] as? String,

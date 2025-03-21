@@ -69,10 +69,16 @@ class TimetableViewModel: ObservableObject {
     
     /// 曜日の配列を取得
     func getWeekdays() -> [String] {
-        let baseWeekdays = ["月", "火", "水", "木", "金"]
+        let baseWeekdays = [
+            NSLocalizedString("月", comment: ""),
+            NSLocalizedString("火", comment: ""),
+            NSLocalizedString("水", comment: ""),
+            NSLocalizedString("木", comment: ""),
+            NSLocalizedString("金", comment: "")
+        ]
         
-        if let saturdayCourses = courses["土"], !saturdayCourses.isEmpty {
-            return baseWeekdays + ["土"]
+        if let saturdayCourses = courses[NSLocalizedString("土", comment: "")], !saturdayCourses.isEmpty {
+            return baseWeekdays + [NSLocalizedString("土", comment: "")]
         }
         return baseWeekdays
     }

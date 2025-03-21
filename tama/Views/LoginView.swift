@@ -132,7 +132,7 @@ struct LoginView: View {
                     HStack(spacing: 0) {
                         Text("登録をすることで ")
                             .foregroundColor(.secondary)
-                        Text("利用規約")
+                        Link("利用規約", destination: URL(string: "https://tama.qaq.tw/user-agreement")!)
                             .foregroundColor(.blue)
                         Text(" に同意したことになります")
                             .foregroundColor(.secondary)
@@ -218,7 +218,7 @@ struct LoginView: View {
                 print("ログイン成功後の通知権限状態: \(settings.authorizationStatus.rawValue)")
                 
                 // 権限がある場合でデバイストークンがない場合は登録
-                if settings.authorizationStatus == .authorized && !self.notificationService.isRegistered {
+                if settings.authorizationStatus == .authorized {
                     self.notificationService.registerForRemoteNotifications()
                 }
                 // まだ決定されていない場合のみリクエスト

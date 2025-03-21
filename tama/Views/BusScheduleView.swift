@@ -108,7 +108,7 @@ struct BusScheduleView: View {
         print("BusScheduleView: fetchBusScheduleData が呼び出されました")
         busScheduleService.fetchBusScheduleData { schedule, error in
             if error != nil {
-                self.errorMessage = "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。"
+                self.errorMessage = NSLocalizedString("時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。", comment: "")
             } else {
                 self.busSchedule = schedule
             }
@@ -390,6 +390,8 @@ struct BusScheduleView: View {
             selectedScheduleType = .wednesday
         } else if weekday == 7 { // 7は土曜日
             selectedScheduleType = .saturday
+        } else {
+            selectedScheduleType = .weekday
         }
     }
     
@@ -432,9 +434,9 @@ struct BusScheduleView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 15) {
                     // 出発駅グループ
-                    routeButton(title: "聖蹟桜ヶ丘駅発", type: .fromSeisekiToSchool)
+                    routeButton(title: NSLocalizedString("聖蹟桜ヶ丘駅発", comment: ""), type: .fromSeisekiToSchool)
                         .id("fromSeisekiToSchool")
-                    routeButton(title: "永山駅発", type: .fromNagayamaToSchool)
+                    routeButton(title: NSLocalizedString("永山駅発", comment: ""), type: .fromNagayamaToSchool)
                         .id("fromNagayamaToSchool")
                     
                     // 分割線
@@ -443,9 +445,9 @@ struct BusScheduleView: View {
                         .background(Color.gray.opacity(0.3))
                     
                     // 目的駅グループ
-                    routeButton(title: "聖蹟桜ヶ丘駅行", type: .fromSchoolToSeiseki)
+                    routeButton(title: NSLocalizedString("聖蹟桜ヶ丘駅行", comment: ""), type: .fromSchoolToSeiseki)
                         .id("fromSchoolToSeiseki")
-                    routeButton(title: "永山駅行", type: .fromSchoolToNagayama)
+                    routeButton(title: NSLocalizedString("永山駅行", comment: ""), type: .fromSchoolToNagayama)
                         .id("fromSchoolToNagayama")
                 }
                 .padding(.horizontal)

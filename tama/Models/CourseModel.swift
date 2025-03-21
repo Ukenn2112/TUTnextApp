@@ -34,7 +34,15 @@ struct CourseModel: Identifiable, Equatable {
     // 曜日を日本語表記で取得
     var weekdayString: String {
         guard let weekday = weekday else { return "" }
-        let weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+        let weekdays = [
+            NSLocalizedString("月", comment: ""),
+            NSLocalizedString("火", comment: ""),
+            NSLocalizedString("水", comment: ""),
+            NSLocalizedString("木", comment: ""),
+            NSLocalizedString("金", comment: ""),
+            NSLocalizedString("土", comment: ""),
+            NSLocalizedString("日", comment: "")
+        ]
         if weekday >= 1 && weekday <= 7 {
             return weekdays[weekday - 1]
         }
@@ -44,9 +52,9 @@ struct CourseModel: Identifiable, Equatable {
     // 時限と時間の表示用文字列
     var periodInfo: String {
         if let period = period {
-            return "\(weekdayString)曜日 \(period)限"
+            return String(format: NSLocalizedString("%@曜日 %d限", comment: ""), weekdayString, period)
         }
-        return "\(startTime.prefix(2)):\(startTime.suffix(2)) - \(endTime.prefix(2)):\(endTime.suffix(2))"
+        return String(format: NSLocalizedString("%@ %@ - %@", comment: ""), weekdayString, startTime, endTime)
     }
     
     // サンプルデータ

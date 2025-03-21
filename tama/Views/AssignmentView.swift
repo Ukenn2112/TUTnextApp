@@ -65,11 +65,11 @@ struct AssignmentView: View {
                     // フィルターセグメントコントロール
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
-                            filterButton(title: "すべて", filter: .all)
-                            filterButton(title: "今日", filter: .today)
-                            filterButton(title: "今週", filter: .thisWeek)
-                            filterButton(title: "今月", filter: .thisMonth)
-                            filterButton(title: "期限切れ", filter: .overdue)
+                            filterButton(title: NSLocalizedString("すべて", comment: ""), filter: .all)
+                            filterButton(title: NSLocalizedString("今日", comment: ""), filter: .today)
+                            filterButton(title: NSLocalizedString("今週", comment: ""), filter: .thisWeek)
+                            filterButton(title: NSLocalizedString("今月", comment: ""), filter: .thisMonth)
+                            filterButton(title: NSLocalizedString("期限切れ", comment: ""), filter: .overdue)
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 5)

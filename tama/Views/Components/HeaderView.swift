@@ -175,8 +175,8 @@ struct HeaderView: View {
     
     private func getTitleText() -> String {
         switch selectedTab {
-        case 0: return "スクールバス"
-        case 2: return "课题"
+        case 0: return NSLocalizedString("スクールバス", comment: "顶部tab")
+        case 2: return NSLocalizedString("课题", comment: "顶部tab")
         default: return ""
         }
     }

@@ -15,20 +15,20 @@ struct Assignment: Identifiable, Codable {
         let now = Date()
         
         if now > dueDate {
-            return "期限切れ"
+            return NSLocalizedString("期限切れ", comment: "课题卡片")
         }
         
         let components = calendar.dateComponents([.day, .hour, .minute], from: now, to: dueDate)
         
         if let days = components.day, days > 0 {
-            return "\(days)日"
+            return String(format: NSLocalizedString("%d日", comment: "课题卡片"), days)
         } else if let hours = components.hour, hours > 0 {
-            return "\(hours)時間"
+            return String(format: NSLocalizedString("%d時間", comment: "课题卡片"), hours)
         } else if let minutes = components.minute {
-            return "\(minutes)分"
+            return String(format: NSLocalizedString("%d分", comment: "课题卡片"), minutes)
         }
         
-        return "まもなく期限"
+        return NSLocalizedString("まもなく期限", comment: "课题卡片")
     }
     
     var isOverdue: Bool {

@@ -76,6 +76,11 @@ class AuthService {
             return
         }
         
+        // デバイストークンを取得して通知登録を解除
+        if let deviceToken = NotificationService.shared.deviceToken {
+            NotificationService.shared.unregisterDeviceTokenFromServer(token: deviceToken)
+        }
+        
         // カスタムデコーダー
         let decoder: (Data) -> Result<Bool, Error> = { data in
             do {

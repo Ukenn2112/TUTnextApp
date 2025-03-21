@@ -14,7 +14,7 @@ struct TabBarView: View {
             HStack {
                 TabBarButton(
                     image: "bus",
-                    text: "バス",
+                    text: NSLocalizedString("バス", comment: "底部tab"),
                     isSelected: selectedTab == 0,
                     colorScheme: colorScheme,
                     action: { selectedTab = 0 }
@@ -22,7 +22,7 @@ struct TabBarView: View {
                 
                 TabBarButton(
                     image: "calendar",
-                    text: "時間割",
+                    text: NSLocalizedString("時間割", comment: "底部tab"),
                     isSelected: selectedTab == 1,
                     colorScheme: colorScheme,
                     action: { selectedTab = 1 }
@@ -30,7 +30,7 @@ struct TabBarView: View {
                 
                 TabBarButton(
                     image: "pencil.line",
-                    text: "課題",
+                    text: NSLocalizedString("課題", comment: "底部tab"),
                     isSelected: selectedTab == 2,
                     colorScheme: colorScheme,
                     action: { selectedTab = 2 }

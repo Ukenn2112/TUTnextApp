@@ -12,6 +12,7 @@ import SwiftData
 struct tamaApp: App {
     @StateObject private var appearanceManager = AppearanceManager()
     @StateObject private var notificationService = NotificationService.shared
+    @StateObject private var languageService = LanguageService.shared
     
     // AppDelegateを使用
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -23,6 +24,7 @@ struct tamaApp: App {
             ContentView()
                 .environmentObject(appearanceManager)
                 .environmentObject(notificationService)
+                .environmentObject(languageService)
                 .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
                 .onAppear {
                     appearanceManager.startObservingSystemAppearance()
