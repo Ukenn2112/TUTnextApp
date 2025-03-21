@@ -186,7 +186,7 @@ struct HeaderView: View {
         guard let fullName = user?.fullName else { return "?" }
         
         // 空白で分割して最初の部分を取得
-        let nameParts = fullName.split(separator: " ")
+        let nameParts = fullName.split(separator: "　")
         if let firstPart = nameParts.first {
             // 最初の部分から最大2文字を取得
             let initialChars = String(firstPart.prefix(2))

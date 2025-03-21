@@ -230,6 +230,8 @@ struct CourseDetailView: View {
                                             Text(data.type)
                                                 .font(.system(size: 14))
                                                 .frame(width: 40, alignment: .leading)
+                                                .minimumScaleFactor(0.5)
+                                                .lineLimit(1)
                                             
                                             GeometryReader { geometry in
                                                 HStack(spacing: 0) {
