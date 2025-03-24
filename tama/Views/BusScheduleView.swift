@@ -419,7 +419,7 @@ struct BusScheduleView: View {
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal)
-            .onChange(of: selectedScheduleType) { newValue in
+            .onChange(of: selectedScheduleType) { oldValue, newValue in
                 selectedTimeEntry = nil
                 updateScrollToHour()
             }
@@ -453,7 +453,7 @@ struct BusScheduleView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 5)
             }
-            .onChange(of: selectedRouteType) { newValue in
+            .onChange(of: selectedRouteType) { oldValue, newValue in
                 withAnimation {
                     scrollProxy.scrollTo(newValue.rawValue, anchor: .center)
                 }
@@ -497,7 +497,7 @@ struct BusScheduleView: View {
                 VStack(alignment: .center, spacing: 16) {
                     // 時刻表
                     scheduleTableView
-                        .onChange(of: scrollToHour) { newValue in
+                        .onChange(of: scrollToHour) { oldValue, newValue in
                             if let hour = newValue {
                                 withAnimation {
                                     scrollProxy.scrollTo("hour_\(hour)", anchor: UnitPoint(x: 0, y: 0.1))

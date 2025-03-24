@@ -48,7 +48,7 @@ struct ContentView: View {
         }
         // アプリ全体のダークモード設定
         .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
-        .onChange(of: appearanceManager.isDarkMode) { newValue in
+        .onChange(of: appearanceManager.isDarkMode) { oldValue, newValue in
             print("ContentView detected isDarkMode change: \(newValue)")
         }
         // 通知センターでの変更監視も追加

@@ -1,7 +1,7 @@
 import Foundation
 
 // MARK: - バス時刻表データモデル
-struct BusSchedule {
+struct BusSchedule: Codable {
     // MARK: - 列挙型
     
     /// バス路線タイプ
@@ -49,14 +49,14 @@ struct BusSchedule {
     }
     
     /// 1日の完全な時刻表
-    struct DaySchedule {
+    struct DaySchedule: Codable {
         let routeType: RouteType
         let scheduleType: ScheduleType
         let hourSchedules: [HourSchedule]
     }
     
     /// 特別便の説明
-    struct SpecialNote {
+    struct SpecialNote: Codable {
         let symbol: String
         let description: String
     }

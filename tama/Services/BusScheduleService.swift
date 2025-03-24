@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - バス時刻表データ提供サービス
 class BusScheduleService {
@@ -20,8 +21,14 @@ class BusScheduleService {
     /// APIリクエストが現在進行中かどうか
     private var isRequestInProgress = false
     
+    /// App Group ID
+    private let appGroupID = "group.com.meikenn.tama"
+    
     /// プライベートイニシャライザ（シングルトンパターン）
-    private init() {}
+    private init() {
+        // 保存されたデータがあれば読み込む
+        loadCachedDataFromAppGroup()
+    }
     
     /// バス時刻表データを取得（非同期）
     func fetchBusScheduleData(completion: @escaping (BusSchedule?, Error?) -> Void) {
@@ -87,6 +94,9 @@ class BusScheduleService {
                 // キャッシュを更新
                 self.cachedSchedule = busSchedule
                 self.lastFetchTime = Date()
+                
+                // App Groupsにデータを保存
+                self.saveBusDataToAppGroup(busSchedule: busSchedule, lastFetchTime: self.lastFetchTime!)
                 
                 print("BusScheduleService: 新しいデータの取得に成功しました（取得時間: \(self.formatDate(self.lastFetchTime!))）")
                 
@@ -273,5 +283,48 @@ class BusScheduleService {
             specialNotes: specialNotes,
             temporaryMessages: nil
         )
+    }
+    
+    /// App Groupsにバスデータを保存
+    private func saveBusDataToAppGroup(busSchedule: BusSchedule, lastFetchTime: Date) {
+        do {
+            // バススケジュールをJSONデータに変換
+            let encoder = JSONEncoder()
+            let busData = try encoder.encode(busSchedule)
+            
+            // UserDefaultsにデータを保存（App Group共有）- メインスレッドで実行
+            DispatchQueue.main.async {
+                let userDefaults = UserDefaults(suiteName: self.appGroupID)
+                userDefaults?.set(busData, forKey: "cachedBusSchedule")
+                userDefaults?.set(lastFetchTime, forKey: "lastBusScheduleFetchTime")
+                
+                print("BusScheduleService: App Groupsにデータを保存しました")
+            }
+        } catch {
+            print("BusScheduleService: App Groupsへのデータ保存に失敗しました - \(error.localizedDescription)")
+        }
+    }
+    
+    /// App Groupsからキャッシュされたデータを読み込む
+    private func loadCachedDataFromAppGroup() {
+        // メインスレッドで実行
+        DispatchQueue.main.async {
+            let userDefaults = UserDefaults(suiteName: self.appGroupID)
+            
+            if let busData = userDefaults?.data(forKey: "cachedBusSchedule"),
+               let fetchTime = userDefaults?.object(forKey: "lastBusScheduleFetchTime") as? Date {
+                do {
+                    let decoder = JSONDecoder()
+                    let busSchedule = try decoder.decode(BusSchedule.self, from: busData)
+                    
+                    self.cachedSchedule = busSchedule
+                    self.lastFetchTime = fetchTime
+                    
+                    print("BusScheduleService: App Groupsからデータを読み込みました（取得時間: \(self.formatDate(fetchTime))）")
+                } catch {
+                    print("BusScheduleService: App Groupsからのデータ読み込みに失敗しました - \(error.localizedDescription)")
+                }
+            }
+        }
     }
 } 

@@ -240,7 +240,7 @@ struct UserSettingsView: View {
                 DarkModeSettingsView(appearanceManager: appearanceManager)
             }
             .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
-            .onChange(of: appearanceManager.isDarkMode) { newValue in
+            .onChange(of: appearanceManager.isDarkMode) { oldValue, newValue in
                 print("Settings view updated isDarkMode: \(newValue)")
             }
         }
@@ -509,7 +509,7 @@ struct DarkModeSettingsView: View {
             })
             // 状態変更を監視して即座に見た目を更新
             .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
-            .onChange(of: appearanceManager.isDarkMode) { newValue in
+            .onChange(of: appearanceManager.isDarkMode) { oldValue, newValue in
                 print("DarkMode sheet updated: \(newValue)")
             }
         }
