@@ -27,9 +27,16 @@ struct tamaApp: App {
                 .environmentObject(languageService)
                 .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
                 .onAppear {
+                    print("tamaApp: Application appeared")
                     appearanceManager.startObservingSystemAppearance()
                     // アプリ起動時に通知権限をチェック
                     notificationService.checkAuthorizationStatus()
+                }
+                // URLスキームを処理
+                .onOpenURL { url in
+                    print("tamaApp: Received openURL: \(url)")
+                    // AppDelegateにURLを処理させる
+                    let _ = AppDelegate.shared.handleURL(url)
                 }
         }
     }

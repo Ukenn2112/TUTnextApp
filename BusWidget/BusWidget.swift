@@ -314,6 +314,22 @@ struct SimpleEntry: TimelineEntry {
     let nextBusTimes: [BusWidgetSchedule.TimeEntry]
     let scheduleType: String
     
+    // URLスキームを作成する関数
+    func getBusDeepLink() -> URL {
+        // 選択されている路線タイプに基づいてURLを構築
+        var urlComponents = URLComponents()
+        urlComponents.scheme = "tama"
+        urlComponents.host = "bus"
+        
+        // 路線タイプをクエリパラメータとして追加
+        urlComponents.queryItems = [
+            URLQueryItem(name: "route", value: configuration.routeType.rawValue),
+            URLQueryItem(name: "schedule", value: scheduleType)
+        ]
+        
+        return urlComponents.url ?? URL(string: "tama://bus")!
+    }
+    
     // バス時刻をDate型に変換するメソッド
     func getBusTimeAsDate(index: Int) -> Date? {
         guard index < nextBusTimes.count else { return nil }
@@ -503,12 +519,31 @@ struct BusWidgetEntryView : View {
     func cardBackgroundColor(opacity: Double = 0.05) -> Color {
         return colorScheme == .dark ? Color.white.opacity(opacity) : themeColor.opacity(opacity)
     }
+    
+    // URLスキームを作成する関数
+    func getBusDeepLink() -> URL {
+        // 選択されている路線タイプに基づいてURLを構築
+        var urlComponents = URLComponents()
+        urlComponents.scheme = "tama"
+        urlComponents.host = "bus"
+        
+        // 路線タイプをクエリパラメータとして追加
+        urlComponents.queryItems = [
+            URLQueryItem(name: "route", value: entry.configuration.routeType.rawValue),
+            URLQueryItem(name: "schedule", value: entry.scheduleType)
+        ]
+        
+        return urlComponents.url ?? URL(string: "tama://bus")!
+    }
 
     var body: some View {
-        if family == .systemSmall {
-            smallWidgetLayout
-        } else {
-            mediumWidgetLayout
+        // タップ時にリンクを開くため、コンテンツをLink要素でラップ
+        Link(destination: getBusDeepLink()) {
+            if family == .systemSmall {
+                smallWidgetLayout
+            } else {
+                mediumWidgetLayout
+            }
         }
     }
     
@@ -846,6 +881,9 @@ struct BusWidget: Widget {
                             WidgetBackgroundView()
                         }
                 }
+                // ウィジェットのURLを指定
+                // Link要素で個別に対応しているが、古いiOSバージョンとの互換性のために残しておく
+                .widgetURL(entry.getBusDeepLink())
         }
         .configurationDisplayName("学校バス時刻表")
         .description("次のバスの発車時刻を表示します")

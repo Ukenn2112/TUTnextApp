@@ -14,6 +14,7 @@ struct BusScheduleView: View {
     @Environment(\.colorScheme) private var colorScheme
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
+    @State private var busParametersObserver: NSObjectProtocol? // URLスキームからのパラメータ通知用
     
     // 位置情報関連
     @State private var locationManager: CLLocationManager?
@@ -96,10 +97,27 @@ struct BusScheduleView: View {
                 // 位置情報マネージャーを初期化して監視を開始
                 self.setupLocationManager()
             }
+            
+            // バス時刻表データの取得
+            fetchBusScheduleData()
+            
+            // アプリがフォアグラウンドに戻ってきた時の処理
+            willEnterForegroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                currentTime = Date()
+                fetchBusScheduleData()
+            }
+            
+            // URLスキームからのバスパラメータ通知を監視
+            setupBusParametersObserver()
         }
         .onDisappear {
             print("BusScheduleView: onDisappear - 位置情報の監視を停止します")
             cleanupTimers()
+            removeObservers()
         }
     }
     
@@ -318,20 +336,6 @@ struct BusScheduleView: View {
         
         // 位置情報マネージャーの初期化と位置の確認
         setupLocationManager()
-        
-        // 应用程序从后台恢复时刷新页面
-        willEnterForegroundObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.willEnterForegroundNotification,
-            object: nil,
-            queue: .main
-        ) { [self] _ in
-            print("BusScheduleView: アプリがフォアグラウンドに復帰しました")
-            fetchBusScheduleData()
-            currentTime = Date()
-            
-            // フォアグラウンドに復帰したときにも位置情報を更新
-            updateLocationImmediately()
-        }
         
         // 1分ごとに現在時刻を更新するタイマー
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [self] _ in
@@ -1100,6 +1104,58 @@ struct BusScheduleView: View {
             print("BusScheduleView: 位置情報の使用が許可されていません")
         @unknown default:
             break
+        }
+    }
+    
+    // MARK: - URLスキーム処理
+    private func setupBusParametersObserver() {
+        busParametersObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("BusParametersFromURL"),
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let userInfo = notification.userInfo {
+                // routeパラメータを処理
+                if let routeString = userInfo["route"] as? String {
+                    switch routeString {
+                    case "fromSeisekiToSchool":
+                        self.selectedRouteType = .fromSeisekiToSchool
+                    case "fromNagayamaToSchool":
+                        self.selectedRouteType = .fromNagayamaToSchool
+                    case "fromSchoolToSeiseki":
+                        self.selectedRouteType = .fromSchoolToSeiseki
+                    case "fromSchoolToNagayama":
+                        self.selectedRouteType = .fromSchoolToNagayama
+                    default:
+                        break
+                    }
+                }
+                
+                // scheduleパラメータを処理
+                if let scheduleString = userInfo["schedule"] as? String {
+                    switch scheduleString {
+                    case "weekday":
+                        self.selectedScheduleType = .weekday
+                    case "saturday":
+                        self.selectedScheduleType = .saturday
+                    case "wednesday":
+                        self.selectedScheduleType = .wednesday
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    // deinitでオブザーバーを解除
+    private func removeObservers() {
+        if let observer = willEnterForegroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        
+        if let observer = busParametersObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 }
