@@ -115,148 +115,43 @@ class TimetableWidgetDataProvider {
     // 共有UserDefaultsアクセス
     private let sharedDefaults = UserDefaults(suiteName: APP_GROUP_ID)
     
-    // キャッシュされた時間割データ
-    private var cachedTimetableData: [String: [String: CourseModel]]?
-    
-    // キャッシュされた最終更新時刻
-    private var cachedLastFetchTime: Date?
-    
-    // キャッシュの有効期限（秒）
-    private let cacheExpirationTime: TimeInterval = 60 * 5 // 5分
-    
-    // データ取得試行回数
-    private var retryCount: Int = 0
-    private let maxRetryCount: Int = 3
-    
     // 初期化
-    private init() {
-        // 起動時にキャッシュを読み込む
-        loadCache()
-    }
-    
-    // キャッシュをメモリに読み込む
-    private func loadCache() {
-        do {
-            // App Groupsからデータを読み込む
-            guard let userDefaults = sharedDefaults else {
-                print("TimetableWidgetDataProvider: App Groupsにアクセスできません")
-                return
-            }
-            
-            guard let timetableData = userDefaults.data(forKey: TimetableWidgetKeys.cachedTimetableData) else {
-                print("TimetableWidgetDataProvider: キャッシュデータが見つかりません")
-                return
-            }
-            
-            guard let fetchTime = userDefaults.object(forKey: TimetableWidgetKeys.lastUpdateTime) as? Date else {
-                print("TimetableWidgetDataProvider: 最終更新時刻が見つかりません")
-                return
-            }
-            
-            let decoder = JSONDecoder()
-            let timetableDataDecoded = try decoder.decode([String: [String: CourseModel]].self, from: timetableData)
-            
-            self.cachedTimetableData = timetableDataDecoded
-            self.cachedLastFetchTime = fetchTime
-            
-            print("TimetableWidgetDataProvider: キャッシュを読み込みました（取得時間: \(formatDate(fetchTime))）")
-            // print("TimetableWidgetDataProvider: キャッシュデータ: \(timetableDataDecoded)")
-        } catch {
-            print("TimetableWidgetDataProvider: キャッシュの読み込みに失敗しました - \(error.localizedDescription)")
-            self.cachedTimetableData = nil
-            self.cachedLastFetchTime = nil
-            
-            // 空のデータを返さないためのフォールバックとしてサンプルデータを使用
-            self.cachedTimetableData = CourseModel.sampleCourses
-        }
-    }
-    
-    // キャッシュが有効かチェック
-    private func isCacheValid() -> Bool {
-        guard let lastFetchTime = cachedLastFetchTime else { return false }
-        
-        let currentTime = Date()
-        let timeDifference = currentTime.timeIntervalSince(lastFetchTime)
-        
-        return timeDifference <= cacheExpirationTime
-    }
-    
-    // 日付をフォーマット
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
-        return formatter.string(from: date)
-    }
+    private init() {}
     
     // App Groupsから時間割データを取得（公開メソッド）
     func getTimetableData() -> [String: [String: CourseModel]]? {
-        // キャッシュが有効ならそれを返す
-        if isCacheValid() && cachedTimetableData != nil {
-            return cachedTimetableData
-        }
-        
-        // リトライ回数をリセット
-        retryCount = 0
-        
-        return fetchTimetableDataWithRetry()
-    }
-    
-    // リトライ機能付きデータ取得
-    private func fetchTimetableDataWithRetry() -> [String: [String: CourseModel]]? {
-        // 最大リトライ回数に達した場合
-        if retryCount >= maxRetryCount {
-            print("TimetableWidgetDataProvider: 最大リトライ回数に達しました。キャッシュデータを返します。")
-            return cachedTimetableData ?? CourseModel.sampleCourses
-        }
-        
-        retryCount += 1
-        
         do {
             // UserDefaultsへのアクセスチェック
             guard let userDefaults = sharedDefaults else {
-                print("TimetableWidgetDataProvider: App Groupsにアクセスできません（試行回数: \(retryCount)）")
-                return cachedTimetableData ?? CourseModel.sampleCourses
+                print("TimetableWidgetDataProvider: App Groupsにアクセスできません")
+                return CourseModel.sampleCourses
             }
             
             // データの存在チェック
             guard let timetableData = userDefaults.data(forKey: TimetableWidgetKeys.cachedTimetableData) else {
-                print("TimetableWidgetDataProvider: App Groupsからデータが見つかりませんでした（試行回数: \(retryCount)）")
+                print("TimetableWidgetDataProvider: App Groupsからデータが見つかりませんでした")
                 // データがなければサンプルデータでフォールバック
-                return cachedTimetableData ?? CourseModel.sampleCourses
+                return CourseModel.sampleCourses
             }
             
             // JSONデータをデコード
             let decoder = JSONDecoder()
             let timetableDataDecoded = try decoder.decode([String: [String: CourseModel]].self, from: timetableData)
             
-            // キャッシュを更新
-            cachedTimetableData = timetableDataDecoded
-            cachedLastFetchTime = getLastFetchTime()
-            
             return timetableDataDecoded
         } catch {
-            print("TimetableWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)（試行回数: \(retryCount)）")
-            
-            // 少し待ってからリトライ
-            Thread.sleep(forTimeInterval: 0.5)
-            return fetchTimetableDataWithRetry()
+            print("TimetableWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)")
+            return CourseModel.sampleCourses
         }
     }
     
     // 最終更新時刻を取得
     func getLastFetchTime() -> Date? {
-        // キャッシュが有効ならそれを返す
-        if isCacheValid() && cachedLastFetchTime != nil {
-            return cachedLastFetchTime
-        }
-        
-        // キャッシュが無効の場合はApp Groupsから直接読み込む
         guard let userDefaults = sharedDefaults else {
             return nil
         }
         
         if let fetchTime = userDefaults.object(forKey: TimetableWidgetKeys.lastUpdateTime) as? Date {
-            cachedLastFetchTime = fetchTime
             return fetchTime
         }
         
