@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		137DE3BF2D9231C800DC08D2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13E90A1E2D8E41A100B91F46 /* WidgetKit.framework */; };
+		137DE3C02D9231C800DC08D2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13E90A202D8E41A100B91F46 /* SwiftUI.framework */; };
+		137DE3D12D9231C900DC08D2 /* TimetableWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		13E90A1F2D8E41A100B91F46 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13E90A1E2D8E41A100B91F46 /* WidgetKit.framework */; };
 		13E90A212D8E41A100B91F46 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13E90A202D8E41A100B91F46 /* SwiftUI.framework */; };
 		13E90A322D8E41A300B91F46 /* BusWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 13E90A1C2D8E41A100B91F46 /* BusWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -27,6 +30,13 @@
 			remoteGlobalIDString = 134628ED2D70417E00A27E98;
 			remoteInfo = tama;
 		};
+		137DE3CF2D9231C900DC08D2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 134628E62D70417E00A27E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 137DE3BD2D9231C700DC08D2;
+			remoteInfo = TimetableWidgetExtension;
+		};
 		13E90A302D8E41A300B91F46 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 134628E62D70417E00A27E98 /* Project object */;
@@ -43,6 +53,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				137DE3D12D9231C900DC08D2 /* TimetableWidgetExtension.appex in Embed Foundation Extensions */,
 				13E90A322D8E41A300B91F46 /* BusWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -54,6 +65,8 @@
 		134628EE2D70417E00A27E98 /* tama.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tama.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		134629002D70418100A27E98 /* tamaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = tamaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1346290A2D70418100A27E98 /* tamaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = tamaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimetableWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		137DE3D62D92320000DC08D2 /* TimetableWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TimetableWidgetExtension.entitlements; sourceTree = "<group>"; };
 		13E90A1C2D8E41A100B91F46 /* BusWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BusWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		13E90A1E2D8E41A100B91F46 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		13E90A202D8E41A100B91F46 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -75,6 +88,20 @@
 			);
 			target = 13E90A1B2D8E41A100B91F46 /* BusWidgetExtension */;
 		};
+		137DE3D52D9231C900DC08D2 /* Exceptions for "TimetableWidget" folder in "TimetableWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */;
+		};
+		13E068B42D931B3C00ECB0A3 /* Exceptions for "tama" folder in "TimetableWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Localizable.xcstrings,
+			);
+			target = 137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */;
+		};
 		13E90A362D8E41A300B91F46 /* Exceptions for "BusWidget" folder in "BusWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -90,6 +117,7 @@
 			exceptions = (
 				13640A2D2D7B215A003752FE /* Exceptions for "tama" folder in "tama" target */,
 				137DE3B52D919E9800DC08D2 /* Exceptions for "tama" folder in "BusWidgetExtension" target */,
+				13E068B42D931B3C00ECB0A3 /* Exceptions for "tama" folder in "TimetableWidgetExtension" target */,
 			);
 			path = tama;
 			sourceTree = "<group>";
@@ -102,6 +130,14 @@
 		1346290D2D70418100A27E98 /* tamaUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = tamaUITests;
+			sourceTree = "<group>";
+		};
+		137DE3C12D9231C800DC08D2 /* TimetableWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				137DE3D52D9231C900DC08D2 /* Exceptions for "TimetableWidget" folder in "TimetableWidgetExtension" target */,
+			);
+			path = TimetableWidget;
 			sourceTree = "<group>";
 		};
 		13E90A222D8E41A100B91F46 /* BusWidget */ = {
@@ -136,6 +172,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		137DE3BB2D9231C700DC08D2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				137DE3C02D9231C800DC08D2 /* SwiftUI.framework in Frameworks */,
+				137DE3BF2D9231C800DC08D2 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		13E90A192D8E41A100B91F46 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -151,11 +196,13 @@
 		134628E52D70417E00A27E98 = {
 			isa = PBXGroup;
 			children = (
+				137DE3D62D92320000DC08D2 /* TimetableWidgetExtension.entitlements */,
 				13F79D802D8F7B7B002BCE42 /* BusWidgetExtension.entitlements */,
 				134628F02D70417E00A27E98 /* tama */,
 				134629032D70418100A27E98 /* tamaTests */,
 				1346290D2D70418100A27E98 /* tamaUITests */,
 				13E90A222D8E41A100B91F46 /* BusWidget */,
+				137DE3C12D9231C800DC08D2 /* TimetableWidget */,
 				13E90A1D2D8E41A100B91F46 /* Frameworks */,
 				134628EF2D70417E00A27E98 /* Products */,
 			);
@@ -168,6 +215,7 @@
 				134629002D70418100A27E98 /* tamaTests.xctest */,
 				1346290A2D70418100A27E98 /* tamaUITests.xctest */,
 				13E90A1C2D8E41A100B91F46 /* BusWidgetExtension.appex */,
+				137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -197,6 +245,7 @@
 			);
 			dependencies = (
 				13E90A312D8E41A300B91F46 /* PBXTargetDependency */,
+				137DE3D02D9231C900DC08D2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				134628F02D70417E00A27E98 /* tama */,
@@ -254,6 +303,28 @@
 			productReference = 1346290A2D70418100A27E98 /* tamaUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 137DE3D22D9231C900DC08D2 /* Build configuration list for PBXNativeTarget "TimetableWidgetExtension" */;
+			buildPhases = (
+				137DE3BA2D9231C700DC08D2 /* Sources */,
+				137DE3BB2D9231C700DC08D2 /* Frameworks */,
+				137DE3BC2D9231C700DC08D2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				137DE3C12D9231C800DC08D2 /* TimetableWidget */,
+			);
+			name = TimetableWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = TimetableWidgetExtension;
+			productReference = 137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		13E90A1B2D8E41A100B91F46 /* BusWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13E90A332D8E41A300B91F46 /* Build configuration list for PBXNativeTarget "BusWidgetExtension" */;
@@ -297,6 +368,9 @@
 						CreatedOnToolsVersion = 16.1;
 						TestTargetID = 134628ED2D70417E00A27E98;
 					};
+					137DE3BD2D9231C700DC08D2 = {
+						CreatedOnToolsVersion = 16.1;
+					};
 					13E90A1B2D8E41A100B91F46 = {
 						CreatedOnToolsVersion = 16.1;
 					};
@@ -323,6 +397,7 @@
 				134628FF2D70418100A27E98 /* tamaTests */,
 				134629092D70418100A27E98 /* tamaUITests */,
 				13E90A1B2D8E41A100B91F46 /* BusWidgetExtension */,
+				137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -343,6 +418,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		134629082D70418100A27E98 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		137DE3BC2D9231C700DC08D2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -380,6 +462,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		137DE3BA2D9231C700DC08D2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		13E90A182D8E41A100B91F46 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -399,6 +488,11 @@
 			isa = PBXTargetDependency;
 			target = 134628ED2D70417E00A27E98 /* tama */;
 			targetProxy = 1346290B2D70418100A27E98 /* PBXContainerItemProxy */;
+		};
+		137DE3D02D9231C900DC08D2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */;
+			targetProxy = 137DE3CF2D9231C900DC08D2 /* PBXContainerItemProxy */;
 		};
 		13E90A312D8E41A300B91F46 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -679,6 +773,64 @@
 			};
 			name = Release;
 		};
+		137DE3D32D9231C900DC08D2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = TimetableWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4H88DC6RMN;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TimetableWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TimetableWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.TimetableWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		137DE3D42D9231C900DC08D2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = TimetableWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4H88DC6RMN;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TimetableWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TimetableWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.TimetableWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		13E90A342D8E41A300B91F46 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -772,6 +924,15 @@
 			buildConfigurations = (
 				1346291B2D70418100A27E98 /* Debug */,
 				1346291C2D70418100A27E98 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		137DE3D22D9231C900DC08D2 /* Build configuration list for PBXNativeTarget "TimetableWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				137DE3D32D9231C900DC08D2 /* Debug */,
+				137DE3D42D9231C900DC08D2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

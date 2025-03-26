@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct CourseModel: Identifiable, Equatable {
+struct CourseModel: Identifiable, Equatable, Codable {
     var id = UUID()
     let name: String
     let room: String

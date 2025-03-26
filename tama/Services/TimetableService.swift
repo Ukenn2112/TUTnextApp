@@ -4,7 +4,19 @@ import SwiftUI
 class TimetableService {
     static let shared = TimetableService()
     
-    private init() {}
+    /// App Group ID
+    private let appGroupID = "group.com.meikenn.tama"
+    
+    /// キャッシュされた時間割データ
+    private var cachedTimetableData: [String: [String: CourseModel]]?
+    
+    /// 最後にデータを取得した時間
+    private var lastFetchTime: Date?
+    
+    private init() {
+        // 起動時にApp Groupsからデータを読み込む
+        loadTimetableDataFromAppGroup()
+    }
     
     // 時間割データを取得する関数
     func fetchTimetableData(completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void) {
@@ -125,6 +137,13 @@ class TimetableService {
                             // 時間割データの変換
                             let timetableData = self.convertToTimetableData(courseList)
                             
+                            // データをApp Groupsに保存
+                            self.saveTimetableDataToAppGroup(timetableData)
+                            self.lastFetchTime = Date()
+                            
+                            // メモリ内のキャッシュも更新
+                            self.cachedTimetableData = timetableData
+                            
                             // 未読件数を更新してから時間割データを返す
                             UserService.shared.updateAllKeijiMidokCnt(keijiCnt: data["keijiCnt"] as? Int ?? 0) {
                                 print("【時間割】変換後データ: \(timetableData.keys) 曜日, 合計\(timetableData.values.flatMap { $0.values }.count)コース")
@@ -226,6 +245,60 @@ class TimetableService {
         }
         
         return timetableData
+    }
+    
+    /// App Groupsに時間割データを保存
+    private func saveTimetableDataToAppGroup(_ timetableData: [String: [String: CourseModel]]) {
+        do {
+            // 時間割データをJSONデータに変換
+            let encoder = JSONEncoder()
+            let timetableDataEncoded = try encoder.encode(timetableData)
+            
+            // App Groupのユーザーデフォルトに保存
+            DispatchQueue.main.async {
+                let userDefaults = UserDefaults(suiteName: self.appGroupID)
+                userDefaults?.set(timetableDataEncoded, forKey: "cachedTimetableData")
+                userDefaults?.set(Date(), forKey: "lastTimetableFetchTime")
+                
+                print("【時間割】App Groupsにデータを保存しました")
+            }
+        } catch {
+            print("【時間割】App Groupsへのデータ保存に失敗しました - \(error.localizedDescription)")
+        }
+    }
+    
+    /// App Groupsから時間割データを読み込む
+    private func loadTimetableDataFromAppGroup() {
+        DispatchQueue.main.async {
+            let userDefaults = UserDefaults(suiteName: self.appGroupID)
+            
+            if let timetableData = userDefaults?.data(forKey: "cachedTimetableData"),
+               let fetchTime = userDefaults?.object(forKey: "lastTimetableFetchTime") as? Date {
+                do {
+                    let decoder = JSONDecoder()
+                    let timetableDataDecoded = try decoder.decode([String: [String: CourseModel]].self, from: timetableData)
+                    
+                    self.cachedTimetableData = timetableDataDecoded
+                    self.lastFetchTime = fetchTime
+                    
+                    print("【時間割】App Groupsからデータを読み込みました（取得時間: \(self.formatDate(fetchTime))）")
+                } catch {
+                    print("【時間割】App Groupsからのデータ読み込みに失敗しました - \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    /// キャッシュされた時間割データを取得
+    func getCachedTimetableData() -> [String: [String: CourseModel]]? {
+        return cachedTimetableData
+    }
+    
+    /// 日付をフォーマット
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
+        return formatter.string(from: date)
     }
 }
 
