@@ -178,17 +178,6 @@ class TimetableService {
     private func convertToTimetableData(_ courseList: [[String: Any]]) -> [String: [String: CourseModel]] {
         var timetableData: [String: [String: CourseModel]] = [:]
         
-        // 曜日の変換マップ
-        let weekdayMap = [
-            1: NSLocalizedString("月", comment: ""),
-            2: NSLocalizedString("火", comment: ""),
-            3: NSLocalizedString("水", comment: ""),
-            4: NSLocalizedString("木", comment: ""),
-            5: NSLocalizedString("金", comment: ""),
-            6: NSLocalizedString("土", comment: ""),
-            7: NSLocalizedString("日", comment: "")
-        ]
-        
         for courseData in courseList {
             guard let courseName = courseData["jugyoName"] as? String,
                   let roomName = courseData["kyostName"] as? String,
@@ -206,15 +195,6 @@ class TimetableService {
                 print("【時間割】コースデータの解析に失敗: \(courseData)")
                 continue
             }
-            
-            // 曜日を取得
-            guard let day = weekdayMap[weekdayNumber] else {
-                print("【時間割】無効な曜日: \(weekdayNumber)")
-                continue
-            }
-            
-            // 時限を文字列に変換
-            let period = "\(periodNumber)"
             
             // 保存されている色インデックスを取得、なければデフォルト値を使用
             let colorIndex = CourseColorService.shared.getCourseColor(jugyoCd: jugyoCd) ?? 1
@@ -237,11 +217,17 @@ class TimetableService {
                 keijiMidokCnt: keijiMidokCnt
             )
             
+            // 曜日の整数値を文字列に変換（1-7を使用）
+            let dayKey = "\(weekdayNumber)"
+            
+            // 時限を文字列に変換
+            let period = "\(periodNumber)"
+            
             // 時間割データに追加
-            if timetableData[day] == nil {
-                timetableData[day] = [:]
+            if timetableData[dayKey] == nil {
+                timetableData[dayKey] = [:]
             }
-            timetableData[day]?[period] = courseModel
+            timetableData[dayKey]?[period] = courseModel
         }
         
         return timetableData

@@ -8,6 +8,21 @@ struct TimetableView: View {
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
     
+    // 曜日インデックスを表示用文字列に変換するヘルパー
+    private func weekdayString(from index: String) -> String {
+        guard let idx = Int(index), idx >= 1 && idx <= 7 else { return "" }
+        let weekdays = [
+            NSLocalizedString("月", comment: ""),
+            NSLocalizedString("火", comment: ""),
+            NSLocalizedString("水", comment: ""),
+            NSLocalizedString("木", comment: ""),
+            NSLocalizedString("金", comment: ""),
+            NSLocalizedString("土", comment: ""),
+            NSLocalizedString("日", comment: "")
+        ]
+        return weekdays[idx - 1]
+    }
+    
     private let presetColors: [Color] = [
         .white,
         Color(red: 1.0, green: 0.8, blue: 0.8),  // 浅粉色
@@ -99,7 +114,7 @@ struct TimetableView: View {
                 if day == viewModel.getCurrentWeekday() {
                     currentDayView(day: day, width: layout.cellWidth)
                 } else {
-                    Text(day)
+                    Text(weekdayString(from: day))
                         .font(.system(size: 14))
                         .foregroundColor(.primary)
                         .frame(width: layout.cellWidth, height: 10)
@@ -115,7 +130,7 @@ struct TimetableView: View {
             Circle()
                 .fill(Color.green)
                 .frame(width: 20, height: 20)
-            Text(day)
+            Text(weekdayString(from: day))
                 .font(.system(size: 14))
                 .foregroundColor(.white)
         }
@@ -153,7 +168,8 @@ struct TimetableView: View {
         HStack(spacing: 4) {
             ForEach(viewModel.getWeekdays(), id: \.self) { day in
                 TimeSlotCell(
-                    day: day,
+                    dayIndex: day,
+                    displayDay: weekdayString(from: day),
                     period: period,
                     course: viewModel.courses[day]?[period],
                     presetColors: presetColors,
@@ -191,7 +207,8 @@ private struct LayoutMetrics {
 // MARK: - TimeSlotCell
 // 課程単元格視図
 struct TimeSlotCell: View {
-    let day: String
+    let dayIndex: String
+    let displayDay: String
     let period: String
     let course: CourseModel?
     let presetColors: [Color]
@@ -247,7 +264,7 @@ struct TimeSlotCell: View {
                 .padding(.horizontal, 4)
             } else {
                 // 修改空格子文字颜色
-                Text("\(day)\(period)")
+                Text("\(displayDay)\(period)")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }

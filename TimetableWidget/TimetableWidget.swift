@@ -159,7 +159,7 @@ struct LargeTimetableView: View {
                 if day == currentWeekday {
                     currentDayView(day: day)
                 } else {
-                    Text(day)
+                    Text(dataProvider.getWeekdayDisplayString(from: day))
                         .font(.system(size: 9, weight: .medium))
                         .foregroundColor(.primary)
                         .frame(maxWidth: .infinity)
@@ -175,7 +175,7 @@ struct LargeTimetableView: View {
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.green)
                 .frame(height: 12)
-            Text(day)
+            Text(dataProvider.getWeekdayDisplayString(from: day))
                 .font(.system(size: 9, weight: .bold))
                 .foregroundColor(.white)
         }
@@ -210,7 +210,8 @@ struct LargeTimetableView: View {
         HStack(spacing: itemSpacing) {
             ForEach(dataProvider.getWeekdays(), id: \.self) { day in
                 TimeSlotCellWidget(
-                    day: day,
+                    dayIndex: day,
+                    displayDay: dataProvider.getWeekdayDisplayString(from: day),
                     period: period,
                     course: entry.courses?[day]?[period],
                     isCurrentDay: day == currentWeekday,
@@ -224,7 +225,8 @@ struct LargeTimetableView: View {
 
 // 時限セル
 struct TimeSlotCellWidget: View {
-    let day: String
+    let dayIndex: String
+    let displayDay: String
     let period: String
     let course: CourseModel?
     let isCurrentDay: Bool
@@ -304,7 +306,7 @@ struct SmallTimetableView: View {
                 
                 Spacer()
                 
-                Text(currentWeekday)
+                Text(dataProvider.getWeekdayDisplayString(from: currentWeekday))
                     .font(.system(size: 12, weight: .bold))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
@@ -515,7 +517,7 @@ struct MediumTimetableView: View {
                 
                 Spacer()
                 
-                Text(currentWeekday)
+                Text(dataProvider.getWeekdayDisplayString(from: currentWeekday))
                     .font(.system(size: 12, weight: .bold))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)

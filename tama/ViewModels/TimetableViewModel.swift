@@ -69,16 +69,12 @@ class TimetableViewModel: ObservableObject {
     
     /// 曜日の配列を取得
     func getWeekdays() -> [String] {
-        let baseWeekdays = [
-            NSLocalizedString("月", comment: ""),
-            NSLocalizedString("火", comment: ""),
-            NSLocalizedString("水", comment: ""),
-            NSLocalizedString("木", comment: ""),
-            NSLocalizedString("金", comment: "")
-        ]
+        // 基本の曜日配列（月～金）
+        let baseWeekdays = ["1", "2", "3", "4", "5"]
         
-        if let saturdayCourses = courses[NSLocalizedString("土", comment: "")], !saturdayCourses.isEmpty {
-            return baseWeekdays + [NSLocalizedString("土", comment: "")]
+        // 土曜日のコースが存在する場合は土曜日も追加
+        if let saturdayCourses = courses["6"], !saturdayCourses.isEmpty {
+            return baseWeekdays + ["6"]
         }
         return baseWeekdays
     }
@@ -114,11 +110,8 @@ class TimetableViewModel: ObservableObject {
         let weekday = calendar.component(.weekday, from: Date())
         let japaneseWeekday = weekday == 1 ? 7 : weekday - 1
         
-        let weekdays = getWeekdays()
-        if (1...weekdays.count).contains(japaneseWeekday) {
-            return weekdays[japaneseWeekday - 1]
-        }
-        return ""
+        // 整数値の文字列として返す
+        return "\(japaneseWeekday)"
     }
     
     /// 現在の時限を取得

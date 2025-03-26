@@ -268,18 +268,9 @@ class TimetableWidgetDataProvider {
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: Date())
         
-        // 日本の曜日: 1=日曜日, 2=月曜日, 3=火曜日, 4=水曜日, 5=木曜日, 6=金曜日, 7=土曜日
-        let weekdayMap = [
-            1: NSLocalizedString("日", comment: ""),
-            2: NSLocalizedString("月", comment: ""),
-            3: NSLocalizedString("火", comment: ""),
-            4: NSLocalizedString("水", comment: ""),
-            5: NSLocalizedString("木", comment: ""),
-            6: NSLocalizedString("金", comment: ""),
-            7: NSLocalizedString("土", comment: "")
-        ]
-        
-        return weekdayMap[weekday] ?? NSLocalizedString("月", comment: "")
+        // 日本の曜日を整数値の文字列に変換 (1-7)
+        let japaneseWeekday = weekday == 1 ? 7 : weekday - 1
+        return String(japaneseWeekday)
     }
     
     // 現在の時限を取得
@@ -313,20 +304,30 @@ class TimetableWidgetDataProvider {
     
     // 曜日リストを取得
     func getWeekdays() -> [String] {
-        let baseWeekdays = [
+        // 基本の曜日配列（月～金）
+        let baseWeekdays = ["1", "2", "3", "4", "5"]
+        
+        // 土曜日の授業があるかチェック
+        if let saturdayCourses = getTimetableData()?["6"], !saturdayCourses.isEmpty {
+            return baseWeekdays + ["6"]
+        }
+        
+        return baseWeekdays
+    }
+    
+    // 曜日インデックスを表示用文字列に変換
+    func getWeekdayDisplayString(from index: String) -> String {
+        guard let idx = Int(index), idx >= 1 && idx <= 7 else { return "" }
+        let weekdays = [
             NSLocalizedString("月", comment: ""),
             NSLocalizedString("火", comment: ""),
             NSLocalizedString("水", comment: ""),
             NSLocalizedString("木", comment: ""),
-            NSLocalizedString("金", comment: "")
+            NSLocalizedString("金", comment: ""),
+            NSLocalizedString("土", comment: ""),
+            NSLocalizedString("日", comment: "")
         ]
-        
-        // 土曜日の授業があるかチェック
-        if let saturdayCourses = getTimetableData()?[NSLocalizedString("土", comment: "")], !saturdayCourses.isEmpty {
-            return baseWeekdays + [NSLocalizedString("土", comment: "")]
-        }
-        
-        return baseWeekdays
+        return weekdays[idx - 1]
     }
     
     // 時限情報を取得
