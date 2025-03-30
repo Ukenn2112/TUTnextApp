@@ -7,29 +7,28 @@
 
 import WidgetKit
 import SwiftUI
-import AppIntents
 
 // エントリーモデル
 struct TimetableEntry: TimelineEntry {
     let date: Date
     let courses: [String: [String: CourseModel]]?
     let lastFetchTime: Date?
-    let configuration: ConfigurationAppIntent
 }
 
 // プロバイダー
-struct Provider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> TimetableEntry {
+struct Provider: TimelineProvider {
+    typealias Entry = TimetableEntry
+    
+    func placeholder(in context: Context) -> Entry {
         // プレースホルダーとしてサンプルデータを使用
         return TimetableEntry(
             date: Date(), 
             courses: CourseModel.sampleCourses, 
-            lastFetchTime: Date(),
-            configuration: ConfigurationAppIntent()
+            lastFetchTime: Date()
         )
     }
 
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> TimetableEntry {
+    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
         // データプロバイダーインスタンス取得
         let dataProvider = TimetableWidgetDataProvider.shared
         
@@ -41,15 +40,16 @@ struct Provider: AppIntentTimelineProvider {
         let entryDate = Date()
         let entryCourses = courses ?? (context.isPreview ? CourseModel.sampleCourses : [:])
         
-        return TimetableEntry(
+        let entry = TimetableEntry(
             date: entryDate, 
             courses: entryCourses, 
-            lastFetchTime: lastFetchTime,
-            configuration: configuration
+            lastFetchTime: lastFetchTime
         )
+        
+        completion(entry)
     }
     
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<TimetableEntry> {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         // データプロバイダーインスタンス取得
         let dataProvider = TimetableWidgetDataProvider.shared
         
@@ -65,28 +65,147 @@ struct Provider: AppIntentTimelineProvider {
         let entry = TimetableEntry(
             date: currentDate, 
             courses: entryCourses, 
-            lastFetchTime: lastFetchTime,
-            configuration: configuration
+            lastFetchTime: lastFetchTime
         )
         
-        // 更新間隔を決定
-        var updateInterval: TimeInterval = 15 * 60 // デフォルト15分
+        // 更新時間の配列を作成
+        var updateTimes: [Date] = []
         
-        // データが古いかチェック
-        if let fetchTime = lastFetchTime {
-            let timeSinceFetch = currentDate.timeIntervalSince(fetchTime)
-            if timeSinceFetch > 60 * 60 { // 1時間以上経過している場合
-                updateInterval = 5 * 60 // 5分後に更新
+        // 定期更新（10分ごと）- 基本的な更新頻度を確保
+        let tenMinutesLater = Calendar.current.date(byAdding: .minute, value: 10, to: currentDate)!
+        updateTimes.append(tenMinutesLater)
+        
+        // 1. 今日の各授業の開始時間と終了時間（終了1分後）を取得
+        let calendar = Calendar.current
+        let periods = dataProvider.getPeriods()
+        
+        for (_, startTimeStr, endTimeStr) in periods {
+            // 開始時間を Date に変換
+            if let startComponents = parseTimeString(startTimeStr) {
+                let startDateComponents = DateComponents(
+                    year: calendar.component(.year, from: currentDate),
+                    month: calendar.component(.month, from: currentDate),
+                    day: calendar.component(.day, from: currentDate),
+                    hour: startComponents.hour,
+                    minute: startComponents.minute
+                )
+                
+                if let startDate = calendar.date(from: startDateComponents) {
+                    // 授業開始の5分前にも更新
+                    if let fiveMinutesBefore = calendar.date(byAdding: .minute, value: -5, to: startDate),
+                       fiveMinutesBefore > currentDate {
+                        updateTimes.append(fiveMinutesBefore)
+                    }
+                    
+                    // 授業開始時に更新
+                    if startDate > currentDate {
+                        updateTimes.append(startDate)
+                    }
+                    
+                    // 授業開始の3分後にも更新（授業開始直後の状態を反映するため）
+                    if let threeMinutesAfter = calendar.date(byAdding: .minute, value: 3, to: startDate),
+                       threeMinutesAfter > currentDate {
+                        updateTimes.append(threeMinutesAfter)
+                    }
+                }
             }
-        } else {
-            // データがない場合も5分後に更新
-            updateInterval = 5 * 60
+            
+            // 終了時間を Date に変換
+            if let endComponents = parseTimeString(endTimeStr) {
+                let endDateComponents = DateComponents(
+                    year: calendar.component(.year, from: currentDate),
+                    month: calendar.component(.month, from: currentDate),
+                    day: calendar.component(.day, from: currentDate),
+                    hour: endComponents.hour,
+                    minute: endComponents.minute
+                )
+                
+                if let endDate = calendar.date(from: endDateComponents) {
+                    // 授業終了の5分前にも更新
+                    if let fiveMinutesBefore = calendar.date(byAdding: .minute, value: -5, to: endDate),
+                       fiveMinutesBefore > currentDate {
+                        updateTimes.append(fiveMinutesBefore)
+                    }
+                    
+                    // 授業終了時に更新
+                    if endDate > currentDate {
+                        updateTimes.append(endDate)
+                    }
+                    
+                    // 授業終了1分後に更新
+                    if let oneMinuteAfter = calendar.date(byAdding: .minute, value: 1, to: endDate),
+                       oneMinuteAfter > currentDate {
+                        updateTimes.append(oneMinuteAfter)
+                    }
+                }
+            }
         }
         
-        let nextUpdateDate = Calendar.current.date(byAdding: .second, value: Int(updateInterval), to: currentDate)!
+        // 2. 翌日の0時も追加
+        var nextMidnightComponents = DateComponents()
+        nextMidnightComponents.year = calendar.component(.year, from: currentDate)
+        nextMidnightComponents.month = calendar.component(.month, from: currentDate)
+        nextMidnightComponents.day = calendar.component(.day, from: currentDate) + 1
+        nextMidnightComponents.hour = 0
+        nextMidnightComponents.minute = 0
+        nextMidnightComponents.second = 0
         
-        return Timeline(entries: [entry], policy: .after(nextUpdateDate))
+        if let nextMidnight = calendar.date(from: nextMidnightComponents) {
+            // 0時直前にも更新
+            if let fiveMinutesBefore = calendar.date(byAdding: .minute, value: -5, to: nextMidnight) {
+                updateTimes.append(fiveMinutesBefore)
+            }
+            
+            // 0時に更新
+            updateTimes.append(nextMidnight)
+            
+            // 0時直後にも更新
+            if let fiveMinutesAfter = calendar.date(byAdding: .minute, value: 5, to: nextMidnight) {
+                updateTimes.append(fiveMinutesAfter)
+            }
+        }
+        
+        // 3. データが古い場合はすぐに更新
+        if let fetchTime = lastFetchTime {
+            let timeSinceFetch = currentDate.timeIntervalSince(fetchTime)
+            if timeSinceFetch > 30 * 60 { // 30分以上経過している場合
+                let immediateUpdate = calendar.date(byAdding: .minute, value: 1, to: currentDate)!
+                updateTimes.append(immediateUpdate)
+            }
+        } else {
+            // データがない場合もすぐに更新
+            let immediateUpdate = calendar.date(byAdding: .minute, value: 1, to: currentDate)!
+            updateTimes.append(immediateUpdate)
+        }
+        
+        // 4. 現在授業中なら短い間隔で更新（現在時刻の状態を正確に表示するため）
+        if dataProvider.getCurrentPeriod() != nil {
+            let fiveMinutesLater = calendar.date(byAdding: .minute, value: 5, to: currentDate)!
+            updateTimes.append(fiveMinutesLater)
+        }
+        
+        // 更新時間をソートして最も近い時間を取得
+        updateTimes.sort()
+        
+        // 最も近い更新時間を取得（デフォルトは15分後）
+        let nextUpdateDate = updateTimes.first ?? calendar.date(byAdding: .minute, value: 15, to: currentDate)!
+        
+        // デバッグ用（必要に応じてコメントアウト）
+        // print("Next update scheduled at: \(nextUpdateDate)")
+        
+        completion(Timeline(entries: [entry], policy: .after(nextUpdateDate)))
     }
+}
+
+// 時間文字列をパース
+private func parseTimeString(_ timeString: String) -> (hour: Int, minute: Int)? {
+    let components = timeString.split(separator: ":")
+    guard components.count == 2,
+          let hour = Int(components[0]),
+          let minute = Int(components[1]) else {
+        return nil
+    }
+    return (hour: hour, minute: minute)
 }
 
 // ウィジェットビュー
@@ -99,14 +218,18 @@ struct TimetableWidgetEntryView : View {
         switch widgetFamily {
         case .systemLarge:
             LargeTimetableView(entry: entry, colorScheme: colorScheme)
+                .widgetURL(URL(string: "tama://timetable"))
         case .systemMedium:
             MediumTimetableView(entry: entry, colorScheme: colorScheme)
+                .widgetURL(URL(string: "tama://timetable"))
         case .systemSmall:
             SmallTimetableView(entry: entry, colorScheme: colorScheme)
+                .widgetURL(URL(string: "tama://timetable"))
         default:
             // その他のサイズは非サポート
             Text("このサイズはサポートされていません")
                 .font(.system(size: 10))
+                .widgetURL(URL(string: "tama://timetable"))
         }
     }
 }
@@ -338,18 +461,13 @@ struct SmallTimetableView: View {
             } else if let nextCourse = getNextCourse() {
                 // 現在の授業がなければ次の授業のみ表示
                 currentCourseView(course: nextCourse, isCurrentCourse: false)
-            } else if let lastCourse = getLastCourseOfDay() {
-                // すべての授業が終了していれば最後の授業を表示
-                VStack(spacing: 4) {
-                    Text("本日の授業は終了しました")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .padding(.top, 2)
-                        .padding(.horizontal, 6)
-                    
-                    currentCourseView(course: lastCourse, isCurrentCourse: false)
-                        .opacity(0.8) // 終了した授業は少し薄く表示
-                }
+            } else if getLastCourseOfDay() {
+                // すべての授業が終了していれば
+                Text("本日の授業は終了しました")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .padding(.top, 6)
+                    .frame(maxWidth: .infinity, alignment: .center)
             } else {
                 Text("本日の授業はありません")
                     .font(.system(size: 11))
@@ -391,42 +509,30 @@ struct SmallTimetableView: View {
             if !futureCourses.isEmpty {
                 return futureCourses.first
             }
-        } else {
-            // 時間情報がない場合は、単純に一番早い授業を返す
-            return courses.values.sorted { 
-                (Int($0.period ?? 0) < Int($1.period ?? 0)) 
-            }.first
         }
         
         return nil
     }
     
-    // 最後の授業を取得（すべての授業が終了したかの判断用）
-    private func getLastCourseOfDay() -> CourseModel? {
-        guard let courses = entry.courses?[currentWeekday], !courses.isEmpty else { return nil }
+    // 今日のすべての授業が終了したかを判断
+    private func getLastCourseOfDay() -> Bool {
+        guard let courses = entry.courses?[currentWeekday], !courses.isEmpty else { return false }
         
         // 今日の全ての授業が終了したかどうかをチェック
         if let currentPeriodInt = currentPeriod.flatMap(Int.init) {
             // 今後の授業があるかどうか確認
             let hasRemainingCourses = courses.values.contains { ($0.period ?? 0) >= currentPeriodInt }
             
-            // 今後の授業がある場合はnilを返す
-            if hasRemainingCourses {
-                return nil
-            }
-            
-            // すべての授業が終了した場合は、最後の授業を返す
-            return courses.values.sorted { 
-                (Int($0.period ?? 0) > Int($1.period ?? 0)) 
-            }.first
+            // 今後の授業がない場合はtrueを返す
+            return !hasRemainingCourses
         }
         
-        return nil
+        return false
     }
     
     // 次の時限を取得
     private func getNextPeriod() -> String? {
-        guard let currentPeriod = currentPeriod, let intPeriod = Int(currentPeriod) else { return "1" }
+        guard let currentPeriod = currentPeriod, let intPeriod = Int(currentPeriod) else { return nil }
         let nextIntPeriod = intPeriod + 1
         if nextIntPeriod <= 7 {
             return String(nextIntPeriod)
@@ -651,14 +757,18 @@ struct TimetableWidget: Widget {
     let kind: String = "TimetableWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
+        StaticConfiguration(kind: kind, provider: Provider()) { entry in
             if #available(iOSApplicationExtension 17.0, *) {
                 TimetableWidgetEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
+                    .containerBackground(Color(UIColor { traitCollection in
+                        return traitCollection.userInterfaceStyle == .dark ? .black : .white
+                    }), for: .widget)
             } else {
                 TimetableWidgetEntryView(entry: entry)
                     .padding()
-                    .background()
+                    .background(Color(UIColor { traitCollection in
+                        return traitCollection.userInterfaceStyle == .dark ? .black : .white
+                    }))
             }
         }
         .configurationDisplayName("時間割表")
@@ -673,10 +783,11 @@ struct TimetableWidget_Previews: PreviewProvider {
         TimetableWidgetEntryView(entry: TimetableEntry(
             date: Date(),
             courses: [:],
-            lastFetchTime: Date(),
-            configuration: ConfigurationAppIntent()
+            lastFetchTime: Date()
         ))
-        .containerBackground(.fill.tertiary, for: .widget)
+        .containerBackground(Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ? .black : .white
+        }), for: .widget)
         .previewContext(WidgetPreviewContext(family: .systemLarge))
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import WidgetKit
 
 class TimetableService {
     static let shared = TimetableService()
@@ -247,6 +248,8 @@ class TimetableService {
                 userDefaults?.set(Date(), forKey: "lastTimetableFetchTime")
                 
                 print("【時間割】App Groupsにデータを保存しました")
+                // ウィジェットを更新
+                WidgetCenter.shared.reloadTimelines(ofKind: "TimetableWidget")
             }
         } catch {
             print("【時間割】App Groupsへのデータ保存に失敗しました - \(error.localizedDescription)")
