@@ -22,12 +22,24 @@ class CookieService {
         // 使用响应的实际URL，如果可用
         let url = response.url ?? URL(string: urlString) ?? URL(string: "https://next.tama.ac.jp")!
         
-        let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
-        if !cookies.isEmpty {
-            cookies.forEach { cookie in
-                DispatchQueue.main.async {
-                    self.cookieStorage.setCookie(cookie)
-                    print("保存されたCookie: \(cookie.name) = \(cookie.value), ドメイン: \(cookie.domain)")
+        // 複数のSet-Cookieヘッダーを処理
+        let setCookieHeaders = headerFields.filter { $0.key.lowercased() == "set-cookie" }
+        
+        if !setCookieHeaders.isEmpty {
+            // 各Set-Cookieヘッダーを個別に処理
+            setCookieHeaders.forEach { header in
+                let cookieString = header.value
+                if let cookie = HTTPCookie(properties: [
+                    .name: cookieString.components(separatedBy: "=").first ?? "",
+                    .value: cookieString.components(separatedBy: "=").dropFirst().joined(separator: "="),
+                    .domain: url.host ?? "",
+                    .path: "/",
+                    .version: "0"
+                ]) {
+                    DispatchQueue.main.async {
+                        self.cookieStorage.setCookie(cookie)
+                        print("保存されたCookie: \(cookie.name) = \(cookie.value), ドメイン: \(cookie.domain)")
+                    }
                 }
             }
             

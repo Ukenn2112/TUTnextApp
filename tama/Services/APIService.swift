@@ -151,6 +151,18 @@ class APIService {
             if let response = response, let url = response.url {
                 // 使用响应的实际URL而不是固定域名
                 CookieService.shared.saveCookies(from: response, for: url.absoluteString)
+                
+                // 複数のSet-Cookieヘッダーを処理
+                if let headerFields = httpResponse.allHeaderFields as? [String: String] {
+                    let setCookieHeaders = headerFields.filter { $0.key.lowercased() == "set-cookie" }
+                    if !setCookieHeaders.isEmpty {
+                        print("【\(logTag)】複数のSet-Cookieヘッダーを検出: \(setCookieHeaders.count)個")
+                        setCookieHeaders.forEach { header in
+                            print("【\(logTag)】Set-Cookie: \(header.value)")
+                        }
+                    }
+                }
+                
                 print("【\(logTag)】Cookieを保存しました")
             }
         }

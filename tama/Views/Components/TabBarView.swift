@@ -9,6 +9,7 @@ struct TabBarView: View {
     @State private var webViewURL: URL?
     @State private var user: User?
     @FocusState private var isFocused: Bool
+    @State private var showPrintSystemView = false
     
     private func collapseWithAnimation() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -91,8 +92,7 @@ struct TabBarView: View {
                             text: NSLocalizedString("印刷システム", comment: ""),
                             colorScheme: colorScheme
                         ) {
-                            webViewURL = URL(string: "https://cloudodp.fujifilm.com/guestweb/?#/login")
-                            showWebView = true
+                            showPrintSystemView = true
                             collapseWithAnimation()
                         }
                     }
@@ -172,6 +172,9 @@ struct TabBarView: View {
             if let url = webViewURL {
                 SafariWebView(url: url)
             }
+        }
+        .sheet(isPresented: $showPrintSystemView) {
+            PrintSystemView()
         }
         .onAppear {
             loadUserData()
