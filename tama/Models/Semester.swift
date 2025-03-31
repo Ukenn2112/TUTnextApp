@@ -14,8 +14,8 @@ struct Semester {
     }
     
     static let current = Semester(
-        year: 2024,
-        termNo: 2,
-        termName: "秋学期"
+        year: 2025,
+        termNo: 1,
+        termName: "春学期"
     )
 }

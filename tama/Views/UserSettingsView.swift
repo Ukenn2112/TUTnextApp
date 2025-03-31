@@ -57,14 +57,6 @@ struct UserSettingsView: View {
                             // アカウント設定
                             SettingsSectionHeader(title: NSLocalizedString("アカウント設定", comment: ""))
                             
-                            SettingsRow(icon: "smartphone", title: NSLocalizedString("スマホサイトへ", comment: "")) {
-                                // T-Nextスマホサイトへ
-                                if let tnextURL = createTnextURL() {
-                                    urlToOpen = tnextURL
-                                    showSafari = true
-                                }
-                            }
-                            
                             SettingsRow(icon: "lock.fill", title: NSLocalizedString("パスワード変更", comment: "")) {
                                 openPasswordChangeURL()
                             }
@@ -159,7 +151,13 @@ struct UserSettingsView: View {
                             .buttonStyle(PlainButtonStyle())
                             
                             // サポート
-                            SettingsSectionHeader(title: NSLocalizedString("サポート", comment: ""))
+                            SettingsSectionHeader(title: NSLocalizedString("その他", comment: ""))
+
+                            // 利用規約
+                            SettingsRow(icon: "doc.text.fill", title: NSLocalizedString("利用規約", comment: "")) {
+                                urlToOpen = URL(string: "https://tama.qaq.tw/user-agreement")!
+                                showSafari = true
+                            }
                             
                             SettingsRow(icon: "exclamationmark.bubble.fill", title: NSLocalizedString("フィードバック", comment: "")) {
                                 sendFeedback()
@@ -364,45 +362,6 @@ struct UserSettingsView: View {
         let passwordChangeURL = URL(string: "https://google.tama.ac.jp/unicornidm/user/tama/password/")!
         urlToOpen = passwordChangeURL
         showSafari = true
-    }
-
-    // T-nextへのURLを生成する関数
-    private func createTnextURL() -> URL? {
-        let webApiLoginInfo: [String: Any] = [
-            "password": "",
-            "autoLoginAuthCd": "",
-            "encryptedPassword": user?.encryptedPassword ?? "",
-            "userId": user?.username ?? "",
-            "parameterMap": ""
-        ]
-        
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
-              let jsonString = String(data: jsonData, encoding: .utf8) else {
-            return nil
-        }
-        
-        // カスタムエンコーディング
-        let customEncoded = jsonString
-            .replacingOccurrences(of: " ", with: "%20")
-            .replacingOccurrences(of: "\"", with: "%22")
-            .replacingOccurrences(of: "\\", with: "%5C")
-            .replacingOccurrences(of: "'", with: "%27")
-            .replacingOccurrences(of: "+", with: "%2B")
-            .replacingOccurrences(of: ",", with: "%2C")
-            .replacingOccurrences(of: "/", with: "%2F")
-            .replacingOccurrences(of: ":", with: "%3A")
-            .replacingOccurrences(of: ";", with: "%3B")
-            .replacingOccurrences(of: "=", with: "%3D")
-            .replacingOccurrences(of: "?", with: "%3F")
-            .replacingOccurrences(of: "{", with: "%7B")
-            .replacingOccurrences(of: "}", with: "%7D")
-        
-        let encodedLoginInfo = customEncoded
-            .replacingOccurrences(of: "%2522", with: "%22")
-            .replacingOccurrences(of: "%255C", with: "%5C")
-        
-        let urlString = "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
-        return URL(string: urlString)
     }
 
     // フィードバック送信処理

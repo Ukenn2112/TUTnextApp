@@ -10,23 +10,29 @@ class TimetableViewModel: ObservableObject {
     
     // MARK: - Private Properties
     private var cancellables = Set<AnyCancellable>()
+    private let timetableService = TimetableService.shared
     
     // MARK: - Initialization
     init() {
         // サンプルデータを初期値として設定
         self.courses = CourseModel.sampleCourses
+        
+        // TimetableServiceからの学期情報を監視
+        timetableService.$currentSemester
+            .sink { [weak self] semester in
+                self?.currentSemester = semester
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Public Methods
     
-    /// 時間割データを取得
-    func fetchTimetableData(forSemester semester: Semester? = nil) {
+    /// 時間割データを取得 - 新インターフェース
+    func fetchTimetableData(forYear year: Int = 0, termNo: Int = 0) {
         isLoading = true
         errorMessage = nil
         
-        let targetSemester = semester ?? currentSemester
-        
-        TimetableService.shared.fetchTimetableData(semester: targetSemester) { [weak self] result in
+        TimetableService.shared.fetchTimetableData(year: year, termNo: termNo) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isLoading = false
@@ -42,6 +48,11 @@ class TimetableViewModel: ObservableObject {
                 }
             }
         }
+    }
+    
+    /// 時間割データを取得 - 互換性のため
+    func fetchTimetableData() {
+        fetchTimetableData(forYear: 0, termNo: 0)
     }
     
     /// 課程の色を更新

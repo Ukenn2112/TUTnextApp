@@ -678,28 +678,6 @@
         }
       }
     },
-    "サポート" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지원"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "帮助反馈"
-          }
-        }
-      }
-    },
     "システムに従う" : {
       "localizations" : {
         "en" : {
@@ -723,6 +701,7 @@
       }
     },
     "シラバス" : {
+      "comment" : "课程大纲",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -811,24 +790,46 @@
         }
       }
     },
-    "スマホサイトへ" : {
+    "スマホサイト" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Go to Mobile Site"
+            "value" : "Mobile Site"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "모바일 사이트로 이동"
+            "value" : "스마트폰 사이트"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "转到移动网站"
+            "value" : "移动端页面"
+          }
+        }
+      }
+    },
+    "その他" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Others"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기타"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他"
           }
         }
       }
@@ -895,6 +896,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "深色模式"
+          }
+        }
+      }
+    },
+    "たまゆに" : {
+      "comment" : "大学官网",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamayuni"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "타마유니"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多摩油尼"
           }
         }
       }
@@ -1413,50 +1437,6 @@
         }
       }
     },
-    "再ログイン" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Log In Again"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 로그인"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再登录"
-          }
-        }
-      }
-    },
-    "再試行" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 시도"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重试"
-          }
-        }
-      }
-    },
     "再読み込み" : {
       "localizations" : {
         "en" : {
@@ -1651,6 +1631,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "为途经永山站开往学校。"
+          }
+        }
+      }
+    },
+    "印刷システム" : {
+      "comment" : "印刷システム",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Print System"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인쇄 시스템"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打印服务"
           }
         }
       }
@@ -1931,6 +1934,29 @@
         }
       }
     },
+    "年間予定" : {
+      "comment" : "年度计划",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schedule"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연간 계획"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学年计划"
+          }
+        }
+      }
+    },
     "授" : {
       "localizations" : {
         "en" : {
@@ -2152,28 +2178,6 @@
         }
       }
     },
-    "時間割ウィジェットの設定" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schedule Widget Settings"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "시간표 위젯 설정"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "课程表部件设置"
-          }
-        }
-      }
-    },
     "時間割を表示します" : {
       "localizations" : {
         "en" : {
@@ -2214,28 +2218,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "课程表"
-          }
-        }
-      }
-    },
-    "時間割表示設定" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schedule Display Settings"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "시간표 표시 설정"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "课程表显示设置"
           }
         }
       }
@@ -2352,7 +2334,26 @@
       }
     },
     "本日の授業は終了しました" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's class has ended"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 수업이 종료되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天的课程已经结束"
+          }
+        }
+      }
     },
     "本日の次のバスはありません" : {
       "localizations" : {

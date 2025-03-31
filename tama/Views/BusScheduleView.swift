@@ -68,7 +68,7 @@ struct BusScheduleView: View {
                         self.errorMessage = nil
                         self.fetchBusScheduleData()
                     }) {
-                        Text("再試行")
+                        Text("再読み込み")
                     }
                     .padding(.top, 16)
                 }

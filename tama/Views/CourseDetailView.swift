@@ -141,10 +141,8 @@ struct CourseDetailView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     
-                    Button("再ログイン") {
-                        UserService.shared.clearCurrentUser()
-                        dismiss()
-                        isLoggedIn = false
+                    Button("再読み込み") {
+                        viewModel.fetchCourseDetail()
                     }
                     .padding(.top, 16)
                 }

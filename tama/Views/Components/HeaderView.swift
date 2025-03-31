@@ -8,7 +8,7 @@ struct HeaderView: View {
     @State private var user: User?
     @State private var showSafariView = false
     @State private var keijiBoardURL: URL?
-    let semester: Semester = .current  // 使用当前学期数据
+    @State private var semester: Semester = .current  // 使用当前学期数据
     
     // NotificationCenterを使用してUserDefaultsの変更を監視
     private let userDefaultsObserver = NotificationCenter.default
@@ -78,10 +78,16 @@ struct HeaderView: View {
         .onAppear {
             // ビュー表示時にUserServiceからユーザー情報を取得
             loadUserData()
+            // TimetableServiceから学期情報を取得
+            semester = TimetableService.shared.currentSemester
         }
         .onReceive(userDefaultsObserver) { _ in
             // UserDefaultsが変更されたときにユーザー情報を再読み込み
             loadUserData()
+        }
+        .onReceive(TimetableService.shared.$currentSemester) { updatedSemester in
+            // 学期情報が更新されたときに反映
+            semester = updatedSemester
         }
     }
     

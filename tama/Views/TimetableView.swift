@@ -64,10 +64,9 @@ struct TimetableView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                         
-                        Button("再ログイン") {
-                            // 执行登出操作
-                            UserService.shared.clearCurrentUser()
-                            isLoggedIn = false
+                        Button("再読み込み") {
+                            // 刷新数据而不是登出
+                            viewModel.fetchTimetableData()
                         }
                         .padding(.top, 16)
                     }

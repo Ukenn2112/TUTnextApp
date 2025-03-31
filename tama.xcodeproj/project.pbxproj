@@ -16,20 +16,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		134629012D70418100A27E98 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 134628E62D70417E00A27E98 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 134628ED2D70417E00A27E98;
-			remoteInfo = tama;
-		};
-		1346290B2D70418100A27E98 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 134628E62D70417E00A27E98 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 134628ED2D70417E00A27E98;
-			remoteInfo = tama;
-		};
 		137DE3CF2D9231C900DC08D2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 134628E62D70417E00A27E98 /* Project object */;
@@ -63,8 +49,6 @@
 
 /* Begin PBXFileReference section */
 		134628EE2D70417E00A27E98 /* tama.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tama.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		134629002D70418100A27E98 /* tamaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = tamaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		1346290A2D70418100A27E98 /* tamaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = tamaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimetableWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		137DE3D62D92320000DC08D2 /* TimetableWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TimetableWidgetExtension.entitlements; sourceTree = "<group>"; };
 		13E90A1C2D8E41A100B91F46 /* BusWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BusWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -122,16 +106,6 @@
 			path = tama;
 			sourceTree = "<group>";
 		};
-		134629032D70418100A27E98 /* tamaTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = tamaTests;
-			sourceTree = "<group>";
-		};
-		1346290D2D70418100A27E98 /* tamaUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = tamaUITests;
-			sourceTree = "<group>";
-		};
 		137DE3C12D9231C800DC08D2 /* TimetableWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -152,20 +126,6 @@
 
 /* Begin PBXFrameworksBuildPhase section */
 		134628EB2D70417E00A27E98 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		134628FD2D70418100A27E98 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		134629072D70418100A27E98 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -199,8 +159,6 @@
 				137DE3D62D92320000DC08D2 /* TimetableWidgetExtension.entitlements */,
 				13F79D802D8F7B7B002BCE42 /* BusWidgetExtension.entitlements */,
 				134628F02D70417E00A27E98 /* tama */,
-				134629032D70418100A27E98 /* tamaTests */,
-				1346290D2D70418100A27E98 /* tamaUITests */,
 				13E90A222D8E41A100B91F46 /* BusWidget */,
 				137DE3C12D9231C800DC08D2 /* TimetableWidget */,
 				13E90A1D2D8E41A100B91F46 /* Frameworks */,
@@ -212,8 +170,6 @@
 			isa = PBXGroup;
 			children = (
 				134628EE2D70417E00A27E98 /* tama.app */,
-				134629002D70418100A27E98 /* tamaTests.xctest */,
-				1346290A2D70418100A27E98 /* tamaUITests.xctest */,
 				13E90A1C2D8E41A100B91F46 /* BusWidgetExtension.appex */,
 				137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */,
 			);
@@ -256,52 +212,6 @@
 			productName = tama;
 			productReference = 134628EE2D70417E00A27E98 /* tama.app */;
 			productType = "com.apple.product-type.application";
-		};
-		134628FF2D70418100A27E98 /* tamaTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 134629172D70418100A27E98 /* Build configuration list for PBXNativeTarget "tamaTests" */;
-			buildPhases = (
-				134628FC2D70418100A27E98 /* Sources */,
-				134628FD2D70418100A27E98 /* Frameworks */,
-				134628FE2D70418100A27E98 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				134629022D70418100A27E98 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				134629032D70418100A27E98 /* tamaTests */,
-			);
-			name = tamaTests;
-			packageProductDependencies = (
-			);
-			productName = tamaTests;
-			productReference = 134629002D70418100A27E98 /* tamaTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		134629092D70418100A27E98 /* tamaUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 1346291A2D70418100A27E98 /* Build configuration list for PBXNativeTarget "tamaUITests" */;
-			buildPhases = (
-				134629062D70418100A27E98 /* Sources */,
-				134629072D70418100A27E98 /* Frameworks */,
-				134629082D70418100A27E98 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				1346290C2D70418100A27E98 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				1346290D2D70418100A27E98 /* tamaUITests */,
-			);
-			name = tamaUITests;
-			packageProductDependencies = (
-			);
-			productName = tamaUITests;
-			productReference = 1346290A2D70418100A27E98 /* tamaUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */ = {
 			isa = PBXNativeTarget;
@@ -360,14 +270,6 @@
 					134628ED2D70417E00A27E98 = {
 						CreatedOnToolsVersion = 16.1;
 					};
-					134628FF2D70418100A27E98 = {
-						CreatedOnToolsVersion = 16.1;
-						TestTargetID = 134628ED2D70417E00A27E98;
-					};
-					134629092D70418100A27E98 = {
-						CreatedOnToolsVersion = 16.1;
-						TestTargetID = 134628ED2D70417E00A27E98;
-					};
 					137DE3BD2D9231C700DC08D2 = {
 						CreatedOnToolsVersion = 16.1;
 					};
@@ -394,8 +296,6 @@
 			projectRoot = "";
 			targets = (
 				134628ED2D70417E00A27E98 /* tama */,
-				134628FF2D70418100A27E98 /* tamaTests */,
-				134629092D70418100A27E98 /* tamaUITests */,
 				13E90A1B2D8E41A100B91F46 /* BusWidgetExtension */,
 				137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */,
 			);
@@ -404,20 +304,6 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		134628EC2D70417E00A27E98 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		134628FE2D70418100A27E98 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		134629082D70418100A27E98 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -448,20 +334,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		134628FC2D70418100A27E98 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		134629062D70418100A27E98 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		137DE3BA2D9231C700DC08D2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -479,16 +351,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		134629022D70418100A27E98 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 134628ED2D70417E00A27E98 /* tama */;
-			targetProxy = 134629012D70418100A27E98 /* PBXContainerItemProxy */;
-		};
-		1346290C2D70418100A27E98 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 134628ED2D70417E00A27E98 /* tama */;
-			targetProxy = 1346290B2D70418100A27E98 /* PBXContainerItemProxy */;
-		};
 		137DE3D02D9231C900DC08D2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */;
@@ -648,7 +510,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -688,7 +550,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -698,78 +560,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
-		134629182D70418100A27E98 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4H88DC6RMN;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tamaTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/tama.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/tama";
-			};
-			name = Debug;
-		};
-		134629192D70418100A27E98 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4H88DC6RMN;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tamaTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/tama.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/tama";
-			};
-			name = Release;
-		};
-		1346291B2D70418100A27E98 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4H88DC6RMN;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tamaUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = tama;
-			};
-			name = Debug;
-		};
-		1346291C2D70418100A27E98 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4H88DC6RMN;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tamaUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = tama;
 			};
 			name = Release;
 		};
@@ -792,7 +582,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.TimetableWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -821,7 +611,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.TimetableWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -850,7 +640,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.BusWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -879,7 +669,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.BusWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -906,24 +696,6 @@
 			buildConfigurations = (
 				134629152D70418100A27E98 /* Debug */,
 				134629162D70418100A27E98 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		134629172D70418100A27E98 /* Build configuration list for PBXNativeTarget "tamaTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				134629182D70418100A27E98 /* Debug */,
-				134629192D70418100A27E98 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		1346291A2D70418100A27E98 /* Build configuration list for PBXNativeTarget "tamaUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1346291B2D70418100A27E98 /* Debug */,
-				1346291C2D70418100A27E98 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

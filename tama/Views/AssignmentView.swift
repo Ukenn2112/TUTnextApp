@@ -56,7 +56,7 @@ struct AssignmentView: View {
                     Button {
                         viewModel.loadAssignments()
                     } label: {
-                        Text("再試行")
+                        Text("再読み込み")
                     }
                 }
                 .padding()

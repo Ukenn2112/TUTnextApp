@@ -14,6 +14,9 @@ class TimetableService {
     /// 最後にデータを取得した時間
     private var lastFetchTime: Date?
     
+    // 現在の学期情報
+    @Published var currentSemester: Semester = .current
+    
     private init() {
         // 起動時にApp Groupsからデータを読み込む
         loadTimetableDataFromAppGroup()
@@ -21,11 +24,11 @@ class TimetableService {
     
     // 時間割データを取得する関数
     func fetchTimetableData(completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void) {
-        fetchTimetableData(semester: .current, completion: completion)
+        fetchTimetableData(year: 0, termNo: 0, completion: completion)
     }
     
     // 指定した学期の時間割データを取得する関数
-    func fetchTimetableData(semester: Semester, completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void) {
+    func fetchTimetableData(year: Int = 0, termNo: Int = 0, completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void) {
         guard let user = UserService.shared.getCurrentUser(),
               let encryptedPassword = user.encryptedPassword else {
             print("【時間割】ユーザー認証情報なし")
@@ -44,8 +47,8 @@ class TimetableService {
         let requestBody: [String: Any] = [
             "plainLoginPassword": "",
             "data": [
-                "kaikoNendo": semester.year,
-                "gakkiNo": semester.termNo
+                "kaikoNendo": year,
+                "gakkiNo": termNo
             ],
             "langCd": "",
             "encryptedLoginPassword": encryptedPassword,
@@ -134,6 +137,20 @@ class TimetableService {
                         if let data = json["data"] as? [String: Any],
                            let courseList = data["jgkmDtoList"] as? [[String: Any]] {
                             print("【時間割】全未読揭示数: \(data["keijiCnt"] as? Int ?? 0)")
+                            
+                            // 授業年度と学期
+                            let semesterYear = data["nendo"] as? Int ?? 0
+                            let semesterTermNo = data["gakkiNo"] as? Int ?? 0
+                            let semesterName = data["gakkiName"] as? String ?? ""
+                            
+                            // 学期情報を更新
+                            DispatchQueue.main.async {
+                                self.currentSemester = Semester(
+                                    year: semesterYear,
+                                    termNo: semesterTermNo,
+                                    termName: semesterName
+                                )
+                            }
                             
                             // 時間割データの変換
                             let timetableData = self.convertToTimetableData(courseList)
