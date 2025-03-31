@@ -158,6 +158,12 @@ struct UserSettingsView: View {
                                 urlToOpen = URL(string: "https://tama.qaq.tw/user-agreement")!
                                 showSafari = true
                             }
+
+                            // プライバシーポリシー
+                            SettingsRow(icon: "hand.raised.fill", title: NSLocalizedString("プライバシーポリシー", comment: "")) {
+                                urlToOpen = URL(string: "https://tama.qaq.tw/policy")!
+                                showSafari = true
+                            }
                             
                             SettingsRow(icon: "exclamationmark.bubble.fill", title: NSLocalizedString("フィードバック", comment: "")) {
                                 sendFeedback()
