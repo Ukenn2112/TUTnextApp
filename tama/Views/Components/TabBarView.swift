@@ -9,7 +9,8 @@ struct TabBarView: View {
     @State private var webViewURL: URL?
     @State private var user: User?
     @FocusState private var isFocused: Bool
-    @State private var showPrintSystemView = false
+    @State private var showSheet = false
+    @State private var sheetContent: AnyView?
     
     private func collapseWithAnimation() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -92,7 +93,9 @@ struct TabBarView: View {
                             text: NSLocalizedString("印刷システム", comment: ""),
                             colorScheme: colorScheme
                         ) {
-                            showPrintSystemView = true
+                            // 印刷システム画面を表示
+                            showSheet = true
+                            sheetContent = AnyView(PrintSystemView())
                             collapseWithAnimation()
                         }
                     }
@@ -173,8 +176,8 @@ struct TabBarView: View {
                 SafariWebView(url: url)
             }
         }
-        .sheet(isPresented: $showPrintSystemView) {
-            PrintSystemView()
+        .sheet(isPresented: $showSheet) {
+            sheetContent
         }
         .onAppear {
             loadUserData()

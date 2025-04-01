@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		132FAA962D9B9C2700D6B817 /* PrintShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 132FAA8C2D9B9C2700D6B817 /* PrintShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		137DE3BF2D9231C800DC08D2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13E90A1E2D8E41A100B91F46 /* WidgetKit.framework */; };
 		137DE3C02D9231C800DC08D2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13E90A202D8E41A100B91F46 /* SwiftUI.framework */; };
 		137DE3D12D9231C900DC08D2 /* TimetableWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -16,6 +17,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		132FAA942D9B9C2700D6B817 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 134628E62D70417E00A27E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 132FAA8B2D9B9C2700D6B817;
+			remoteInfo = PrintShareExtension;
+		};
 		137DE3CF2D9231C900DC08D2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 134628E62D70417E00A27E98 /* Project object */;
@@ -39,6 +47,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				132FAA962D9B9C2700D6B817 /* PrintShareExtension.appex in Embed Foundation Extensions */,
 				137DE3D12D9231C900DC08D2 /* TimetableWidgetExtension.appex in Embed Foundation Extensions */,
 				13E90A322D8E41A300B91F46 /* BusWidgetExtension.appex in Embed Foundation Extensions */,
 			);
@@ -48,6 +57,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		132FAA8C2D9B9C2700D6B817 /* PrintShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PrintShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		134628EE2D70417E00A27E98 /* tama.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tama.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimetableWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		137DE3D62D92320000DC08D2 /* TimetableWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TimetableWidgetExtension.entitlements; sourceTree = "<group>"; };
@@ -58,6 +68,20 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		132FAA9A2D9B9C2700D6B817 /* Exceptions for "PrintShareExtension" folder in "PrintShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 132FAA8B2D9B9C2700D6B817 /* PrintShareExtension */;
+		};
+		132FAA9E2D9B9F9500D6B817 /* Exceptions for "tama" folder in "PrintShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Localizable.xcstrings,
+			);
+			target = 132FAA8B2D9B9C2700D6B817 /* PrintShareExtension */;
+		};
 		13640A2D2D7B215A003752FE /* Exceptions for "tama" folder in "tama" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -96,12 +120,21 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		132FAA8D2D9B9C2700D6B817 /* PrintShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				132FAA9A2D9B9C2700D6B817 /* Exceptions for "PrintShareExtension" folder in "PrintShareExtension" target */,
+			);
+			path = PrintShareExtension;
+			sourceTree = "<group>";
+		};
 		134628F02D70417E00A27E98 /* tama */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				13640A2D2D7B215A003752FE /* Exceptions for "tama" folder in "tama" target */,
 				137DE3B52D919E9800DC08D2 /* Exceptions for "tama" folder in "BusWidgetExtension" target */,
 				13E068B42D931B3C00ECB0A3 /* Exceptions for "tama" folder in "TimetableWidgetExtension" target */,
+				132FAA9E2D9B9F9500D6B817 /* Exceptions for "tama" folder in "PrintShareExtension" target */,
 			);
 			path = tama;
 			sourceTree = "<group>";
@@ -125,6 +158,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		132FAA892D9B9C2700D6B817 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		134628EB2D70417E00A27E98 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -161,6 +201,7 @@
 				134628F02D70417E00A27E98 /* tama */,
 				13E90A222D8E41A100B91F46 /* BusWidget */,
 				137DE3C12D9231C800DC08D2 /* TimetableWidget */,
+				132FAA8D2D9B9C2700D6B817 /* PrintShareExtension */,
 				13E90A1D2D8E41A100B91F46 /* Frameworks */,
 				134628EF2D70417E00A27E98 /* Products */,
 			);
@@ -172,6 +213,7 @@
 				134628EE2D70417E00A27E98 /* tama.app */,
 				13E90A1C2D8E41A100B91F46 /* BusWidgetExtension.appex */,
 				137DE3BE2D9231C700DC08D2 /* TimetableWidgetExtension.appex */,
+				132FAA8C2D9B9C2700D6B817 /* PrintShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -188,6 +230,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		132FAA8B2D9B9C2700D6B817 /* PrintShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 132FAA972D9B9C2700D6B817 /* Build configuration list for PBXNativeTarget "PrintShareExtension" */;
+			buildPhases = (
+				132FAA882D9B9C2700D6B817 /* Sources */,
+				132FAA892D9B9C2700D6B817 /* Frameworks */,
+				132FAA8A2D9B9C2700D6B817 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				132FAA8D2D9B9C2700D6B817 /* PrintShareExtension */,
+			);
+			name = PrintShareExtension;
+			packageProductDependencies = (
+			);
+			productName = PrintShareExtension;
+			productReference = 132FAA8C2D9B9C2700D6B817 /* PrintShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		134628ED2D70417E00A27E98 /* tama */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 134629142D70418100A27E98 /* Build configuration list for PBXNativeTarget "tama" */;
@@ -202,6 +266,7 @@
 			dependencies = (
 				13E90A312D8E41A300B91F46 /* PBXTargetDependency */,
 				137DE3D02D9231C900DC08D2 /* PBXTargetDependency */,
+				132FAA952D9B9C2700D6B817 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				134628F02D70417E00A27E98 /* tama */,
@@ -267,6 +332,9 @@
 				LastSwiftUpdateCheck = 1610;
 				LastUpgradeCheck = 1610;
 				TargetAttributes = {
+					132FAA8B2D9B9C2700D6B817 = {
+						CreatedOnToolsVersion = 16.1;
+					};
 					134628ED2D70417E00A27E98 = {
 						CreatedOnToolsVersion = 16.1;
 					};
@@ -298,11 +366,19 @@
 				134628ED2D70417E00A27E98 /* tama */,
 				13E90A1B2D8E41A100B91F46 /* BusWidgetExtension */,
 				137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */,
+				132FAA8B2D9B9C2700D6B817 /* PrintShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		132FAA8A2D9B9C2700D6B817 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		134628EC2D70417E00A27E98 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -327,6 +403,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		132FAA882D9B9C2700D6B817 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		134628EA2D70417E00A27E98 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -351,6 +434,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		132FAA952D9B9C2700D6B817 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 132FAA8B2D9B9C2700D6B817 /* PrintShareExtension */;
+			targetProxy = 132FAA942D9B9C2700D6B817 /* PBXContainerItemProxy */;
+		};
 		137DE3D02D9231C900DC08D2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 137DE3BD2D9231C700DC08D2 /* TimetableWidgetExtension */;
@@ -364,6 +452,60 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		132FAA982D9B9C2700D6B817 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PrintShareExtension/PrintShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4H88DC6RMN;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrintShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PrintShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.PrintShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		132FAA992D9B9C2700D6B817 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PrintShareExtension/PrintShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4H88DC6RMN;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrintShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PrintShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.PrintShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		134629122D70418100A27E98 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -510,7 +652,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -550,7 +692,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -582,7 +724,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.TimetableWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -611,7 +753,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.TimetableWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -640,7 +782,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.BusWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -669,7 +811,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.meikenn.tama.BusWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -682,6 +824,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		132FAA972D9B9C2700D6B817 /* Build configuration list for PBXNativeTarget "PrintShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				132FAA982D9B9C2700D6B817 /* Debug */,
+				132FAA992D9B9C2700D6B817 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		134628E92D70417E00A27E98 /* Build configuration list for PBXProject "tama" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

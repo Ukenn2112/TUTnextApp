@@ -65,6 +65,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             print("Query items: \(components.queryItems ?? [])")
         }
         
+        // 印刷URLのケース（Share Extensionから起動された場合）
+        if url.host == "print" {
+            print("Print URL detected - showing PrintSystemView")
+            
+            // モーダルでの表示処理はContentViewに任せる
+            // 通知を発行して他のビューに知らせる
+            NotificationCenter.default.post(name: Notification.Name("HandleURLScheme"), object: url)
+            return true
+        }
+        
         // 通知を発行して他のビューに知らせる
         NotificationCenter.default.post(name: Notification.Name("HandleURLScheme"), object: url)
         return true

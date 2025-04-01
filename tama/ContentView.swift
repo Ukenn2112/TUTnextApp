@@ -131,6 +131,17 @@ struct ContentView: View {
                     userInfo: userInfo as [AnyHashable : Any]
                 )
             }
+        case "print":
+            print("Opening print system view")
+            // 印刷システム画面を表示するための処理
+            let printSystemView = PrintSystemView.handleURLScheme()
+            
+            // モーダルで表示するためのホストコントローラを取得
+            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootController = scene.windows.first?.rootViewController {
+                let hostingController = UIHostingController(rootView: printSystemView)
+                rootController.present(hostingController, animated: true)
+            }
         default:
             print("Unknown path: \(path)")
             break

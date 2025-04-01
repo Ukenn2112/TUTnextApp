@@ -6,6 +6,11 @@ struct PrintSystemView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     
+    // URLスキームで起動された場合のビュー生成関数
+    static func handleURLScheme() -> some View {
+        return PrintSystemView()
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {

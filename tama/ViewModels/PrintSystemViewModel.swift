@@ -15,6 +15,48 @@ class PrintSystemViewModel: ObservableObject {
     // PIN番号
     @Published var pinCode: String = ""
     
+    init() {
+        // 初期化時に共有されたファイルを確認
+        checkForSharedFile()
+    }
+    
+    // 共有拡張機能から共有されたファイルを確認
+    private func checkForSharedFile() {
+        guard let sharedUserDefaults = UserDefaults(suiteName: "group.com.meikenn.tama"),
+              let fileInfo = sharedUserDefaults.dictionary(forKey: "SharedPrintFile") else {
+            return
+        }
+        
+        // ファイル情報を取得
+        guard let tempFilePath = fileInfo["tempFileURL"] as? String,
+              let fileName = fileInfo["fileName"] as? String,
+              let fileSize = fileInfo["fileSize"] as? Int else {
+            return
+        }
+        
+        let tempFileURL = URL(fileURLWithPath: tempFilePath)
+        
+        do {
+            // ファイルデータを読み込む
+            let fileData = try Data(contentsOf: tempFileURL)
+            
+            // ViewModel内のselectedFileに設定
+            DispatchQueue.main.async { [weak self] in
+                self?.selectedFile = (data: fileData, name: fileName, size: fileSize)
+            }
+            
+            // 使用済みのファイル情報を削除
+            sharedUserDefaults.removeObject(forKey: "SharedPrintFile")
+            
+            // 一時ファイルを削除
+            try FileManager.default.removeItem(at: tempFileURL)
+        } catch {
+            print("共有ファイルの読み込みエラー: \(error.localizedDescription)")
+            // エラーがあっても共有情報は削除
+            sharedUserDefaults.removeObject(forKey: "SharedPrintFile")
+        }
+    }
+    
     // 印刷システムにログインする
     func login(completion: @escaping (Bool) -> Void) {
         isLoading = true
