@@ -10,6 +10,9 @@ struct CourseDetailView: View {
     @Binding var isLoggedIn: Bool
     @Environment(\.colorScheme) private var colorScheme
     
+    // メモの編集状態を管理するためのFocusState
+    @FocusState private var isMemoFocused: Bool
+    
     // シラバスシートの表示状態
     @State private var showingSyllabus = false
     @State private var showSafariView = false
@@ -85,6 +88,55 @@ struct CourseDetailView: View {
             .replacingOccurrences(of: "%255C", with: "%5C")
         
         print("【シラバスURL】encodedLoginInfo: \(encodedLoginInfo)")
+        let urlString = "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
+        return URL(string: urlString)
+    }
+    
+    // 掲示URLを生成する関数
+    private func createAnnouncementURL(announcementId: Int) -> URL? {
+        guard let user = UserService.shared.getCurrentUser(),
+              let encryptedPassword = user.encryptedPassword else {
+            return nil
+        }
+        
+        let webApiLoginInfo: [String: Any] = [
+            "autoLoginAuthCd": "",
+            "parameterMap": "",
+            "paramaterMap": [
+                "keijiNo": announcementId
+            ],
+            "encryptedPassword": encryptedPassword,
+            "formId": "Bsd50702",
+            "userId": user.username,
+            "funcId": "Bsd507",
+            "password": ""
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return nil
+        }
+        
+        // カスタムエンコーディング
+        let customEncoded = jsonString
+            .replacingOccurrences(of: " ", with: "%20")
+            .replacingOccurrences(of: "\"", with: "%22")
+            .replacingOccurrences(of: "\\", with: "%5C")
+            .replacingOccurrences(of: "'", with: "%27")
+            .replacingOccurrences(of: "+", with: "%2B")
+            .replacingOccurrences(of: ",", with: "%2C")
+            .replacingOccurrences(of: "/", with: "%2F")
+            .replacingOccurrences(of: ":", with: "%3A")
+            .replacingOccurrences(of: ";", with: "%3B")
+            .replacingOccurrences(of: "=", with: "%3D")
+            .replacingOccurrences(of: "?", with: "%3F")
+            .replacingOccurrences(of: "{", with: "%7B")
+            .replacingOccurrences(of: "}", with: "%7D")
+        
+        let encodedLoginInfo = customEncoded
+            .replacingOccurrences(of: "%2522", with: "%22")
+            .replacingOccurrences(of: "%255C", with: "%5C")
+        
         let urlString = "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
         return URL(string: urlString)
     }
@@ -168,28 +220,29 @@ struct CourseDetailView: View {
                             if viewModel.announcementCount > 0 {
                                 VStack(spacing: 8) {
                                     ForEach(viewModel.courseDetail?.announcements ?? []) { announcement in
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                HStack {
-                                                    if !announcement.isRead {
-                                                        Circle()
-                                                            .fill(Color.red)
-                                                            .frame(width: 8, height: 8)
-                                                    }
+                                        Button(action: {
+                                            if let url = createAnnouncementURL(announcementId: announcement.id) {
+                                                showSafariView = true
+                                                syllabusURL = url
+                                            }
+                                        }) {
+                                            HStack {
+                                                VStack(alignment: .leading, spacing: 4) {
                                                     Text(announcement.title)
                                                         .font(.system(size: 14, weight: .medium))
+                                                        .foregroundColor(.primary)
+                                                    Text(announcement.formattedDate)
+                                                        .font(.system(size: 12))
+                                                        .foregroundColor(.gray)
                                                 }
-                                                Text(announcement.formattedDate)
-                                                    .font(.system(size: 12))
+                                                Spacer()
+                                                Image(systemName: "chevron.right")
                                                     .foregroundColor(.gray)
                                             }
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .foregroundColor(.gray)
+                                            .padding(10)
+                                            .background(Color(UIColor.secondarySystemBackground))
+                                            .cornerRadius(8)
                                         }
-                                        .padding(10)
-                                        .background(Color(UIColor.secondarySystemBackground))
-                                        .cornerRadius(8)
                                     }
                                 }
                             } else {
@@ -272,38 +325,65 @@ struct CourseDetailView: View {
                         .padding(.horizontal)
                         
                         // メモセクション
-                        // VStack(alignment: .leading, spacing: 8) {
-                        //     HStack {
-                        //         Image(systemName: "note.text")
-                        //             .foregroundColor(.gray)
-                        //         Text("メモ")
-                        //             .font(.system(size: 16, weight: .bold))
-                        //     }
-                        //     .padding(.vertical, 12)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "note.text")
+                                    .foregroundColor(.gray)
+                                Text("メモ")
+                                    .font(.system(size: 16, weight: .bold))
+                                Spacer()
+                                
+                                // 編集中の場合は保存ボタンを表示
+                                if isMemoFocused || viewModel.isMemoChanged {
+                                    Button(action: {
+                                        viewModel.saveMemo()
+                                        viewModel.isMemoChanged = false
+                                        // 保存後にフォーカスを外す
+                                        isMemoFocused = false
+                                    }) {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 12)
                             
-                        //     TextEditor(text: $viewModel.memo)
-                        //         .font(.system(size: 14))
-                        //         .foregroundColor(viewModel.memo.isEmpty ? .secondary : .primary)
-                        //         .frame(minHeight: 40)
-                        //         .overlay(
-                        //             Group {
-                        //                 if viewModel.memo.isEmpty {
-                        //                     Text("持ち物や小テスト情報など\n授業に関することをメモできます。")
-                        //                         .font(.system(size: 14))
-                        //                         .foregroundColor(.gray)
-                        //                         .lineSpacing(4)
-                        //                         .frame(maxWidth: .infinity, alignment: .leading)
-                        //                         .padding(.horizontal, 5)
-                        //                         .padding(.top, 2)
-                        //                         .allowsHitTesting(false)
-                        //                 }
-                        //             }
-                        //         )
-                        //         .padding(.bottom, 12)
+                            ZStack(alignment: .topLeading) {
+                                if viewModel.memo.isEmpty {
+                                    Text("持ち物や小テスト情報など\n授業に関することをメモできます。")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                        .lineSpacing(4)
+                                        .padding(.horizontal, 5)
+                                        .allowsHitTesting(false)
+                                }
+                                
+                                TextEditor(text: $viewModel.memo)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.primary)
+                                    .frame(minHeight: 30)
+                                    .focused($isMemoFocused)
+                                    .onChange(of: viewModel.memo) { oldValue, newValue in
+                                        viewModel.isMemoChanged = true
+                                    }
+                                    .onChange(of: isMemoFocused) { oldValue, newValue in
+                                        // フォーカスが外れた時、かつメモが変更されていた場合に保存
+                                        if !newValue && viewModel.isMemoChanged {
+                                            viewModel.saveMemo()
+                                            viewModel.isMemoChanged = false
+                                        }
+                                    }
+                                    .scrollContentBackground(.hidden)
+                                    .background(Color.clear)
+                                    .padding(.top, -5)
+                            }
+                            .padding(.bottom, 12)
                             
-                        //     Divider()
-                        // }
-                        // .padding(.horizontal)
+                            Divider()
+                        }
+                        .padding(.horizontal)
+                        
                         // リンクセクション
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {

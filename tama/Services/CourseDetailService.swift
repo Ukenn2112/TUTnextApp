@@ -149,14 +149,13 @@ class CourseDetailService {
         var announcements: [AnnouncementModel] = []
         if let keijiInfoDtoList = data["keijiInfoDtoList"] as? [[String: Any]] {
             for keijiInfo in keijiInfoDtoList {
-                if let title = keijiInfo["keijiTitle"] as? String,
-                   let date = keijiInfo["keijiDate"] as? String,
-                   let id = keijiInfo["keijiCd"] as? String {
+                if let subject = keijiInfo["subject"] as? String,
+                   let keijiAppendDate = keijiInfo["keijiAppendDate"] as? Int,
+                   let keijiNo = keijiInfo["keijiNo"] as? Int {
                     let announcement = AnnouncementModel(
-                        id: id,
-                        title: title,
-                        date: date,
-                        isRead: keijiInfo["midokuFlg"] as? Bool ?? false
+                        id: keijiNo,
+                        title: subject,
+                        date: keijiAppendDate
                     )
                     announcements.append(announcement)
                 }
@@ -177,7 +176,7 @@ class CourseDetailService {
         }
         
         // 授業メモの取得
-        // let memo = data["jugyoMemo"] as? String ?? ""
+        let memo = data["jugyoMemo"] as? String ?? ""
         
         // シラバス公開フラグの取得
         let syllabusPubFlg = data["syllabusPubFlg"] as? Bool ?? false
@@ -188,10 +187,137 @@ class CourseDetailService {
         return CourseDetailResponse(
             announcements: announcements,
             attendance: attendance,
-            // memo: memo,
+            memo: memo,
             syllabusPubFlg: syllabusPubFlg,
             syuKetuKanriFlg: syuKetuKanriFlg
         )
+    }
+    
+    // メモを保存する関数
+    func saveMemo(course: CourseModel, memo: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let user = UserService.shared.getCurrentUser(),
+              let encryptedPassword = user.encryptedPassword else {
+            print("【メモ保存】ユーザー認証情報なし")
+            completion(.failure(CourseDetailError.userNotAuthenticated))
+            return
+        }
+        
+        // API リクエストの準備
+        guard let url = URL(string: "https://next.tama.ac.jp/uprx/webapi/up/ap/Apa004Resource/setJugyoMemoInfo") else {
+            print("【メモ保存】無効なエンドポイント")
+            completion(.failure(CourseDetailError.invalidEndpoint))
+            return
+        }
+        
+        // リクエストボディの作成
+        let requestBody: [String: Any] = [
+            "loginUserId": user.username,
+            "langCd": "",
+            "encryptedLoginPassword": encryptedPassword,
+            "productCd": "ap",
+            "plainLoginPassword": "",
+            "subProductCd": "apa",
+            "data": [
+                "jugyoCd": course.jugyoCd ?? "",
+                "nendo": course.academicYear ?? 0,
+                "jugyoMemo": memo
+            ]
+        ]
+        
+        // リクエストデータをログに出力
+        print("【メモ保存】リクエスト: \(url.absoluteString)")
+        if let jsonString = try? JSONSerialization.data(withJSONObject: requestBody),
+           let jsonStr = String(data: jsonString, encoding: .utf8) {
+            print("【メモ保存】リクエストボディ: \(jsonStr)")
+        }
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            print("【メモ保存】リクエスト作成失敗")
+            completion(.failure(CourseDetailError.requestCreationFailed))
+            return
+        }
+        
+        // リクエストの設定
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+        
+        // APIリクエストの実行
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("【メモ保存】エラー: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            // HTTPレスポンスをログに出力
+            if let httpResponse = response as? HTTPURLResponse {
+                print("【メモ保存】HTTPステータスコード: \(httpResponse.statusCode)")
+                
+                // 保存Cookie
+                if let url = response?.url {
+                    CookieService.shared.saveCookies(from: response!, for: url.absoluteString)
+                    print("【メモ保存】Cookieを保存しました")
+                }
+            }
+            
+            guard let data = data else {
+                print("【メモ保存】データなし")
+                completion(.failure(CourseDetailError.noDataReceived))
+                return
+            }
+            
+            // 生のレスポンスデータをログに出力
+            if let rawResponseString = String(data: data, encoding: .utf8) {
+                print("【メモ保存】生レスポンス: \(rawResponseString)")
+            }
+            
+            // URLエンコードされたレスポンスをデコード
+            guard let responseString = String(data: data, encoding: .utf8),
+                  let decodedData = responseString.removingPercentEncoding?
+                .replacingOccurrences(of: "\u{3000}", with: " ")
+                .replacingOccurrences(of: "+", with: " ")
+                .data(using: .utf8) else {
+                print("【メモ保存】デコード失敗")
+                completion(.failure(CourseDetailError.decodingFailed))
+                return
+            }
+            
+            // デコードされたJSONデータをログに出力
+            if let decodedString = String(data: decodedData, encoding: .utf8) {
+                print("【メモ保存】デコード後レスポンス: \(decodedString)")
+            }
+            
+            // JSONデータの解析
+            do {
+                if let json = try JSONSerialization.jsonObject(with: decodedData) as? [String: Any],
+                   let statusDto = json["statusDto"] as? [String: Any],
+                   let success = statusDto["success"] as? Bool {
+                    
+                    print("【メモ保存】ステータス: success=\(success)")
+                    
+                    if success {
+                        completion(.success(()))
+                    } else {
+                        if let messageList = statusDto["messageList"] as? [String], !messageList.isEmpty {
+                            let errorMessage = messageList.first ?? "Unknown error"
+                            print("【メモ保存】APIエラー: \(errorMessage)")
+                            completion(.failure(CourseDetailError.apiError(errorMessage)))
+                        } else {
+                            print("【メモ保存】不明なAPIエラー")
+                            completion(.failure(CourseDetailError.apiError("Unknown error")))
+                        }
+                    }
+                } else {
+                    print("【メモ保存】レスポンス解析失敗")
+                    completion(.failure(CourseDetailError.invalidResponse))
+                }
+            } catch {
+                print("【メモ保存】JSON解析エラー: \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }.resume()
     }
 }
 

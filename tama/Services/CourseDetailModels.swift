@@ -4,22 +4,26 @@ import Foundation
 struct CourseDetailResponse {
     let announcements: [AnnouncementModel]
     let attendance: AttendanceModel
-    // let memo: String
+    let memo: String
     let syllabusPubFlg: Bool
     let syuKetuKanriFlg: Bool
 }
 
 // 掲示情報モデル
 struct AnnouncementModel: Identifiable {
-    let id: String
+    let id: Int
     let title: String
-    let date: String
-    let isRead: Bool
+    let date: Int
     
     // 日付をフォーマットして表示
     var formattedDate: String {
-        // APIから返される日付形式に合わせて変更する必要があるかもしれません
-        return date
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .none
+        dateFormatter.locale = Locale(identifier: "ja_JP")
+        
+        let date = Date(timeIntervalSince1970: TimeInterval(self.date / 1000))
+        return dateFormatter.string(from: date)
     }
 }
 
