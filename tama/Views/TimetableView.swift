@@ -7,6 +7,8 @@ struct TimetableView: View {
     @Environment(\.colorScheme) private var colorScheme // 添加这一行
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
+    // 掲示リストSafariView閉じる通知観察者
+    @State private var announcementSafariDismissObserver: NSObjectProtocol? = nil
     
     // 曜日インデックスを表示用文字列に変換するヘルパー
     private func weekdayString(from index: String) -> String {
@@ -92,12 +94,28 @@ struct TimetableView: View {
                     print("TimetableView: アプリがフォアグラウンドに復帰しました")
                     viewModel.fetchTimetableData()
                 }
+                
+                // 掲示リストのSafariViewが閉じられた時の通知を受け取る
+                announcementSafariDismissObserver = NotificationCenter.default.addObserver(
+                    forName: .announcementSafariDismissed,
+                    object: nil,
+                    queue: .main
+                ) { [self] _ in
+                    print("TimetableView: 掲示リストのSafariViewが閉じられました")
+                    viewModel.fetchTimetableData()
+                }
             }
             .onDisappear {
                 // 移除通知观察者
                 if let observer = willEnterForegroundObserver {
                     NotificationCenter.default.removeObserver(observer)
                     willEnterForegroundObserver = nil
+                }
+                
+                // 掲示リストSafari閉じる通知観察者を削除
+                if let observer = announcementSafariDismissObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                    announcementSafariDismissObserver = nil
                 }
             }
         }
@@ -261,6 +279,28 @@ struct TimeSlotCell: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 4)
+                
+                // 未読掲示
+                if let keijiMidokCnt = course.keijiMidokCnt, keijiMidokCnt > 0 {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            ZStack {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 15, height: 15)
+                                Text("\(keijiMidokCnt)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.trailing, -6)
+                            .padding(.top, -6)
+                        }
+                        Spacer()
+                    }
+                    .padding(4)
+                    .frame(width: cellWidth, height: cellHeight)
+                }
             } else {
                 // 修改空格子文字颜色
                 Text("\(displayDay)\(period)")

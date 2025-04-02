@@ -6,6 +6,9 @@ struct SafariWebView: UIViewControllerRepresentable {
     @Environment(\.presentationMode) private var presentationMode
     let url: URL
     
+    // オプションの通知タイプを追加
+    var dismissNotification: Notification.Name? = nil
+    
     func makeUIViewController(context: Context) -> SFSafariViewController {
         let safariViewController = SFSafariViewController(url: url)
         safariViewController.delegate = context.coordinator
@@ -47,7 +50,13 @@ struct SafariWebView: UIViewControllerRepresentable {
         }
         
         func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+            // SafariViewが閉じられた時の処理
             parent.presentationMode.wrappedValue.dismiss()
+            
+            // 通知が設定されている場合に送信
+            if let notification = parent.dismissNotification {
+                NotificationCenter.default.post(name: notification, object: nil)
+            }
         }
     }
 } 

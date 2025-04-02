@@ -384,7 +384,7 @@ struct TimeSlotCellWidget: View {
             if let course = course {
                 // 授業情報
                 VStack(spacing: 0) {
-                    Text(course.name)
+                    Text(course.name.replacingOccurrences(of: "※私費外国人留学生のみ履修可能", with: ""))
                         .font(.system(size: 8, weight: .medium))
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
@@ -565,7 +565,7 @@ struct SmallTimetableView: View {
             
             // 授業情報
             VStack(alignment: .leading, spacing: 1) {
-                Text(course.name)
+                Text(course.name.replacingOccurrences(of: "※私費外国人留学生のみ履修可能", with: ""))
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(2)
                 
@@ -687,7 +687,7 @@ struct MediumTimetableView: View {
     private func courseCellView(course: CourseModel, isCurrentPeriod: Bool) -> some View {
         VStack(spacing: 2) {
             // 授業名
-            Text(course.name)
+            Text(course.name.replacingOccurrences(of: "※私費外国人留学生のみ履修可能", with: ""))
                 .font(.system(size: 9, weight: .medium))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)

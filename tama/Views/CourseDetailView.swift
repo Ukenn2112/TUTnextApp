@@ -1,5 +1,10 @@
 import SwiftUI
 
+// 掲示リストのSafariViewが閉じられた時の通知名を定義
+extension Notification.Name {
+    static let announcementSafariDismissed = Notification.Name("AnnouncementSafariDismissed")
+}
+
 struct CourseDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: CourseDetailViewModel
@@ -17,6 +22,9 @@ struct CourseDetailView: View {
     @State private var showingSyllabus = false
     @State private var showSafariView = false
     @State private var syllabusURL: URL?
+    
+    // 掲示リスト表示用の状態フラグ
+    @State private var isAnnouncementSafari = false
     
     // 時限情報を計算
     private var periodInfo: String {
@@ -222,6 +230,8 @@ struct CourseDetailView: View {
                                     ForEach(viewModel.courseDetail?.announcements ?? []) { announcement in
                                         Button(action: {
                                             if let url = createAnnouncementURL(announcementId: announcement.id) {
+                                                // 掲示リスト用のフラグをtrueに設定
+                                                isAnnouncementSafari = true
                                                 showSafariView = true
                                                 syllabusURL = url
                                             }
@@ -396,6 +406,8 @@ struct CourseDetailView: View {
                             
                             Button(action: {
                                 if let url = createSyllabusURL() {
+                                    // シラバス表示の場合はフラグをfalseに設定
+                                    isAnnouncementSafari = false
                                     showSafariView = true
                                     syllabusURL = url
                                 }
@@ -413,7 +425,12 @@ struct CourseDetailView: View {
                             .foregroundColor(.primary)
                             .sheet(isPresented: $showSafariView) {
                                 if let url = syllabusURL {
-                                    SafariWebView(url: url)
+                                    // 通知フラグの状態に基づいて通知を設定
+                                    if isAnnouncementSafari {
+                                        SafariWebView(url: url, dismissNotification: .announcementSafariDismissed)
+                                    } else {
+                                        SafariWebView(url: url)
+                                    }
                                 }
                             }
                             

@@ -69,8 +69,15 @@ struct HeaderView: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(Color(UIColor.systemBackground))
-        .sheet(isPresented: $showSafariView) {
-            SafariWebView(url: createKeijiBoardURL() ?? URL(string: "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml")!)
+        .sheet(isPresented: $showSafariView, onDismiss: {
+            // シートが閉じられた時（下スワイプでも）に実行される
+            NotificationCenter.default.post(name: .announcementSafariDismissed, object: nil)
+        }) {
+            // 掲示板SafariViewが閉じられた時も通知を送信するように修正
+            SafariWebView(
+                url: createKeijiBoardURL() ?? URL(string: "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml")!,
+                dismissNotification: .announcementSafariDismissed
+            )
         }
         .sheet(isPresented: $showingUserSettings) {
             UserSettingsView(isLoggedIn: $isLoggedIn)
