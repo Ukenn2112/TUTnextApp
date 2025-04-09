@@ -1526,7 +1526,26 @@
       }
     },
     "メモ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memo"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메모"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备忘录"
+          }
+        }
+      }
     },
     "ライト" : {
       "localizations" : {
@@ -2511,7 +2530,26 @@
       }
     },
     "持ち物や小テスト情報など\n授業に関することをメモできます。" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Items and quiz information\nYou can take notes about class-related matters."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "소지품 및 소시험 정보 등\n수업에 관한 내용을 메모할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要携带的物品、测验信息等。\n您可以记录与课堂相关的事项。"
+          }
+        }
+      }
     },
     "授" : {
       "localizations" : {
@@ -2730,6 +2768,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "课程表 %@"
+          }
+        }
+      }
+    },
+    "時間割をカレンダーへ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schedule to calendar"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 일정을 달력에 추가하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将课程表添加至日历"
           }
         }
       }

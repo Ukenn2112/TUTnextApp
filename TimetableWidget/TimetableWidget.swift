@@ -493,21 +493,50 @@ struct SmallTimetableView: View {
         guard let courses = entry.courses?[currentWeekday] else { return nil }
         
         // 現在の時限から次の時限を計算
-        if let nextPeriod = getNextPeriod(), let nextCourse = courses[nextPeriod] {
+        if let _ = self.currentPeriod, let nextPeriod = getNextPeriod(), let nextCourse = courses[nextPeriod] {
             return nextCourse
         }
         
-        // 現在時限がない場合は、これから始まる一番早い授業を返す
-        if let currentPeriodInt = currentPeriod.flatMap(Int.init) {
-            // 今より後の授業を時間順に取得
-            let futureCourses = courses.values.filter { 
-                ($0.period ?? 0) > currentPeriodInt 
-            }.sorted { 
-                (Int($0.period ?? 0) < Int($1.period ?? 0)) 
+        // 現在時限がない場合（授業時間外）
+        let now = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        let currentTime = hour * 60 + minute // 現在時刻を分に変換
+        
+        // 全ての授業を時間でソート
+        let sortedCourses = courses.values.sorted { 
+            let period1 = $0.period ?? 0
+            let period2 = $1.period ?? 0
+            
+            // 時限を分単位の時間に変換
+            let timeForPeriod: (Int) -> Int = { period in
+                if period <= 0 || period > 7 { return 0 }
+                let periodData = dataProvider.getPeriods()[period - 1]
+                let startTimeStr = periodData.1
+                if let startComponents = parseTimeString(startTimeStr) {
+                    return startComponents.hour * 60 + startComponents.minute
+                }
+                return 0
             }
             
-            if !futureCourses.isEmpty {
-                return futureCourses.first
+            let time1 = timeForPeriod(period1)
+            let time2 = timeForPeriod(period2)
+            
+            return time1 < time2
+        }
+        
+        // 現在時刻より後の授業を探す
+        for course in sortedCourses {
+            if let period = course.period, period > 0 && period <= 7 {
+                let periodData = dataProvider.getPeriods()[period - 1]
+                let startTimeStr = periodData.1
+                if let startComponents = parseTimeString(startTimeStr) {
+                    let startTime = startComponents.hour * 60 + startComponents.minute
+                    if startTime > currentTime {
+                        return course
+                    }
+                }
             }
         }
         
@@ -518,21 +547,41 @@ struct SmallTimetableView: View {
     private func getLastCourseOfDay() -> Bool {
         guard let courses = entry.courses?[currentWeekday], !courses.isEmpty else { return false }
         
-        // 今日の全ての授業が終了したかどうかをチェック
+        // 現在の時刻を取得
+        let now = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        let currentTime = hour * 60 + minute // 現在時刻を分に変換
+        
+        // 時限がある場合はその後の授業があるかチェック
         if let currentPeriodInt = currentPeriod.flatMap(Int.init) {
             // 今後の授業があるかどうか確認
-            let hasRemainingCourses = courses.values.contains { ($0.period ?? 0) >= currentPeriodInt }
+            let hasRemainingCourses = courses.values.contains { ($0.period ?? 0) > currentPeriodInt }
             
             // 今後の授業がない場合はtrueを返す
             return !hasRemainingCourses
+        } else {
+            // 時限がない場合（授業時間外）は、現在時刻より後に開始する授業があるかチェック
+            let hasRemainingCourses = courses.values.contains { course in
+                if let period = course.period, period > 0 && period <= 7 {
+                    let periodData = dataProvider.getPeriods()[period - 1]
+                    let startTimeStr = periodData.1
+                    if let startComponents = parseTimeString(startTimeStr) {
+                        let startTime = startComponents.hour * 60 + startComponents.minute
+                        return startTime > currentTime
+                    }
+                }
+                return false
+            }
+            
+            return !hasRemainingCourses
         }
-        
-        return false
     }
     
     // 次の時限を取得
     private func getNextPeriod() -> String? {
-        guard let currentPeriod = currentPeriod, let intPeriod = Int(currentPeriod) else { return nil }
+        guard let currentPeriodStr = currentPeriod, let intPeriod = Int(currentPeriodStr) else { return nil }
         let nextIntPeriod = intPeriod + 1
         if nextIntPeriod <= 7 {
             return String(nextIntPeriod)

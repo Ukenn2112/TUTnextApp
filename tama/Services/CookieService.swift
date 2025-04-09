@@ -134,4 +134,4 @@ class CookieService {
     func isSessionValid() -> Bool {
         return hasCookiesForDomain("https://next.tama.ac.jp")
     }
-} 
+}

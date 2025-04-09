@@ -63,6 +63,11 @@ struct UserSettingsView: View {
                             
                             // アプリ設定
                             SettingsSectionHeader(title: NSLocalizedString("アプリ設定", comment: ""))
+
+                            SettingsRow(icon: "calendar.badge.plus", title: NSLocalizedString("時間割をカレンダーへ", comment: "")) {
+                                urlToOpen = URL(string: "https://tama.qaq.tw/")!
+                                showSafari = true
+                            }
                             
                             Button(action: {
                                 handleNotificationSettings()

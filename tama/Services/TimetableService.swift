@@ -2,6 +2,13 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
+// 部屋変更の情報を保持する構造体
+struct RoomChange: Codable {
+    let courseName: String
+    let newRoom: String
+    let expiryDate: Date
+}
+
 class TimetableService {
     static let shared = TimetableService()
     
@@ -17,9 +24,14 @@ class TimetableService {
     // 現在の学期情報
     @Published var currentSemester: Semester = .current
     
+    // 部屋変更情報を格納するディクショナリ（コース名をキーとする）
+    private var roomChanges: [String: RoomChange] = [:]
+    
     private init() {
         // 起動時にApp Groupsからデータを読み込む
         loadTimetableDataFromAppGroup()
+        // 部屋変更情報を読み込む
+        loadRoomChanges()
     }
     
     // 時間割データを取得する関数
@@ -217,10 +229,16 @@ class TimetableService {
             // 保存されている色インデックスを取得、なければデフォルト値を使用
             let colorIndex = CourseColorService.shared.getCourseColor(jugyoCd: jugyoCd) ?? 1
             
+            // 部屋変更情報があれば、それを適用する
+            var finalRoomName = roomName.replacingOccurrences(of: "教室", with: "")
+            if let roomChange = roomChanges[courseName], Date() < roomChange.expiryDate {
+                finalRoomName = roomChange.newRoom
+            }
+            
             // CourseModelを作成
             let courseModel = CourseModel(
                 name: courseName,
-                room: roomName.replacingOccurrences(of: "教室", with: ""),
+                room: finalRoomName,
                 teacher: teacherName,
                 startTime: startTime,
                 endTime: endTime,
@@ -305,6 +323,132 @@ class TimetableService {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
         return formatter.string(from: date)
+    }
+    
+    // MARK: - 部屋変更関連のメソッド
+    
+    /// 部屋変更を処理する
+    func handleRoomChange(courseName: String, newRoom: String) {
+        print("【時間割】部屋変更処理: \(courseName) → \(newRoom)")
+        
+        // 48時間後の日時を計算
+        let expiryDate = Calendar.current.date(byAdding: .hour, value: 48, to: Date())!
+        
+        // 部屋変更情報を作成
+        let roomChange = RoomChange(
+            courseName: courseName,
+            newRoom: newRoom,
+            expiryDate: expiryDate
+        )
+        
+        // 部屋変更情報を保存
+        roomChanges[courseName] = roomChange
+        
+        // 永続化
+        saveRoomChanges()
+        
+        // キャッシュされた時間割データがあれば更新
+        if var timetableData = cachedTimetableData {
+            updateCachedTimetableWithRoomChanges(&timetableData)
+            
+            // 更新したデータを保存
+            saveTimetableDataToAppGroup(timetableData)
+            
+            // ウィジェットを更新
+            WidgetCenter.shared.reloadTimelines(ofKind: "TimetableWidget")
+        }
+    }
+    
+    /// 保存されている部屋変更情報を読み込む
+    private func loadRoomChanges() {
+        let userDefaults = UserDefaults.standard
+        if let data = userDefaults.data(forKey: "roomChanges") {
+            do {
+                let decoder = JSONDecoder()
+                let loadedChanges = try decoder.decode([String: RoomChange].self, from: data)
+                
+                // 期限切れの部屋変更を除外
+                let now = Date()
+                roomChanges = loadedChanges.filter { $0.value.expiryDate > now }
+                
+                print("【時間割】部屋変更情報を読み込みました（\(roomChanges.count)件）")
+                
+                // 期限切れのエントリが削除された場合は保存し直す
+                if roomChanges.count != loadedChanges.count {
+                    saveRoomChanges()
+                }
+            } catch {
+                print("【時間割】部屋変更情報の読み込みに失敗: \(error.localizedDescription)")
+                roomChanges = [:]
+            }
+        }
+    }
+    
+    /// 部屋変更情報を保存する
+    private func saveRoomChanges() {
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(roomChanges)
+            UserDefaults.standard.set(data, forKey: "roomChanges")
+            print("【時間割】部屋変更情報を保存しました（\(roomChanges.count)件）")
+        } catch {
+            print("【時間割】部屋変更情報の保存に失敗: \(error.localizedDescription)")
+        }
+    }
+    
+    /// キャッシュされた時間割データを部屋変更情報で更新する
+    private func updateCachedTimetableWithRoomChanges(_ timetableData: inout [String: [String: CourseModel]]) {
+        // 現在の日時
+        let now = Date()
+        
+        // すべての曜日と時限をループ
+        for (dayKey, dayData) in timetableData {
+            for (periodKey, course) in dayData {
+                // 部屋変更情報があり、期限内かチェック
+                if let roomChange = roomChanges[course.name], roomChange.expiryDate > now {
+                    // 部屋情報を更新した新しいCourseModelを作成
+                    let updatedCourse = CourseModel(
+                        name: course.name,
+                        room: roomChange.newRoom,
+                        teacher: course.teacher,
+                        startTime: course.startTime,
+                        endTime: course.endTime,
+                        colorIndex: course.colorIndex,
+                        weekday: course.weekday,
+                        period: course.period,
+                        jugyoCd: course.jugyoCd,
+                        academicYear: course.academicYear,
+                        courseYear: course.courseYear,
+                        courseTerm: course.courseTerm,
+                        jugyoKbn: course.jugyoKbn,
+                        keijiMidokCnt: course.keijiMidokCnt
+                    )
+                    
+                    // 更新したコースで置き換え
+                    timetableData[dayKey]?[periodKey] = updatedCourse
+                }
+            }
+        }
+    }
+    
+    /// 期限切れの部屋変更情報をクリーンアップする
+    func cleanupExpiredRoomChanges() {
+        let now = Date()
+        let oldCount = roomChanges.count
+        
+        // 期限切れの部屋変更を削除
+        roomChanges = roomChanges.filter { $0.value.expiryDate > now }
+        
+        if oldCount != roomChanges.count {
+            print("【時間割】期限切れの部屋変更情報を削除しました（\(oldCount - roomChanges.count)件）")
+            saveRoomChanges()
+            
+            // キャッシュされた時間割データを更新
+            if var timetableData = cachedTimetableData {
+                updateCachedTimetableWithRoomChanges(&timetableData)
+                saveTimetableDataToAppGroup(timetableData)
+            }
+        }
     }
 }
 

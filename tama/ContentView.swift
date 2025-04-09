@@ -54,6 +54,12 @@ struct ContentView: View {
                 handleDeepLink(url: url)
             }
         }
+        // 通知からの画面遷移通知を処理
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("NavigateToPageFromNotification"))) { notification in
+            if let page = notification.userInfo?["page"] as? String {
+                navigateBasedOnPath(page)
+            }
+        }
         // アプリ全体のダークモード設定
         .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
         .onChange(of: appearanceManager.isDarkMode) { oldValue, newValue in

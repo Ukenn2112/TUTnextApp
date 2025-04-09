@@ -93,6 +93,10 @@ struct TimetableView: View {
                 ) { [self] _ in
                     print("TimetableView: アプリがフォアグラウンドに復帰しました")
                     viewModel.fetchTimetableData()
+                    
+                    // 通知設定の状態を確認してサーバーと同期
+                    NotificationService.shared.checkAuthorizationStatus()
+                    NotificationService.shared.syncNotificationStatusWithServer()
                 }
                 
                 // 掲示リストのSafariViewが閉じられた時の通知を受け取る

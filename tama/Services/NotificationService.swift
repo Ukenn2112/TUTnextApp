@@ -211,11 +211,48 @@ class NotificationService: NSObject, ObservableObject {
     // アプリがフォアグラウンドに戻ったときに呼び出す
     func applicationWillEnterForeground() {
         checkAuthorizationStatus()
+        syncNotificationStatusWithServer()
     }
     
     // 通知登録状態を確認するヘルパーメソッド
     var isRegistered: Bool {
         return isAuthorized && deviceToken != nil
+    }
+    
+    // 通知状態をサーバーと同期する
+    func syncNotificationStatusWithServer() {
+        print("通知状態をサーバーと同期します")
+        
+        // 現在の通知権限とデバイストークンを確認
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                self.isAuthorized = settings.authorizationStatus == .authorized
+                
+                // 最新のデバイストークンを取得
+                let token = UserService.shared.getDeviceToken()
+                self.deviceToken = token
+                
+                // 通知が有効で、デバイストークンがある場合
+                if self.isAuthorized, let token = token {
+                    // ユーザー情報を取得
+                    if let currentUser = UserService.shared.getCurrentUser() {
+                        // サーバーに最新のデバイストークンと通知設定を送信
+                        self.sendDeviceTokenToServer(
+                            token: token,
+                            username: currentUser.username,
+                            encryptedPassword: currentUser.encryptedPassword ?? ""
+                        )
+                    }
+                }
+                // 通知が無効だがデバイストークンがある場合は登録解除
+                else if !self.isAuthorized, let token = self.deviceToken {
+                    self.unregisterDeviceTokenFromServer(token: token)
+                    // デバイストークンを削除
+                    UserService.shared.clearDeviceToken()
+                    self.deviceToken = nil
+                }
+            }
+        }
     }
 }
 
@@ -232,7 +269,24 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         let userInfo = response.notification.request.content.userInfo
         // 通知のペイロードに基づいて適切な画面に遷移するなどの処理を実装
         print("通知がタップされました: \(userInfo)")
+        
+        // "toPage"キーがある場合、それに基づいて画面遷移
+        if let toPage = userInfo["toPage"] as? String {
+            print("通知から画面遷移: \(toPage)")
+            navigateToPage(toPage)
+        }
+        
         completionHandler()
+    }
+    
+    // 通知タップ時の画面遷移処理
+    private func navigateToPage(_ page: String) {
+        // NotificationCenterを使用して画面遷移を通知
+        NotificationCenter.default.post(
+            name: Notification.Name("NavigateToPageFromNotification"),
+            object: nil,
+            userInfo: ["page": page]
+        )
     }
 }
 
@@ -272,7 +326,55 @@ extension NotificationService {
     // リモート通知受信時
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         print("バックグラウンドで通知を受信しました: \(userInfo)")
-        // 必要に応じてデータを処理
+        
+        // 通知タイプを確認
+        if let updateType = userInfo["updateType"] as? String {
+            // 部屋変更通知の処理
+            if updateType == "roomChange" {
+                handleRoomChangeNotification(userInfo: userInfo)
+                completionHandler(.newData)
+                return
+            }
+        }
+        
+        // その他の通知処理
         completionHandler(.newData)
+    }
+    
+    // 部屋変更通知を処理するメソッド
+    private func handleRoomChangeNotification(userInfo: [AnyHashable: Any]) {
+        print("部屋変更通知を処理します")
+        
+        guard let courseName = userInfo["name"] as? String,
+              let newRoom = userInfo["room"] as? String else {
+            print("部屋変更通知の処理に失敗: 必要な情報がありません")
+            return
+        }
+        
+        print("部屋変更: \(courseName) → \(newRoom)")
+        
+        // TimetableServiceの部屋変更処理を呼び出す
+        TimetableService.shared.handleRoomChange(courseName: courseName, newRoom: newRoom)
+        
+        // ローカル通知で部屋変更を知らせる
+        sendRoomChangeLocalNotification(courseName: courseName, newRoom: newRoom)
+    }
+    
+    // 部屋変更をユーザーに通知するローカル通知
+    private func sendRoomChangeLocalNotification(courseName: String, newRoom: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "教室変更のお知らせ"
+        content.body = "「\(courseName)」の教室が\(newRoom)に変更されました。"
+        content.sound = .default
+        
+        // 通知を即時に表示
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("部屋変更通知の送信に失敗: \(error.localizedDescription)")
+            }
+        }
     }
 } 

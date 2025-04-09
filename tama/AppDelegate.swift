@@ -14,6 +14,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         if let url = launchOptions?[UIApplication.LaunchOptionsKey.url] as? URL {
             let _ = handleURL(url)
         }
+        
+        // 期限切れの部屋変更情報をクリーンアップ
+        TimetableService.shared.cleanupExpiredRoomChanges()
+        
+        // 通知状態を確認してサーバーと同期
+        NotificationService.shared.checkAuthorizationStatus()
+        NotificationService.shared.syncNotificationStatusWithServer()
+        
         return true
     }
     
@@ -36,6 +44,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func applicationWillEnterForeground(_ application: UIApplication) {
         // 通知権限の状態を確認
         NotificationService.shared.applicationWillEnterForeground()
+        
+        // 期限切れの部屋変更情報をクリーンアップ
+        TimetableService.shared.cleanupExpiredRoomChanges()
     }
     
     // URLスキームで起動された場合の処理
