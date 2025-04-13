@@ -15,11 +15,19 @@ class NotificationService: NSObject, ObservableObject {
     
     static let shared = NotificationService()
     
+    // 保存最后一次令牌刷新的时间
+    private var lastTokenRefreshDate: Date?
+    // 令牌刷新间隔（7天）
+    private let tokenRefreshInterval: TimeInterval = 7 * 24 * 60 * 60
+    
     private override init() {
         super.init()
         UNUserNotificationCenter.current().delegate = self
         // 初期化時にUserServiceからデバイストークンを取得
         self.deviceToken = UserService.shared.getDeviceToken()
+        
+        // 初期化時の最後のトークン更新日時を取得
+        self.lastTokenRefreshDate = UserDefaults.standard.object(forKey: "lastTokenRefreshDate") as? Date
     }
     
     // 通知権限をリクエスト
@@ -38,6 +46,9 @@ class NotificationService: NSObject, ObservableObject {
                     // 通知が拒否された場合、デバイストークンを削除
                     UserService.shared.clearDeviceToken()
                     self.deviceToken = nil
+                    // 保存されたトークン更新日時をクリア
+                    UserDefaults.standard.removeObject(forKey: "lastTokenRefreshDate")
+                    self.lastTokenRefreshDate = nil
                 }
                 
                 if let error = error {
@@ -211,6 +222,11 @@ class NotificationService: NSObject, ObservableObject {
     // アプリがフォアグラウンドに戻ったときに呼び出す
     func applicationWillEnterForeground() {
         checkAuthorizationStatus()
+        
+        // トークンの有効期限をチェックし、必要に応じて再取得
+        checkAndRefreshDeviceToken()
+        
+        // 最後に確認したトークンでサーバーと同期
         syncNotificationStatusWithServer()
     }
     
@@ -232,16 +248,26 @@ class NotificationService: NSObject, ObservableObject {
                 let token = UserService.shared.getDeviceToken()
                 self.deviceToken = token
                 
+                // トークンの有効期限をチェック
+                let needsTokenRefresh = self.shouldRefreshDeviceToken()
+                
                 // 通知が有効で、デバイストークンがある場合
                 if self.isAuthorized, let token = token {
-                    // ユーザー情報を取得
-                    if let currentUser = UserService.shared.getCurrentUser() {
-                        // サーバーに最新のデバイストークンと通知設定を送信
-                        self.sendDeviceTokenToServer(
-                            token: token,
-                            username: currentUser.username,
-                            encryptedPassword: currentUser.encryptedPassword ?? ""
-                        )
+                    // トークンの有効期限が切れていなければサーバーに送信
+                    if !needsTokenRefresh {
+                        // ユーザー情報を取得
+                        if let currentUser = UserService.shared.getCurrentUser() {
+                            // サーバーに最新のデバイストークンと通知設定を送信
+                            self.sendDeviceTokenToServer(
+                                token: token,
+                                username: currentUser.username,
+                                encryptedPassword: currentUser.encryptedPassword ?? ""
+                            )
+                        }
+                    } else {
+                        // トークンの有効期限が切れている場合は再登録
+                        print("デバイストークンの有効期限が切れているため、再登録します")
+                        self.registerForRemoteNotifications()
                     }
                 }
                 // 通知が無効だがデバイストークンがある場合は登録解除
@@ -250,9 +276,57 @@ class NotificationService: NSObject, ObservableObject {
                     // デバイストークンを削除
                     UserService.shared.clearDeviceToken()
                     self.deviceToken = nil
+                    // 保存されたトークン更新日時をクリア
+                    UserDefaults.standard.removeObject(forKey: "lastTokenRefreshDate")
+                    self.lastTokenRefreshDate = nil
                 }
             }
         }
+    }
+    
+    // デバイストークンの有効期限をチェックし、必要に応じて再取得する
+    func checkAndRefreshDeviceToken() {
+        // 通知が許可されているか確認
+        if !isAuthorized {
+            return
+        }
+        
+        let shouldRefreshToken = shouldRefreshDeviceToken()
+        if shouldRefreshToken {
+            print("デバイストークンの更新期間が経過したため、リモート通知を再登録します")
+            registerForRemoteNotifications()
+        }
+    }
+    
+    // デバイストークンを更新すべきかどうかを判断
+    private func shouldRefreshDeviceToken() -> Bool {
+        // デバイストークンがない場合は更新が必要
+        guard deviceToken != nil else {
+            return true
+        }
+        
+        // 前回の更新日時がない場合も更新が必要
+        guard let lastRefreshDate = lastTokenRefreshDate else {
+            return true
+        }
+        
+        // 更新間隔が経過したかどうかを確認
+        let timeSinceLastRefresh = Date().timeIntervalSince(lastRefreshDate)
+        return timeSinceLastRefresh > tokenRefreshInterval
+    }
+    
+    // デバイストークンの有効性チェック
+    private func isValidDeviceToken(_ token: String) -> Bool {
+        // 基本的な形式チェック (64文字の16進数)
+        let hexPattern = "^[0-9a-f]{64}$"
+        let regex = try? NSRegularExpression(pattern: hexPattern, options: .caseInsensitive)
+        guard let regex = regex,
+              regex.firstMatch(in: token, options: [], range: NSRange(location: 0, length: token.count)) != nil else {
+            print("デバイストークンの形式が無効です: \(token)")
+            return false
+        }
+        
+        return true
     }
 }
 
@@ -300,6 +374,11 @@ extension NotificationService {
         self.deviceToken = token
         print("デバイストークン: \(token)")
         
+        // 現在の日時を最後のトークン更新日時として保存
+        let now = Date()
+        UserDefaults.standard.set(now, forKey: "lastTokenRefreshDate")
+        self.lastTokenRefreshDate = now
+        
         // UserServiceにデバイストークンを保存
         UserService.shared.saveDeviceToken(token)
 
@@ -321,6 +400,10 @@ extension NotificationService {
         
         // 失敗した場合、UserServiceからデバイストークンを削除
         UserService.shared.clearDeviceToken()
+        
+        // 保存されたトークン更新日時をクリア
+        UserDefaults.standard.removeObject(forKey: "lastTokenRefreshDate")
+        self.lastTokenRefreshDate = nil
     }
     
     // リモート通知受信時
