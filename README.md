@@ -1,4 +1,4 @@
-<img src="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/8b/b3/be/8bb3be65-6608-b08e-641c-725be2acc9ec/AppIcon-0-0-1x_U007ephone-0-1-85-220.png/540x540bb.jpg" align="left" width="65"> <h1>TUTnext for swiftUI App</h1>
+<img src="https://github.com/user-attachments/assets/00d24c9a-c77b-45d2-9171-0cd9af5ae049" align="left" width="65"> <h1>TUTnext for swiftUI App</h1>
 <a href="https://apps.apple.com/cn/app/tutnext/id6742843580?itscg=30200&itsct=apps_box_badge&mttnsubad=6742843580" style="display: inline-block;">
 <img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/ja-jp?releaseDate=1742083200" alt="App Store" align="right" style="width: 204px; height: 62px; vertical-align: middle; object-fit: contain;" />
 </a>

@@ -11,6 +11,7 @@ struct TabBarView: View {
     @FocusState private var isFocused: Bool
     @State private var showSheet = false
     @State private var sheetContent: AnyView?
+    @State private var assignmentCount: Int = 0
     
     private func collapseWithAnimation() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -134,6 +135,7 @@ struct TabBarView: View {
                         text: NSLocalizedString("課題", comment: "底部tab"),
                         isSelected: selectedTab == 2,
                         colorScheme: colorScheme,
+                        badgeCount: assignmentCount,
                         action: { 
                             selectedTab = 2
                             collapseWithAnimation()
@@ -181,6 +183,27 @@ struct TabBarView: View {
         }
         .onAppear {
             loadUserData()
+            fetchAssignmentCount()
+            
+            // 通知の購読を設定
+            NotificationCenter.default.addObserver(
+                forName: AssignmentService.assignmentsUpdatedNotification,
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let userInfo = notification.userInfo,
+                   let count = userInfo["count"] as? Int {
+                    self.assignmentCount = count
+                }
+            }
+        }
+        .onDisappear {
+            // 通知の購読を解除
+            NotificationCenter.default.removeObserver(
+                self,
+                name: AssignmentService.assignmentsUpdatedNotification,
+                object: nil
+            )
         }
     }
     
@@ -195,6 +218,18 @@ struct TabBarView: View {
     // ユーザーデータの読み込み
     private func loadUserData() {
         user = UserService.shared.getCurrentUser()
+    }
+    
+    // 課題数を取得するメソッド
+    private func fetchAssignmentCount() {
+        AssignmentService.shared.getAssignments { result in
+            switch result {
+            case .success(let assignments):
+                self.assignmentCount = assignments.count
+            case .failure:
+                self.assignmentCount = 0
+            }
+        }
     }
     
     // T-nextへのURLを生成する関数
@@ -242,6 +277,7 @@ struct TabBarButton: View {
     let text: String
     let isSelected: Bool
     let colorScheme: ColorScheme
+    var badgeCount: Int = 0
     let action: () -> Void
     
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
@@ -252,8 +288,22 @@ struct TabBarButton: View {
             action()
         }) {
             VStack(spacing: 2) {
-                Image(systemName: image)
-                    .font(.system(size: 20))
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: image)
+                        .font(.system(size: 20))
+                    
+                    if badgeCount > 0 {
+                        Text("\(badgeCount)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(minWidth: 16, minHeight: 16)
+                            .background(Color.red)
+                            .clipShape(Circle())
+                            .offset(x: 10, y: -10)
+                    }
+                }
+                .frame(height: 24)
+                
                 Text(text)
                     .font(.system(size: 9))
             }

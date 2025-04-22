@@ -418,6 +418,13 @@ extension NotificationService {
                 completionHandler(.newData)
                 return
             }
+            
+            // 課題数変更通知の処理
+            if updateType == "kaidaiNumChange" {
+                handleAssignmentCountChangeNotification(userInfo: userInfo)
+                completionHandler(.newData)
+                return
+            }
         }
         
         // その他の通知処理
@@ -441,6 +448,14 @@ extension NotificationService {
         
         // ローカル通知で部屋変更を知らせる
         sendRoomChangeLocalNotification(courseName: courseName, newRoom: newRoom)
+    }
+    
+    // 課題数変更通知を処理するメソッド
+    private func handleAssignmentCountChangeNotification(userInfo: [AnyHashable: Any]) {
+        print("課題数変更通知を処理します")
+        
+        // AssignmentServiceに処理を委譲
+        AssignmentService.shared.handleAssignmentCountChangeNotification(userInfo: userInfo)
     }
     
     // 部屋変更をユーザーに通知するローカル通知
