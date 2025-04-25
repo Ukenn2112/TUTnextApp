@@ -150,34 +150,66 @@ struct LoginView: View {
         isLoading = true
         errorMessage = nil
         
+        // タイムアウト処理を追加
+        let timeoutTask = DispatchWorkItem {
+            if isLoading {
+                DispatchQueue.main.async {
+                    isLoading = false
+                    errorMessage = "ログインがタイムアウトしました。\nネットワーク接続を確認してください。\n\nもしネットワーク接続が良好であることが確認できた場合は、遅入りますが、admin@ukenn.top に取り合わせいてください。"
+                    focusedField = .account
+                }
+            }
+        }
+        
+        // 5秒後にタイムアウト処理を実行
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeoutTask)
+        
         AuthService.shared.login(account: account, password: password) { result in
+            // タイムアウト処理をキャンセル
+            timeoutTask.cancel()
+            
             DispatchQueue.main.async {
                 self.isLoading = false
                 
                 switch result {
                 case .success(let json):
-                    if let statusDto = json["statusDto"] as? [String: Any] {
-                        if let success = statusDto["success"] as? Bool, success {
-                            // ログイン成功
-                            if let userData = json["data"] as? [String: Any] {
-                                // ユーザー情報の保存処理
-                                self.saveUserData(userData)
-                            } else {
-                                self.errorMessage = AuthError.userDataNotFound.localizedDescription
-                                self.focusedField = .account // エラー時にアカウント入力欄にフォーカス
-                            }
-                        } else {
-                            // ログイン失敗
-                            if let messageList = statusDto["messageList"] as? [String], !messageList.isEmpty {
-                                self.errorMessage = messageList.first
-                                self.focusedField = .account // エラー時にアカウント入力欄にフォーカス
-                            } else {
-                                self.errorMessage = AuthError.loginFailed("ログインに失敗しました").localizedDescription
-                                self.focusedField = .account // エラー時にアカウント入力欄にフォーカス
-                            }
-                        }
-                    } else {
+                    // JSONデータの検証を強化
+                    guard let statusDto = json["statusDto"] as? [String: Any] else {
                         self.errorMessage = AuthError.invalidResponse.localizedDescription
+                        self.focusedField = .account
+                        return
+                    }
+                    
+                    guard let success = statusDto["success"] as? Bool else {
+                        self.errorMessage = AuthError.invalidResponse.localizedDescription
+                        self.focusedField = .account
+                        return
+                    }
+                    
+                    if success {
+                        // ログイン成功
+                        guard let userData = json["data"] as? [String: Any] else {
+                            self.errorMessage = AuthError.userDataNotFound.localizedDescription
+                            self.focusedField = .account
+                            return
+                        }
+                        
+                        // ユーザーデータの検証 - encryptedPasswordの存在チェック
+                        guard userData["encryptedPassword"] != nil else {
+                            self.errorMessage = "サーバーからのレスポンスが不完全です。\n遅入りますが、admin@ukenn.top に取り合わせいてください。"
+                            self.focusedField = .account
+                            return
+                        }
+                        
+                        // ユーザー情報の保存処理
+                        self.saveUserData(userData)
+                    } else {
+                        // ログイン失敗
+                        if let messageList = statusDto["messageList"] as? [String], !messageList.isEmpty {
+                            self.errorMessage = messageList.first
+                        } else {
+                            self.errorMessage = AuthError.loginFailed("ログインに失敗しました").localizedDescription
+                        }
                         self.focusedField = .account // エラー時にアカウント入力欄にフォーカス
                     }
                     
@@ -194,6 +226,13 @@ struct LoginView: View {
     }
     
     private func saveUserData(_ userData: [String: Any]) {
+        // encryptedPasswordの存在を再確認（冗長チェック - すでにperformLoginで検証済み）
+        guard userData["encryptedPassword"] != nil else {
+            print("致命的エラー: saveUserData - encryptedPasswordが見つかりません")
+            // performLoginでチェック済みなので、このケースに入ることは通常ありません
+            return
+        }
+        
         if let user = UserService.shared.createUser(from: userData) {
             UserService.shared.saveUser(user) {
                 // ユーザーデータの保存が完了した後に通知権限をリクエストし、ログイン状態を更新
