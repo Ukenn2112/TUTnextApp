@@ -5,8 +5,8 @@
 //  Created by 维安雨轩 on 2025/03/22.
 //
 
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
 @main
 struct BusWidgetBundle: WidgetBundle {

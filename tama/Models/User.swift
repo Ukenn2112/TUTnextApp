@@ -7,4 +7,4 @@ struct User: Codable {
     var encryptedPassword: String?
     var allKeijiMidokCnt: Int?
     var deviceToken: String?
-} 
+}

@@ -6,8 +6,8 @@
 //
 
 import ActivityKit
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
 struct TimetableWidgetAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
@@ -66,7 +66,7 @@ extension TimetableWidgetAttributes.ContentState {
 }
 
 #Preview("LiveActivity", as: .content, using: TimetableWidgetAttributes.preview) {
-   TimetableWidgetLiveActivity()
+    TimetableWidgetLiveActivity()
 } contentStates: {
     TimetableWidgetAttributes.ContentState.sample
 }

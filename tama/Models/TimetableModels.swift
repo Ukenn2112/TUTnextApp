@@ -24,4 +24,4 @@ struct TimetableCourse {
     let startTime: String
     let endTime: String
     var colorIndex: Int = 1  // デフォルトカラーインデックス
-} 
+}

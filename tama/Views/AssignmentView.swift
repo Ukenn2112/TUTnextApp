@@ -7,16 +7,16 @@ struct AssignmentView: View {
     @Environment(\.colorScheme) private var colorScheme
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
-    
+
     enum AssignmentFilter {
         case all, today, thisWeek, thisMonth, overdue
     }
-    
+
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea()
-            
+
             if viewModel.isLoading {
                 ProgressView("読み込み中...")
                     .progressViewStyle(CircularProgressViewStyle())
@@ -25,13 +25,13 @@ struct AssignmentView: View {
                 VStack {
                     Text("エラーが発生しました")
                         .font(.headline)
-                    
+
                     Text(errorMessage)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding()
-                    
+
                     Button {
                         viewModel.loadAssignments()
                     } label: {
@@ -44,15 +44,15 @@ struct AssignmentView: View {
                     Image(systemName: "checkmark.circle")
                         .font(.system(size: 60))
                         .foregroundColor(.green)
-                    
+
                     Text("課題はありません")
                         .font(.title2)
-                    
+
                     Text("現在提出すべき課題はありません。")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                    
+
                     Button {
                         viewModel.loadAssignments()
                     } label: {
@@ -66,17 +66,21 @@ struct AssignmentView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
                             filterButton(title: NSLocalizedString("すべて", comment: ""), filter: .all)
-                            filterButton(title: NSLocalizedString("今日", comment: ""), filter: .today)
-                            filterButton(title: NSLocalizedString("今週", comment: ""), filter: .thisWeek)
-                            filterButton(title: NSLocalizedString("今月", comment: ""), filter: .thisMonth)
-                            filterButton(title: NSLocalizedString("期限切れ", comment: ""), filter: .overdue)
+                            filterButton(
+                                title: NSLocalizedString("今日", comment: ""), filter: .today)
+                            filterButton(
+                                title: NSLocalizedString("今週", comment: ""), filter: .thisWeek)
+                            filterButton(
+                                title: NSLocalizedString("今月", comment: ""), filter: .thisMonth)
+                            filterButton(
+                                title: NSLocalizedString("期限切れ", comment: ""), filter: .overdue)
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 5)
                     }
                     .padding(.vertical, 8)
                     .background(Color(UIColor.systemBackground))
-                    
+
                     // 課題リスト
                     ScrollView {
                         LazyVStack(spacing: 16) {
@@ -114,7 +118,7 @@ struct AssignmentView: View {
             }
         }
     }
-    
+
     private var filteredAssignments: [Assignment] {
         switch selectedFilter {
         case .all:
@@ -129,7 +133,7 @@ struct AssignmentView: View {
             return viewModel.overdueAssignments
         }
     }
-    
+
     private func filterButton(title: String, filter: AssignmentFilter) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -142,13 +146,14 @@ struct AssignmentView: View {
                 .padding(.horizontal, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(selectedFilter == filter ?
-                              Color.blue.opacity(0.9) :
-                                Color.gray.opacity(colorScheme == .dark ? 0.25 : 0.15))
-                        .shadow(color: selectedFilter == filter ?
-                                Color.blue.opacity(0.3) :
-                                    Color.clear,
-                                radius: 3, x: 0, y: 2)
+                        .fill(
+                            selectedFilter == filter
+                                ? Color.blue.opacity(0.9)
+                                : Color.gray.opacity(colorScheme == .dark ? 0.25 : 0.15)
+                        )
+                        .shadow(
+                            color: selectedFilter == filter ? Color.blue.opacity(0.3) : Color.clear,
+                            radius: 3, x: 0, y: 2)
                 )
                 .foregroundColor(selectedFilter == filter ? .white : .primary)
         }
@@ -160,4 +165,4 @@ struct AssignmentView: View {
     NavigationView {
         AssignmentView(isLoggedIn: .constant(true))
     }
-} 
+}

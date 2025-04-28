@@ -2,30 +2,35 @@ import Foundation
 
 class AuthService {
     static let shared = AuthService()
-    
+
     private init() {}
-    
+
     // ログイン処理を実行する関数
-    func login(account: String, password: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    func login(
+        account: String, password: String,
+        completion: @escaping (Result<[String: Any], Error>) -> Void
+    ) {
         // API リクエストの準備
-        guard let url = URL(string: "https://next.tama.ac.jp/uprx/webapi/up/pk/Pky001Resource/login") else {
+        guard
+            let url = URL(string: "https://next.tama.ac.jp/uprx/webapi/up/pk/Pky001Resource/login")
+        else {
             completion(.failure(AuthError.invalidEndpoint))
             return
         }
-        
+
         // リクエストボディの作成
         let requestBody: [String: Any] = [
             "data": [
                 "loginUserId": account,
-                "plainLoginPassword": password
+                "plainLoginPassword": password,
             ]
         ]
-        
+
         guard let request = APIService.shared.createRequest(url: url, body: requestBody) else {
             completion(.failure(AuthError.requestCreationFailed))
             return
         }
-        
+
         // カスタムデコーダー
         let decoder: (Data) -> Result<[String: Any], Error> = { data in
             do {
@@ -42,7 +47,7 @@ class AuthService {
                 return .failure(error)
             }
         }
-        
+
         // APIリクエストの実行
         APIService.shared.request(
             endpoint: url.absoluteString,
@@ -52,15 +57,20 @@ class AuthService {
             decoder: decoder
         )(request)
     }
-    
+
     // ログアウト処理を実行する関数
-    func logout(userId: String, encryptedPassword: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+    func logout(
+        userId: String, encryptedPassword: String,
+        completion: @escaping (Result<Bool, Error>) -> Void
+    ) {
         // API リクエストの準備
-        guard let url = URL(string: "https://next.tama.ac.jp/uprx/webapi/up/pk/Pky002Resource/logout") else {
+        guard
+            let url = URL(string: "https://next.tama.ac.jp/uprx/webapi/up/pk/Pky002Resource/logout")
+        else {
             completion(.failure(AuthError.invalidEndpoint))
             return
         }
-        
+
         // リクエストボディの作成
         let requestBody: [String: Any] = [
             "subProductCd": "apa",
@@ -68,36 +78,39 @@ class AuthService {
             "loginUserId": userId,
             "langCd": "",
             "productCd": "ap",
-            "encryptedLoginPassword": encryptedPassword
+            "encryptedLoginPassword": encryptedPassword,
         ]
-        
+
         guard let request = APIService.shared.createRequest(url: url, body: requestBody) else {
             completion(.failure(AuthError.requestCreationFailed))
             return
         }
-        
+
         // デバイストークンを取得して通知登録を解除
         if let deviceToken = NotificationService.shared.deviceToken {
             NotificationService.shared.unregisterDeviceTokenFromServer(token: deviceToken)
         }
-        
+
         // カスタムデコーダー
         let decoder: (Data) -> Result<Bool, Error> = { data in
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let statusDto = json["statusDto"] as? [String: Any],
-                   let success = statusDto["success"] as? Bool {
-                    
+                    let statusDto = json["statusDto"] as? [String: Any],
+                    let success = statusDto["success"] as? Bool
+                {
+
                     // 常にCookieとユーザー情報をクリア（成功・失敗に関わらず）
                     CookieService.shared.clearCookies()
                     UserService.shared.clearCurrentUser()
-                    
+
                     if success {
                         completion(.success(true))
                         return .success(true)
                     } else {
                         // エラーメッセージがあれば取得
-                        let errorMessage = (statusDto["errorList"] as? [[String: Any]])?.first?["errorMessage"] as? String ?? "Logout failed"
+                        let errorMessage =
+                            (statusDto["errorList"] as? [[String: Any]])?.first?["errorMessage"]
+                            as? String ?? "Logout failed"
                         let error = AuthError.logoutFailed(errorMessage)
                         completion(.failure(error))
                         return .failure(error)
@@ -106,7 +119,7 @@ class AuthService {
                     // レスポンス解析失敗時もCookieとユーザー情報をクリア
                     CookieService.shared.clearCookies()
                     UserService.shared.clearCurrentUser()
-                    
+
                     let error = AuthError.invalidResponse
                     completion(.failure(error))
                     return .failure(error)
@@ -115,12 +128,12 @@ class AuthService {
                 // エラー発生時もCookieとユーザー情報をクリア
                 CookieService.shared.clearCookies()
                 UserService.shared.clearCurrentUser()
-                
+
                 completion(.failure(error))
                 return .failure(error)
             }
         }
-        
+
         // APIリクエストの実行
         APIService.shared.request(
             endpoint: url.absoluteString,
@@ -142,7 +155,7 @@ enum AuthError: Error, LocalizedError {
     case loginFailed(String)
     case logoutFailed(String)
     case userDataNotFound
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidEndpoint:
@@ -163,4 +176,4 @@ enum AuthError: Error, LocalizedError {
             return "ユーザーデータが見つかりません"
         }
     }
-} 
+}

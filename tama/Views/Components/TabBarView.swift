@@ -12,19 +12,19 @@ struct TabBarView: View {
     @State private var showSheet = false
     @State private var sheetContent: AnyView?
     @State private var assignmentCount: Int = 0
-    
+
     private func collapseWithAnimation() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             isExpanded = false
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // 分隔线
             Divider()
                 .background(Color.primary.opacity(colorScheme == .dark ? 0.1 : 0.2))
-            
+
             // 可滑动的内容区域
             VStack(spacing: 0) {
                 // 拖动指示器
@@ -34,11 +34,11 @@ struct TabBarView: View {
                         .frame(width: 36, height: 5)
                         .padding(.vertical, 12)
                 }
-                .contentShape(Rectangle().size(CGSize(width: 60, height: 30))) // 明確なタップ領域の設定
+                .contentShape(Rectangle().size(CGSize(width: 60, height: 30)))  // 明確なタップ領域の設定
                 .gesture(
-                    DragGesture(minimumDistance: 10) // 最小拖动距离，防止轻触误操作
+                    DragGesture(minimumDistance: 10)  // 最小拖动距离，防止轻触误操作
                         .onEnded { value in
-                            if abs(value.translation.height) > 5 { // 垂直方向の移動が5ポイント以上あるときのみ反応
+                            if abs(value.translation.height) > 5 {  // 垂直方向の移動が5ポイント以上あるときのみ反応
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                     isExpanded.toggle()
                                 }
@@ -47,13 +47,13 @@ struct TabBarView: View {
                 )
                 .onTapGesture {
                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                    impactFeedback.impactOccurred() // タップ時に触覚フィードバックを提供
+                    impactFeedback.impactOccurred()  // タップ時に触覚フィードバックを提供
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         isExpanded.toggle()
                     }
                 }
                 .focused($isFocused)
-                
+
                 // 第二层级功能按钮
                 if isExpanded {
                     HStack(spacing: 30) {
@@ -66,7 +66,7 @@ struct TabBarView: View {
                             showWebView = true
                             collapseWithAnimation()
                         }
-                        
+
                         SecondaryTabButton(
                             image: "smartphone",
                             text: NSLocalizedString("スマホサイト", comment: ""),
@@ -78,7 +78,7 @@ struct TabBarView: View {
                                 collapseWithAnimation()
                             }
                         }
-                        
+
                         SecondaryTabButton(
                             image: "globe",
                             text: NSLocalizedString("たまゆに", comment: ""),
@@ -88,7 +88,7 @@ struct TabBarView: View {
                             showWebView = true
                             collapseWithAnimation()
                         }
-                        
+
                         SecondaryTabButton(
                             image: "printer",
                             text: NSLocalizedString("印刷システム", comment: ""),
@@ -105,7 +105,7 @@ struct TabBarView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .focused($isFocused)
                 }
-                
+
                 // 主标签栏
                 HStack {
                     TabBarButton(
@@ -113,30 +113,30 @@ struct TabBarView: View {
                         text: NSLocalizedString("バス", comment: "底部tab"),
                         isSelected: selectedTab == 0,
                         colorScheme: colorScheme,
-                        action: { 
+                        action: {
                             selectedTab = 0
                             collapseWithAnimation()
                         }
                     )
-                    
+
                     TabBarButton(
                         image: "calendar",
                         text: NSLocalizedString("時間割", comment: "底部tab"),
                         isSelected: selectedTab == 1,
                         colorScheme: colorScheme,
-                        action: { 
+                        action: {
                             selectedTab = 1
                             collapseWithAnimation()
                         }
                     )
-                    
+
                     TabBarButton(
                         image: "pencil.line",
                         text: NSLocalizedString("課題", comment: "底部tab"),
                         isSelected: selectedTab == 2,
                         colorScheme: colorScheme,
                         badgeCount: assignmentCount,
-                        action: { 
+                        action: {
                             selectedTab = 2
                             collapseWithAnimation()
                         }
@@ -166,7 +166,7 @@ struct TabBarView: View {
                     collapseWithAnimation()
                 }
             }
-            
+
             // 底部安全区域占位
             if getSafeAreaBottom() > 0 {
                 Color(UIColor.systemBackground)
@@ -184,7 +184,7 @@ struct TabBarView: View {
         .onAppear {
             loadUserData()
             fetchAssignmentCount()
-            
+
             // 通知の購読を設定
             NotificationCenter.default.addObserver(
                 forName: AssignmentService.assignmentsUpdatedNotification,
@@ -192,7 +192,8 @@ struct TabBarView: View {
                 queue: .main
             ) { notification in
                 if let userInfo = notification.userInfo,
-                   let count = userInfo["count"] as? Int {
+                    let count = userInfo["count"] as? Int
+                {
                     self.assignmentCount = count
                 }
             }
@@ -206,7 +207,7 @@ struct TabBarView: View {
             )
         }
     }
-    
+
     // 获取安全区域底部高度
     private func getSafeAreaBottom() -> CGFloat {
         let scenes = UIApplication.shared.connectedScenes
@@ -214,12 +215,12 @@ struct TabBarView: View {
         let window = windowScene?.windows.first
         return window?.safeAreaInsets.bottom ?? 0
     }
-    
+
     // ユーザーデータの読み込み
     private func loadUserData() {
         user = UserService.shared.getCurrentUser()
     }
-    
+
     // 課題数を取得するメソッド
     private func fetchAssignmentCount() {
         AssignmentService.shared.getAssignments { result in
@@ -231,7 +232,7 @@ struct TabBarView: View {
             }
         }
     }
-    
+
     // T-nextへのURLを生成する関数
     private func createTnextURL() -> URL? {
         let webApiLoginInfo: [String: Any] = [
@@ -239,16 +240,18 @@ struct TabBarView: View {
             "autoLoginAuthCd": "",
             "encryptedPassword": user?.encryptedPassword ?? "",
             "userId": user?.username ?? "",
-            "parameterMap": ""
+            "parameterMap": "",
         ]
-        
+
         guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
-              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            let jsonString = String(data: jsonData, encoding: .utf8)
+        else {
             return nil
         }
-        
+
         // カスタムエンコーディング
-        let customEncoded = jsonString
+        let customEncoded =
+            jsonString
             .replacingOccurrences(of: " ", with: "%20")
             .replacingOccurrences(of: "\"", with: "%22")
             .replacingOccurrences(of: "\\", with: "%5C")
@@ -262,12 +265,14 @@ struct TabBarView: View {
             .replacingOccurrences(of: "?", with: "%3F")
             .replacingOccurrences(of: "{", with: "%7B")
             .replacingOccurrences(of: "}", with: "%7D")
-        
-        let encodedLoginInfo = customEncoded
+
+        let encodedLoginInfo =
+            customEncoded
             .replacingOccurrences(of: "%2522", with: "%22")
             .replacingOccurrences(of: "%255C", with: "%5C")
-        
-        let urlString = "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
+
+        let urlString =
+            "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
         return URL(string: urlString)
     }
 }
@@ -279,9 +284,9 @@ struct TabBarButton: View {
     let colorScheme: ColorScheme
     var badgeCount: Int = 0
     let action: () -> Void
-    
+
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
-    
+
     var body: some View {
         Button(action: {
             feedbackGenerator.impactOccurred()
@@ -291,7 +296,7 @@ struct TabBarButton: View {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: image)
                         .font(.system(size: 20))
-                    
+
                     if badgeCount > 0 {
                         Text("\(badgeCount)")
                             .font(.system(size: 10, weight: .bold))
@@ -303,14 +308,12 @@ struct TabBarButton: View {
                     }
                 }
                 .frame(height: 24)
-                
+
                 Text(text)
                     .font(.system(size: 9))
             }
             .frame(maxWidth: .infinity)
-            .foregroundColor(isSelected ? 
-                           (colorScheme == .dark ? .white : .black) :
-                           .secondary)
+            .foregroundColor(isSelected ? (colorScheme == .dark ? .white : .black) : .secondary)
         }
     }
 }
@@ -321,7 +324,7 @@ struct SecondaryTabButton: View {
     let colorScheme: ColorScheme
     let action: () -> Void
     @State private var isPressed = false
-    
+
     var body: some View {
         Button(action: {
             withAnimation(.spring(response: 0.2)) {
@@ -353,4 +356,4 @@ struct SecondaryTabButton: View {
 
 #Preview {
     TabBarView(selectedTab: .constant(1))
-} 
+}

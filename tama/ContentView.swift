@@ -5,15 +5,15 @@
 //  Created by 维安雨轩 on 2025/02/27.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab = 1
     @State private var isLoggedIn = false
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
-    
+
     var body: some View {
         Group {
             if !isLoggedIn {
@@ -22,20 +22,20 @@ struct ContentView: View {
             } else {
                 VStack(spacing: 0) {
                     HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
-                    
+
                     TabView(selection: $selectedTab) {
                         BusScheduleView()
                             .tag(0)
-                        
+
                         TimetableView(isLoggedIn: $isLoggedIn)
                             .tag(1)
-                        
+
                         AssignmentView(isLoggedIn: $isLoggedIn)
                             .tag(2)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     .edgesIgnoringSafeArea(.bottom)
-                    
+
                     TabBarView(selectedTab: $selectedTab)
                 }
                 .transition(.opacity)
@@ -45,17 +45,21 @@ struct ContentView: View {
         .onAppear {
             // アプリ起動時にログイン状態を確認
             checkLoginStatus()
-            
+
             // URLスキームからのディープリンク処理を確認
             processInitialURL()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HandleURLScheme"))) { notification in
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HandleURLScheme")))
+        { notification in
             if let url = notification.object as? URL {
                 handleDeepLink(url: url)
             }
         }
         // 通知からの画面遷移通知を処理
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("NavigateToPageFromNotification"))) { notification in
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: Notification.Name("NavigateToPageFromNotification"))
+        ) { notification in
             if let page = notification.userInfo?["page"] as? String {
                 navigateBasedOnPath(page)
             }
@@ -66,12 +70,15 @@ struct ContentView: View {
             print("ContentView detected isDarkMode change: \(newValue)")
         }
         // 通知センターでの変更監視も追加
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppearanceDidChangeNotification"))) { _ in
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: Notification.Name("AppearanceDidChangeNotification"))
+        ) { _ in
             // 通知を受け取ったら強制的に再描画
             print("ContentView received appearance change notification")
         }
     }
-    
+
     // ログイン状態を確認
     private func checkLoginStatus() {
         // UserServiceからユーザー情報を取得
@@ -79,39 +86,39 @@ struct ContentView: View {
         // ユーザー情報があればログイン状態とする
         isLoggedIn = user != nil
     }
-    
+
     // アプリ起動時に初期URLを処理
     private func processInitialURL() {
         if let path = AppDelegate.shared.getPathComponent() {
             print("Processing initial URL path: \(path)")
             // ログインしていない場合は一旦スキップ（ログイン後に処理される）
-            guard isLoggedIn else { 
+            guard isLoggedIn else {
                 print("User not logged in, skipping URL processing")
-                return 
+                return
             }
-            
+
             navigateBasedOnPath(path)
-            
+
             // URLによる遷移が完了したらリセット
             AppDelegate.shared.resetURLProcessing()
         }
     }
-    
+
     // URLスキームの処理
     private func handleDeepLink(url: URL) {
-        guard isLoggedIn else { return } // ログインしていない場合は無視
-        
+        guard isLoggedIn else { return }  // ログインしていない場合は無視
+
         print("Handling deep link: \(url.absoluteString)")
         // ホスト部分を取得（例：tama://timetable なら "timetable"）
         let path = url.host ?? ""
         print("URL path component: \(path)")
         navigateBasedOnPath(path)
     }
-    
+
     // パスに基づいてタブに遷移
     private func navigateBasedOnPath(_ path: String) {
         print("Navigating based on path: \(path)")
-        
+
         switch path {
         case "timetable":
             print("Switching to timetable tab")
@@ -125,26 +132,27 @@ struct ContentView: View {
             // URLからバスのパラメータを取得して通知を送信
             let route = AppDelegate.shared.getQueryValue(for: "route")
             let schedule = AppDelegate.shared.getQueryValue(for: "schedule")
-            
+
             print("Bus parameters - route: \(route ?? "nil"), schedule: \(schedule ?? "nil")")
-            
+
             if route != nil || schedule != nil {
                 // パラメータをNotificationCenterを通じてBusScheduleViewに送信
                 let userInfo: [String: Any?] = ["route": route, "schedule": schedule]
                 NotificationCenter.default.post(
                     name: Notification.Name("BusParametersFromURL"),
                     object: nil,
-                    userInfo: userInfo as [AnyHashable : Any]
+                    userInfo: userInfo as [AnyHashable: Any]
                 )
             }
         case "print":
             print("Opening print system view")
             // 印刷システム画面を表示するための処理
             let printSystemView = PrintSystemView.handleURLScheme()
-            
+
             // モーダルで表示するためのホストコントローラを取得
             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let rootController = scene.windows.first?.rootViewController {
+                let rootController = scene.windows.first?.rootViewController
+            {
                 let hostingController = UIHostingController(rootView: printSystemView)
                 rootController.present(hostingController, animated: true)
             }

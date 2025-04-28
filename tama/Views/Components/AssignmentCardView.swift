@@ -4,7 +4,7 @@ struct AssignmentCardView: View {
     let assignment: Assignment
     var onTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
-    
+
     // 根据课题状态返回适当的颜色
     private var timeColor: Color {
         if assignment.isOverdue {
@@ -15,7 +15,7 @@ struct AssignmentCardView: View {
             return .primary
         }
     }
-    
+
     // 根据课题状态返回适当的背景颜色
     private var timeBackgroundColor: Color {
         if assignment.isOverdue {
@@ -26,7 +26,7 @@ struct AssignmentCardView: View {
             return Color.gray.opacity(0.1)
         }
     }
-    
+
     var body: some View {
         Button {
             onTap()
@@ -36,14 +36,14 @@ struct AssignmentCardView: View {
                     Text(assignment.courseName)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Spacer()
-                    
+
                     // 残り時間を表示
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption)
-                        
+
                         Text(assignment.remainingTimeText)
                             .font(.caption)
                     }
@@ -55,25 +55,25 @@ struct AssignmentCardView: View {
                             .fill(timeBackgroundColor)
                     )
                 }
-                
+
                 Text(assignment.title)
                     .font(.headline)
                     .foregroundColor(.primary)
                     .lineLimit(2)
-                
+
                 Text(assignment.description)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
-                
+
                 HStack {
                     // 期限日を表示
                     Text("\(formatDate(assignment.dueDate)) 締切")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -89,15 +89,15 @@ struct AssignmentCardView: View {
                             .blur(radius: 1)
                             .padding(-2)
                     }
-                    
+
                     // カードの背景
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color(UIColor.systemBackground))
                 }
             )
             .shadow(
-                color: colorScheme == .dark 
-                    ? Color.white.opacity(0.07) 
+                color: colorScheme == .dark
+                    ? Color.white.opacity(0.07)
                     : Color.black.opacity(0.1),
                 radius: colorScheme == .dark ? 8 : 5,
                 x: 0,
@@ -106,7 +106,7 @@ struct AssignmentCardView: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd HH:mm"
@@ -118,7 +118,7 @@ struct AssignmentCardView: View {
     let calendar = Calendar.current
     let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
     let urgentDate = calendar.date(byAdding: .hour, value: 1, to: Date())!
-    
+
     let assignment = Assignment(
         id: "1",
         title: "第3回レポート提出",
@@ -129,13 +129,13 @@ struct AssignmentCardView: View {
         status: .pending,
         url: "https://example.com/assignments/1"
     )
-    
+
     return VStack {
         AssignmentCardView(assignment: assignment) {
             print("Tapped assignment")
         }
         .padding()
-        
+
         AssignmentCardView(
             assignment: Assignment(
                 id: "2",
@@ -151,7 +151,7 @@ struct AssignmentCardView: View {
             print("Tapped overdue assignment")
         }
         .padding()
-        
+
         AssignmentCardView(
             assignment: Assignment(
                 id: "3",
@@ -170,4 +170,4 @@ struct AssignmentCardView: View {
     }
     .background(Color(UIColor.systemGroupedBackground))
     .preferredColorScheme(.dark)
-} 
+}

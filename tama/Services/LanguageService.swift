@@ -3,20 +3,20 @@ import UIKit
 
 class LanguageService: NSObject, ObservableObject {
     @Published var currentLanguage: String = "日本語"
-    
+
     static let shared = LanguageService()
-    
+
     private override init() {
         super.init()
         // 初期化時に現在の言語を取得
         updateCurrentLanguage()
     }
-    
+
     // 現在の言語を更新
     func updateCurrentLanguage() {
         let preferredLanguage = Locale.preferredLanguages.first ?? "ja"
         let languageCode = preferredLanguage.prefix(2).lowercased()
-        
+
         switch languageCode {
         case "ja":
             currentLanguage = "日本語"
@@ -30,7 +30,7 @@ class LanguageService: NSObject, ObservableObject {
             currentLanguage = "日本語"
         }
     }
-    
+
     // 言語設定画面を開く
     func openLanguageSettings() {
         if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -46,4 +46,4 @@ class LanguageService: NSObject, ObservableObject {
             }
         }
     }
-} 
+}
