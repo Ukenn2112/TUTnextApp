@@ -67,6 +67,28 @@
         }
       }
     },
+    "@Meikennと@Cursorが愛を込めて作った" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Made with love by @Meikenn and @Cursor"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사랑을 담아 @Meikenn과 @Cursor가 만들었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由 @Meikenn 和 @Cursor 倾情打造"
+          }
+        }
+      }
+    },
     "%@" : {
       "localizations" : {
         "en" : {
@@ -141,6 +163,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ %2$@ - %3$@"
+          }
+        }
+      }
+    },
+    "%@ さん" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mx. %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 님"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 同学"
           }
         }
       }
@@ -546,6 +590,50 @@
         }
       }
     },
+    "NFCシステムがビジー状態です。しばらくしてから再試行してください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The NFC system is busy. Please try again after a while."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC 시스템이 바쁩니다. 잠시 후에 다시 시도해 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC系统繁忙。请稍后再试。"
+          }
+        }
+      }
+    },
+    "NFCセッションがタイムアウトしました。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC Session timed out."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC 세션이 타임아웃되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC读取超时"
+          }
+        }
+      }
+    },
     "TUTnext" : {
       "localizations" : {
         "en" : {
@@ -762,6 +850,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "开启"
+          }
+        }
+      }
+    },
+    "カードが見つかりませんでした。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Card not found."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드를 찾을 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未检测到卡片"
           }
         }
       }
@@ -1635,6 +1745,28 @@
         }
       }
     },
+    "ログイン方法を選択" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a login method."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그인 방법 선택"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择登录方式"
+          }
+        }
+      }
+    },
     "両面" : {
       "localizations" : {
         "en" : {
@@ -2434,6 +2566,72 @@
         }
       }
     },
+    "学生証をiPhoneの上部に近づけてください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please bring your student ID close to the top of the iPhone."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학생증을 아이폰의 상단에 가까이 대십시오."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请将学生证靠近iPhone顶部。"
+          }
+        }
+      }
+    },
+    "学生証をスキャン" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Student ID scan"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학생증을 스캔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描学生证"
+          }
+        }
+      }
+    },
+    "学生証をスキャンして自動入力するか、手動でアカウントを入力することができます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can scan your student ID for automatic input or manually enter your account information."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학생증을 스캔하여 자동 입력하거나 수동으로 계정을 입력할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您可以扫描学生证进行自动输入，或手动输入账户名。"
+          }
+        }
+      }
+    },
     "完了" : {
       "localizations" : {
         "en" : {
@@ -2525,6 +2723,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "学年计划"
+          }
+        }
+      }
+    },
+    "手入力" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual input"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수동 입력"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动输入"
           }
         }
       }
@@ -3723,6 +3943,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置中…"
+          }
+        }
+      }
+    },
+    "読み取り成功！" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read Success!"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기 성공!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取成功！"
           }
         }
       }

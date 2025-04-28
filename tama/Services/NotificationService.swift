@@ -1,10 +1,3 @@
-//
-//  NotificationService.swift
-//  tama
-//
-//  Created by AI Assistant on 2024/09/01.
-//
-
 import Foundation
 import UserNotifications
 import UIKit
