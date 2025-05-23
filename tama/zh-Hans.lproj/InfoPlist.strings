@@ -1,0 +1,9 @@
+/* 
+  InfoPlist.strings
+  tama
+
+  Created by 维安雨轩 on 2025/05/23.
+  
+*/
+"NFCReaderUsageDescription" = "学生证读取";
+"NSLocationWhenInUseUsageDescription" = "根据当前位置，自动选择巴士时刻表的显示顺序。";

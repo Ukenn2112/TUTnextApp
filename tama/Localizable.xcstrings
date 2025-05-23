@@ -386,6 +386,28 @@
         }
       }
     },
+    "%lld人の教師を選択しました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected %lld people as teachers"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld명의 교사를 선택했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已选择%lld名教师"
+          }
+        }
+      }
+    },
     "%lld件" : {
       "localizations" : {
         "en" : {
@@ -854,6 +876,28 @@
         }
       }
     },
+    "お待ちください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please wait"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기다려 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请稍后"
+          }
+        }
+      }
+    },
     "カードが見つかりませんでした。" : {
       "localizations" : {
         "en" : {
@@ -872,6 +916,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未检测到卡片"
+          }
+        }
+      }
+    },
+    "キャンセル" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
           }
         }
       }
@@ -1182,6 +1248,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "深色模式"
+          }
+        }
+      }
+    },
+    "タップして選択して、メールアドレスをコピー" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to select and copy the email address."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "탭하여 선택하고, 이메일 주소를 복사하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击选择并复制电子邮件地址"
           }
         }
       }
@@ -1631,6 +1719,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "马上截止"
+          }
+        }
+      }
+    },
+    "メールアドレスをコピーしました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email address has been copied"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이메일 주소를 복사했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制电子邮件地址"
           }
         }
       }
@@ -2855,6 +2965,94 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "课程通知"
+          }
+        }
+      }
+    },
+    "教師メール" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tchr email"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교사 이메일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "联系教师"
+          }
+        }
+      }
+    },
+    "教師名またはメールアドレスを検索" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search for teacher name or email address."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교사 이름 또는 이메일 주소 검색"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教师名或电子邮件地址进行搜索"
+          }
+        }
+      }
+    },
+    "教師情報を読み込んでいます..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading teacher information..."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교사 정보를 읽어들이고 있습니다..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在获取教师信息…"
+          }
+        }
+      }
+    },
+    "教師連絡先" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teacher Email List"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교사 연락처"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教师联系方式"
           }
         }
       }

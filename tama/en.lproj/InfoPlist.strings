@@ -1,0 +1,9 @@
+/* 
+  InfoPlist.strings
+  tama
+
+  Created by 维安雨轩 on 2025/05/23.
+  
+*/
+"NFCReaderUsageDescription" = "Reading student ID card.";
+"NSLocationWhenInUseUsageDescription" = "Automatically selects the display order of bus schedules based on the current location.";

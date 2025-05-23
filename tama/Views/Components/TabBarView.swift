@@ -56,7 +56,7 @@ struct TabBarView: View {
 
                 // 第二层级功能按钮
                 if isExpanded {
-                    HStack(spacing: 30) {
+                    HStack(spacing: 20) {
                         SecondaryTabButton(
                             image: "calendar.badge.clock",
                             text: NSLocalizedString("年間予定", comment: ""),
@@ -86,6 +86,16 @@ struct TabBarView: View {
                         ) {
                             webViewURL = URL(string: "https://tamauniv.jp")
                             showWebView = true
+                            collapseWithAnimation()
+                        }
+
+                        SecondaryTabButton(
+                            image: "envelope",
+                            text: NSLocalizedString("教師メール", comment: ""),
+                            colorScheme: colorScheme
+                        ) {
+                            showSheet = true
+                            sheetContent = AnyView(TeacherEmailListView())
                             collapseWithAnimation()
                         }
 

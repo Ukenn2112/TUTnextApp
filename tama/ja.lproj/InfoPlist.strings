@@ -1,0 +1,9 @@
+/* 
+  InfoPlist.strings
+  tama
+
+  Created by 维安雨轩 on 2025/05/23.
+  
+*/
+"NFCReaderUsageDescription" = "学生証を読み取ります。";
+"NSLocationWhenInUseUsageDescription" = "現在地に基づいてバスの時刻表の表示順を最適化するために位置情報を使用します。";
