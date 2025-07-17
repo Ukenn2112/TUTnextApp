@@ -10,6 +10,7 @@ struct UserSettingsView: View {
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var languageService: LanguageService
+    @EnvironmentObject private var ratingService: RatingService
     @State private var showSafari: Bool = false
     @State private var urlToOpen: URL? = nil
     @State private var showMailComposer: Bool = false
@@ -188,6 +189,14 @@ struct UserSettingsView: View {
                                 title: NSLocalizedString("フィードバック", comment: "")
                             ) {
                                 sendFeedback()
+                            }
+
+                            // アプリを評価
+                            SettingsRow(
+                                icon: "star.fill",
+                                title: NSLocalizedString("アプリを評価", comment: "")
+                            ) {
+                                ratingService.requestRatingManually()
                             }
 
                             // ログアウト

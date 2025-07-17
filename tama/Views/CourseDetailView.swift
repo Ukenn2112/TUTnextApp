@@ -14,6 +14,7 @@ struct CourseDetailView: View {
     let onColorChange: (Int) -> Void
     @Binding var isLoggedIn: Bool
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var ratingService: RatingService
 
     // メモの編集状態を管理するためのFocusState
     @FocusState private var isMemoFocused: Bool
@@ -516,6 +517,8 @@ struct CourseDetailView: View {
         .background(Color(UIColor.systemBackground))
         .onAppear {
             viewModel.fetchCourseDetail()
+            // 授業詳細表示の重要イベントを記録
+            ratingService.recordSignificantEvent()
         }
     }
 }

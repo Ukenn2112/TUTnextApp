@@ -1546,6 +1546,28 @@
         }
       }
     },
+    "アプリを評価" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rate App"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱 평가하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为应用评分"
+          }
+        }
+      }
+    },
     "プライバシーポリシー" : {
       "localizations" : {
         "en" : {

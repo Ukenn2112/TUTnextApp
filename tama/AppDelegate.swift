@@ -24,6 +24,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // 通知状態を確認してサーバーと同期
         NotificationService.shared.checkAuthorizationStatus()
         NotificationService.shared.syncNotificationStatusWithServer()
+        
+        // アプリ起動時の評価サービス初期化
+        RatingService.shared.onAppLaunch()
 
         return true
     }

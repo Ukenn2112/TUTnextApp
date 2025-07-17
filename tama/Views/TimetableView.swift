@@ -5,6 +5,7 @@ struct TimetableView: View {
     @StateObject private var viewModel = TimetableViewModel()
     @Binding var isLoggedIn: Bool  // 添加登录状态绑定
     @Environment(\.colorScheme) private var colorScheme  // 添加这一行
+    @EnvironmentObject private var ratingService: RatingService
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
     // 掲示リストSafariView閉じる通知観察者
@@ -85,6 +86,8 @@ struct TimetableView: View {
             .edgesIgnoringSafeArea(.bottom)
             .onAppear {
                 viewModel.fetchTimetableData()
+                // 時間割表示の重要イベントを記録
+                ratingService.recordSignificantEvent()
                 // 应用程序从后台恢复时刷新页面
                 willEnterForegroundObserver = NotificationCenter.default.addObserver(
                     forName: UIApplication.willEnterForegroundNotification,

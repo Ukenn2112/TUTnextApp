@@ -12,6 +12,7 @@ struct BusScheduleView: View {
     @State private var selectedTimeEntry: BusSchedule.TimeEntry? = nil
     @State private var cardInfoAppeared: Bool = false
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var ratingService: RatingService
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
     @State private var busParametersObserver: NSObjectProtocol?  // URLスキームからのパラメータ通知用
@@ -91,6 +92,9 @@ struct BusScheduleView: View {
         .onAppear {
             print("BusScheduleView: onAppear")
             setupTimers()
+            
+            // バス時刻表表示の重要イベントを記録
+            ratingService.recordSignificantEvent()
 
             // バスページが開かれるたびに位置情報を更新
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

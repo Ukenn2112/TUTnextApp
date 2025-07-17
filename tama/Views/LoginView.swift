@@ -7,6 +7,7 @@ struct LoginView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Binding var isLoggedIn: Bool
     @EnvironmentObject private var notificationService: NotificationService
+    @EnvironmentObject private var ratingService: RatingService
 
     // 状態プロパティ
     @State private var account = ""
@@ -359,6 +360,8 @@ struct LoginView: View {
                 DispatchQueue.main.async {
                     // 通知許可をリクエスト
                     requestNotificationPermission()
+                    // ログイン成功の重要イベントを記録
+                    ratingService.recordSignificantEvent()
                     // アニメーション付きでログイン状態を更新
                     withAnimation(.easeInOut(duration: 0.3)) {
                         isLoggedIn = true

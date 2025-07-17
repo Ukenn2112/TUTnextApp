@@ -5,6 +5,7 @@ struct AssignmentView: View {
     @StateObject private var viewModel = AssignmentViewModel()
     @State private var selectedFilter: AssignmentFilter = .all
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var ratingService: RatingService
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
 
@@ -100,6 +101,8 @@ struct AssignmentView: View {
         }
         .onAppear {
             viewModel.loadAssignments()
+            // 課題表示の重要イベントを記録
+            ratingService.recordSignificantEvent()
             // 应用程序从后台恢复时刷新页面
             willEnterForegroundObserver = NotificationCenter.default.addObserver(
                 forName: UIApplication.willEnterForegroundNotification,

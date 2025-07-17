@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var isLoggedIn = false
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
+    @EnvironmentObject private var ratingService: RatingService
 
     var body: some View {
         Group {
