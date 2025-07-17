@@ -258,6 +258,7 @@ struct CourseDetailView: View {
                                                     Text(announcement.title)
                                                         .font(.system(size: 14, weight: .medium))
                                                         .foregroundColor(.primary)
+                                                        .multilineTextAlignment(.leading)
                                                     Text(announcement.formattedDate)
                                                         .font(.system(size: 12))
                                                         .foregroundColor(.gray)

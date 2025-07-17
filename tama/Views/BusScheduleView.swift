@@ -653,8 +653,10 @@ struct BusScheduleView: View {
             Divider()
                 .background(Color.gray.opacity(0.3))
 
-            // 水曜日特別メッセージ
-            if selectedScheduleType == .wednesday {
+            // ピンメッセージまたは水曜日特別メッセージ
+            if let pinMessage = busSchedule?.pin {
+                pinMessageView(pinMessage)
+            } else if selectedScheduleType == .wednesday {
                 wednesdaySpecialMessage
             }
 
@@ -719,6 +721,34 @@ struct BusScheduleView: View {
         }
         .padding()
         .background(Color.blue.opacity(0.1))
+    }
+
+    // ピンメッセージ
+    private func pinMessageView(_ pinMessage: BusSchedule.PinMessage) -> some View {
+        Button(action: {
+            if let url = URL(string: pinMessage.url) {
+                UIApplication.shared.open(url)
+            }
+        }) {
+            HStack {
+                Image(systemName: "pin.fill")
+                    .foregroundColor(.orange)
+
+                Text(pinMessage.title)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color.orange.opacity(0.1))
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // 時間ごとの行

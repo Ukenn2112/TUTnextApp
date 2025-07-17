@@ -194,7 +194,8 @@ class BusScheduleService {
             saturdaySchedules: saturdaySchedules,
             wednesdaySchedules: wednesdaySchedules,
             specialNotes: specialNotes,
-            temporaryMessages: response.messages
+            temporaryMessages: response.messages,
+            pin: response.pin
         )
     }
 
@@ -307,7 +308,8 @@ class BusScheduleService {
             saturdaySchedules: [],
             wednesdaySchedules: [],
             specialNotes: specialNotes,
-            temporaryMessages: nil
+            temporaryMessages: nil,
+            pin: nil
         )
     }
 

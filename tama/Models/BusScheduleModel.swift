@@ -65,6 +65,12 @@ struct BusSchedule: Codable {
         let url: String
     }
 
+    // MARK: - ピンメッセージ
+    struct PinMessage: Codable {
+        let title: String
+        let url: String
+    }
+
     // MARK: - プロパティ
 
     /// すべての路線の時刻表
@@ -73,11 +79,13 @@ struct BusSchedule: Codable {
     let wednesdaySchedules: [DaySchedule]  // 水曜日時刻表
     let specialNotes: [SpecialNote]  // 特別便の説明
     let temporaryMessages: [TemporaryMessage]?  // 臨時ダイヤメッセージ
+    let pin: PinMessage?  // ピンメッセージ
 }
 
 // MARK: - APIレスポンス用のデコード構造体
 struct BusAPIResponse: Codable {
     let messages: [BusSchedule.TemporaryMessage]?
+    let pin: BusSchedule.PinMessage?
     let data: BusData
 
     struct BusData: Codable {

@@ -186,13 +186,13 @@ class NFCReader: NSObject, ObservableObject, NFCTagReaderSessionDelegate {
             } catch let error as NFCReadError {
                 print("NFC読み取りエラー: \(error.localizedDescription)")
                 session.invalidate(errorMessage: error.localizedDescription)
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.errorMessage = error.localizedDescription
                 }
             } catch {
                 print("NFC操作中の一般エラー: \(error.localizedDescription)")
                 session.invalidate(errorMessage: "読み取り中にエラーが発生しました: \(error.localizedDescription)")
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.errorMessage = "読み取り中にエラーが発生しました: \(error.localizedDescription)"
                 }
             }
