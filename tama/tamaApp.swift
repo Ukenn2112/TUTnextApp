@@ -27,6 +27,7 @@ struct tamaApp: App {
                 .environmentObject(notificationService)
                 .environmentObject(languageService)
                 .environmentObject(ratingService)
+                .environmentObject(GoogleOAuthService.shared)
                 .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
                 .onAppear {
                     print("tamaApp: Application appeared")

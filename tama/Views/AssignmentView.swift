@@ -6,6 +6,7 @@ struct AssignmentView: View {
     @State private var selectedFilter: AssignmentFilter = .all
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
+    @EnvironmentObject private var oauthService: GoogleOAuthService
     // 前台通知观察者
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
 
@@ -103,6 +104,12 @@ struct AssignmentView: View {
             viewModel.loadAssignments()
             // 課題表示の重要イベントを記録
             ratingService.recordSignificantEvent()
+            
+            // Google OAuth認証状態をチェック
+            Task {
+                await oauthService.loadAuthorizationStatus()
+            }
+            
             // 应用程序从后台恢复时刷新页面
             willEnterForegroundObserver = NotificationCenter.default.addObserver(
                 forName: UIApplication.willEnterForegroundNotification,
@@ -111,6 +118,10 @@ struct AssignmentView: View {
             ) { [self] _ in
                 print("AssignmentView: アプリがフォアグラウンドに復帰しました")
                 viewModel.loadAssignments()
+                // フォアグラウンド復帰時にも認証状態をチェック
+                Task {
+                    await oauthService.loadAuthorizationStatus()
+                }
             }
         }
         .onDisappear {

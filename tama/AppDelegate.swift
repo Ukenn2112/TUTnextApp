@@ -78,9 +78,44 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func handleURL(_ url: URL) -> Bool {
         print("Handling URL: \(url.absoluteString)")
 
-        // カスタムURLスキームのフォーマット確認
+        // Google OAuth コールバック処理 (新しいリダイレクトURI形式)
+        // Info.plistからReversed Client IDを動的に取得
+        guard let reversedClientId = Bundle.main.object(forInfoDictionaryKey: "REVERSED_CLIENT_ID") as? String else {
+            print("REVERSED_CLIENT_ID not found in Info.plist")
+            return false
+        }
+        
+        if url.scheme == reversedClientId {
+            print("Google OAuth callback detected")
+            
+            // 立即发送回调收到通知，强制关闭WebView
+            NotificationCenter.default.post(name: .googleOAuthCallbackReceived, object: nil)
+            
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+               let queryItems = components.queryItems,
+               let code = queryItems.first(where: { $0.name == "code" })?.value {
+                
+                print("OAuth authorization code received: \(code)")
+                GoogleOAuthService.shared.handleAuthCode(code)
+                return true
+            } else if let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+                      let queryItems = components.queryItems,
+                      let error = queryItems.first(where: { $0.name == "error" })?.value {
+                
+                print("OAuth error received: \(error)")
+                // エラー処理
+                NotificationCenter.default.post(
+                    name: .googleOAuthError,
+                    object: nil,
+                    userInfo: ["error": error]
+                )
+                return true
+            }
+        }
+
+        // カスタムURLスキームのフォーマット確認 (tama://の場合)
         guard url.scheme == "tama" else {
-            print("Invalid scheme: \(url.scheme ?? "nil"), expected: tama")
+            print("Invalid scheme: \(url.scheme ?? "nil"), expected: tama or Google OAuth scheme")
             return false
         }
 

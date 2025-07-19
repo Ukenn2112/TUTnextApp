@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HeaderView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var oauthService: GoogleOAuthService
     @Binding var selectedTab: Int
     @Binding var isLoggedIn: Bool
     @State private var showingUserSettings = false
@@ -9,6 +10,7 @@ struct HeaderView: View {
     @State private var showSafariView = false
     @State private var keijiBoardURL: URL?
     @State private var semester: Semester = .current  // 使用当前学期数据
+    @State private var showRevokeConfirmation = false  // 取消授权确认对话框
 
     // NotificationCenterを使用してUserDefaultsの変更を監視
     private let userDefaultsObserver = NotificationCenter.default
@@ -87,6 +89,22 @@ struct HeaderView: View {
         .sheet(isPresented: $showingUserSettings) {
             UserSettingsView(isLoggedIn: $isLoggedIn)
         }
+        .sheet(
+            isPresented: $oauthService.showOAuthWebView,
+            onDismiss: {
+                // OAuth WebViewが閉じられた時の処理
+                oauthService.cancelOAuth()
+                NotificationCenter.default.post(name: .googleOAuthWebViewDismissed, object: nil)
+            }
+        ) {
+            // Google OAuth WebView
+            if let url = oauthService.oauthURL {
+                SafariWebView(
+                    url: url,
+                    dismissNotification: .googleOAuthWebViewDismissed
+                )
+            }
+        }
         .onAppear {
             // ビュー表示時にUserServiceからユーザー情報を取得
             loadUserData()
@@ -100,6 +118,33 @@ struct HeaderView: View {
         .onReceive(TimetableService.shared.$currentSemester) { updatedSemester in
             // 学期情報が更新されたときに反映
             semester = updatedSemester
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthSuccess)) { _ in
+            // OAuth成功時の処理
+            print("Google OAuth 授权成功")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthError)) { notification in
+            // OAuth失败时的处理
+            if let error = notification.userInfo?["error"] as? String {
+                print("Google OAuth 授权失败: \(error)")
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthWebViewDismissed)) { _ in
+            // OAuth WebView关闭时的处理
+            print("Google OAuth WebView 已关闭")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthCallbackReceived)) { _ in
+            // OAuth回调收到时立即关闭WebView
+            print("Google OAuth 回调已收到，强制关闭WebView")
+            oauthService.showOAuthWebView = false
+        }
+        .alert(NSLocalizedString("認証取り消し確認", comment: "取消授权确认对话框标题"), isPresented: $showRevokeConfirmation) {
+            Button(NSLocalizedString("キャンセル", comment: "取消按钮"), role: .cancel) { }
+            Button(NSLocalizedString("認証取り消し", comment: "确认取消按钮"), role: .destructive) {
+                oauthService.clearAuthorization()
+            }
+        } message: {
+            Text(NSLocalizedString("Google OAuth認証を取り消しますか？\n取り消し後は再度認証が必要になります。", comment: "取消授权确认消息"))
         }
     }
 
@@ -188,12 +233,83 @@ struct HeaderView: View {
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.primary)
                 }
+            } else if selectedTab == 2 {
+                HStack(spacing: 12) {
+                    Text(getTitleText())
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    // Google OAuth授权按钮
+                    OAuthButton()
+                }
+                .padding(.horizontal, 10)
             } else {
                 Text(getTitleText())
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.primary)
                     .padding(.horizontal, 10)
             }
+        }
+    }
+    
+    // OAuth授权按钮组件
+    private func OAuthButton() -> some View {
+        Button(action: {
+            if oauthService.isAuthorized {
+                // 已授权状态下显示取消授权确认对话框
+                showRevokeConfirmation = true
+            } else {
+                // 未授权时开始OAuth流程
+                oauthService.startOAuth()
+            }
+        }) {
+            HStack(spacing: 4) {
+                if oauthService.isAuthorizing && !oauthService.showOAuthWebView {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else if oauthService.isAuthorized {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12))
+                } else {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 12))
+                }
+                
+                Text(getOAuthButtonText())
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(getOAuthButtonColor())
+            )
+        }
+        .disabled(oauthService.isAuthorizing && !oauthService.showOAuthWebView)
+        .animation(.easeInOut(duration: 0.2), value: oauthService.isAuthorized)
+        .animation(.easeInOut(duration: 0.2), value: oauthService.isAuthorizing)
+        .animation(.easeInOut(duration: 0.2), value: oauthService.showOAuthWebView)
+    }
+    
+    private func getOAuthButtonText() -> String {
+        if oauthService.showOAuthWebView {
+            return NSLocalizedString("認証中", comment: "认证中")
+        } else if oauthService.isAuthorized {
+            return NSLocalizedString("認証済み", comment: "已授权")
+        } else {
+            return NSLocalizedString("Google認証", comment: "Google授权")
+        }
+    }
+    
+    private func getOAuthButtonColor() -> Color {
+        if oauthService.showOAuthWebView {
+            return Color.orange
+        } else if oauthService.isAuthorized {
+            return Color.green
+        } else {
+            return Color.blue
         }
     }
 
