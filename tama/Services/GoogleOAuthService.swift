@@ -259,6 +259,8 @@ class GoogleOAuthService: ObservableObject {
                 case .success(let response):
                     print("【GoogleOAuth】トークン送信成功: \(response)")
                     self.isAuthorized = true
+                    // 认证状态变化通知
+                    NotificationCenter.default.post(name: .googleOAuthStatusChanged, object: nil)
                 case .failure(let error):
                     print("【GoogleOAuth】トークン送信エラー: \(error.localizedDescription)")
                 }
@@ -283,6 +285,8 @@ class GoogleOAuthService: ObservableObject {
                 case .success(let response):
                     print("【GoogleOAuth】認証取り消し成功: \(response)")
                     self.isAuthorized = false
+                    // 认证状态变化通知
+                    NotificationCenter.default.post(name: .googleOAuthStatusChanged, object: nil)
                 case .failure(let error):
                     print("【GoogleOAuth】認証取り消しエラー: \(error.localizedDescription)")
                 }

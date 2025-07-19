@@ -612,60 +612,60 @@
         }
       }
     },
-    "Google OAuth認証を取り消しますか？\n取り消し後は再度認証が必要になります。" : {
+    "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Do you want to revoke Google OAuth authentication?\nYou will need to authenticate again after revocation."
+            "value" : "Do you want to revoke Classroom authentication?\nYou will need to authenticate again after revocation."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google OAuth認証を取り消しますか？\n取り消し後は再度認証が必要になります。"
+            "value" : "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google OAuth 인증을 해제하시겠습니까?\n해제 후에는 다시 인증이 필요합니다."
+            "value" : "인증을 취소하시겠습니까?\n취소 후에는 Classroom의 과제가 표시되지 않습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "确定要取消Google OAuth授权吗？\n取消后需要重新进行授权。"
+            "value" : "确定要取消授权吗？\n撤销后将无法显示 Classroom 的作业哦。"
           }
         }
       }
     },
-    "Google認証" : {
+    "Classroom 認証" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google Auth"
+            "value" : "Classroom Auth"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google認証"
+            "value" : "Classroom 認証"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google 인증"
+            "value" : "Classroom 인증"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google授权"
+            "value" : "Classroom 授权"
           }
         }
       }

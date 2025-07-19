@@ -144,7 +144,7 @@ struct HeaderView: View {
                 oauthService.clearAuthorization()
             }
         } message: {
-            Text(NSLocalizedString("Google OAuth認証を取り消しますか？\n取り消し後は再度認証が必要になります。", comment: "取消授权确认消息"))
+            Text(NSLocalizedString("認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。", comment: "取消授权确认消息"))
         }
     }
 
@@ -299,7 +299,7 @@ struct HeaderView: View {
         } else if oauthService.isAuthorized {
             return NSLocalizedString("認証済み", comment: "已授权")
         } else {
-            return NSLocalizedString("Google認証", comment: "Google授权")
+            return NSLocalizedString("Classroom 認証", comment: "Classroom 授权")
         }
     }
     

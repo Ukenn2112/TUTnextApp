@@ -124,6 +124,16 @@ struct AssignmentView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthSuccess)) { _ in
+            // Google OAuth授权成功时刷新课题列表
+            print("AssignmentView: Google OAuth授权成功，刷新课题列表")
+            viewModel.loadAssignments()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthStatusChanged)) { _ in
+            // Google OAuth状态变化时刷新课题列表（包括取消授权）
+            print("AssignmentView: Google OAuth状态变化，刷新课题列表")
+            viewModel.loadAssignments()
+        }
         .onDisappear {
             // 移除通知观察者
             if let observer = willEnterForegroundObserver {
