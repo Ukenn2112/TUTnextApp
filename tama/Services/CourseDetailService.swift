@@ -229,6 +229,9 @@ class CourseDetailService {
             return
         }
 
+        // メモ内容をURLエンコード
+        let encodedMemo = memo.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? memo
+
         // リクエストボディの作成
         let requestBody: [String: Any] = [
             "loginUserId": user.username,
@@ -240,7 +243,7 @@ class CourseDetailService {
             "data": [
                 "jugyoCd": course.jugyoCd ?? "",
                 "nendo": course.academicYear ?? 0,
-                "jugyoMemo": memo,
+                "jugyoMemo": encodedMemo,
             ],
         ]
 
