@@ -25,32 +25,6 @@ public enum DateTransformer {
         formatter.locale = Locale(identifier: "ja_JP")
         return formatter
     }()
-    
-    /// API date format (yyyy/MM/dd)
-    public static let apiDate: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy/MM/dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
-    }()
-}
-
-/// String transformation utilities
-public enum StringTransformer {
-    /// Trim whitespace from both ends
-    public static func trimmed(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
-    /// Convert to uppercase
-    public static func uppercase(_ value: String) -> String {
-        value.uppercased()
-    }
-    
-    /// Convert to lowercase
-    public static func lowercase(_ value: String) -> String {
-        value.lowercased()
-    }
 }
 
 /// Color index to/from hex transformation utilities
@@ -82,34 +56,4 @@ public enum ColorTransformer {
         }
         return 1
     }
-}
-
-/// Custom decoding strategies
-public enum ModelDecodingStrategy {
-    /// Convert snake_case keys to camelCase
-    public static func convertFromSnakeCase(_ string: String) -> String {
-        let first = string.prefix(1).lowercased()
-        let remaining = String(string.dropFirst())
-        return first + remaining
-    }
-}
-
-/// Common coding keys with custom implementations
-public struct CommonCodingKeys: CodingKey {
-    public var stringValue: String
-    public var intValue: Int?
-    
-    public init?(stringValue: String) {
-        self.stringValue = stringValue
-        self.intValue = nil
-    }
-    
-    public init?(intValue: Int) {
-        self.stringValue = String(intValue)
-        self.intValue = intValue
-    }
-    
-    public static let id = CommonCodingKeys(stringValue: "id")!
-    public static let message = CommonCodingKeys(stringValue: "message")!
-    public static let data = CommonCodingKeys(stringValue: "data")!
 }

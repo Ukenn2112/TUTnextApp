@@ -1,175 +1,137 @@
+// MARK: - View Protocols
+// This file contains view-related protocols for the TUTnext app
+
 import Foundation
 import SwiftUI
 
-// MARK: - View Model Protocol
+// MARK: - InputViewProtocol
 
-protocol ViewModelProtocol: AnyObject {
-    associatedtype State
-    associatedtype Action
-    
-    var state: State { get }
-    func send(_ action: Action)
+/// Protocol for views that accept user input
+protocol InputViewProtocol {
+    var isValid: Bool { get }
+    func validate() -> Bool
 }
 
-// MARK: - View Protocol
+// MARK: - ListViewProtocol
 
-protocol ViewProtocol: AnyView {
-    associatedtype ViewModel: ViewModelProtocol
-    
-    var viewModel: ViewModel { get }
-    func createView() -> AnyView
+/// Protocol for list-based views
+protocol ListViewProtocol {
+    associatedtype Item
+    var items: [Item] { get set }
+    var isEmpty: Bool { get }
+    func refresh() async
 }
 
-// MARK: - Loading State
+// MARK: - DetailViewProtocol
 
-enum LoadingState<T> {
-    case idle
-    case loading
-    case success(T)
-    case failure(Error)
-    
-    var isLoading: Bool {
-        if case .loading = self { return true }
-        return false
-    }
-    
-    var value: T? {
-        if case .success(let value) = self { return value }
-        return nil
-    }
-    
-    var error: Error? {
-        if case .failure(let error) = self { return error }
-        return nil
-    }
+/// Protocol for detail views
+protocol DetailViewProtocol {
+    associatedtype Item
+    var item: Item? { get set }
+    func loadItem(id: String) async throws
 }
 
-// MARK: - Alert State
+// MARK: - FormViewProtocol
 
-struct AlertState {
-    let title: String
-    let message: String?
-    let primaryButton: AlertButton?
-    let secondaryButton: AlertButton?
-    
-    init(
-        title: String,
-        message: String? = nil,
-        primaryButton: AlertButton? = nil,
-        secondaryButton: AlertButton? = nil
-    ) {
-        self.title = title
-        self.message = message
-        self.primaryButton = primaryButton
-        self.secondaryButton = secondaryButton
-    }
-    
-    static func confirmation(
-        title: String,
-        message: String? = nil,
-        confirm: @escaping () -> Void,
-        cancel: (() -> Void)? = nil
-    ) -> AlertState {
-        AlertState(
-            title: title,
-            message: message,
-            primaryButton: AlertButton(title: "Confirm", action: confirm),
-            secondaryButton: AlertButton(title: "Cancel", action: cancel)
-        )
-    }
-    
-    static func alert(
-        title: String,
-        message: String? = nil,
-        dismiss: (() -> Void)? = nil
-    ) -> AlertState {
-        AlertState(
-            title: title,
-            message: message,
-            primaryButton: AlertButton(title: "OK", action: dismiss)
-        )
-    }
+/// Protocol for form views
+protocol FormViewProtocol {
+    var isSubmitEnabled: Bool { get }
+    var errors: [String: String] { get set }
+    func submit() async throws -> Bool
 }
 
-struct AlertButton {
-    let title: String
-    let action: (() -> Void)?
-    let isDestructive: Bool
-    
-    init(title: String, action: (() -> Void)?, isDestructive: Bool = false) {
-        self.title = title
-        self.action = action
-        self.isDestructive = isDestructive
-    }
+// MARK: - FilterableViewProtocol
+
+/// Protocol for views with filtering capability
+protocol FilterableViewProtocol {
+    associatedtype FilterType
+    var filter: FilterType? { get set }
+    var isFiltered: Bool { get }
+    func applyFilter(_ filter: FilterType)
+    func clearFilter()
 }
 
-// MARK: - Sheet State
+// MARK: - SearchableViewProtocol
 
-enum SheetState: Identifiable {
-    case sheet(AnyView)
-    case fullScreenCover(AnyView)
+/// Protocol for views with search functionality
+protocol SearchableViewProtocol {
+    var searchText: String { get set }
+    var isSearching: Bool { get }
+    var filteredItems: [Self.Item] { get }
+    func performSearch(_ query: String)
+    func clearSearch()
+}
+
+// MARK: - PaginatedViewProtocol
+
+/// Protocol for views with pagination
+protocol PaginatedViewProtocol {
+    var page: Int { get set }
+    var hasMorePages: Bool { get set }
+    var isLoadingMore: Bool { get set }
+    func loadMore() async
+    func resetPagination()
+}
+
+// MARK: - RefreshableViewProtocol
+
+/// Protocol for views with pull-to-refresh
+protocol RefreshableViewProtocol {
+    var isRefreshing: Bool { get set }
+    func refresh() async
+}
+
+// MARK: - ErrorDisplayable
+
+/// Protocol for views that display errors
+protocol ErrorDisplayable {
+    var displayedError: Error? { get set }
+    func showError(_ error: Error)
+    func clearError()
+}
+
+// MARK: - LoadingDisplayable
+
+/// Protocol for views that show loading state
+protocol LoadingDisplayable {
+    var isLoading: Bool { get set }
+    func showLoading()
+    func hideLoading()
+}
+
+// MARK: - EmptyStateDisplayable
+
+/// Protocol for views that show empty state
+protocol EmptyStateDisplayable {
+    var isEmpty: Bool { get }
+    var emptyTitle: String { get }
+    var emptyMessage: String { get }
+    var emptyAction: (() -> Void)? { get }
+}
+
+// MARK: - AsyncViewModel
+
+/// Base class for async view models
+@MainActor
+class AsyncViewModel<State> {
+    @Published private(set) var state: State
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var error: Error?
     
-    var id: String {
-        switch self {
-        case .sheet: return "sheet"
-        case .fullScreenCover: return "fullScreenCover"
+    init(initialState: State) {
+        self.state = initialState
+    }
+    
+    @MainActor
+    func withLoading<T>(_ operation: () async throws -> T) async throws -> T {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            return try await operation()
+        } catch {
+            self.error = error
+            throw error
         }
     }
-}
-
-// MARK: - Navigation State
-
-struct NavigationState {
-    var isActive: Bool = false
-    var destination: AnyView?
-    
-    func navigate(to destination: AnyView) -> NavigationState {
-        NavigationState(isActive: true, destination: destination)
-    }
-    
-    mutating func dismiss() {
-        isActive = false
-        destination = nil
-    }
-}
-
-// MARK: - Form Validation
-
-protocol FormValidatable {
-    var isValid: Bool { get }
-    var validationErrors: [String] { get }
-}
-
-struct ValidationRule {
-    let message: String
-    let validate: (String?) -> Bool
-    
-    static let required = ValidationRule(
-        message: "This field is required",
-        validate: { $0?.isEmpty == false }
-    )
-    
-    static func email() -> ValidationRule {
-        ValidationRule(
-            message: "Invalid email format",
-            validate: { value in
-                guard let value = value, !value.isEmpty else { return true }
-                let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
-                return NSPredicate(format: "SELF MATCHES %@", emailRegex).evaluate(with: value)
-            }
-        )
-    }
-    
-    static func minLength(_ length: Int) -> ValidationRule {
-        ValidationRule(
-            message: "Minimum \(length) characters required",
-            validate: { $0?.count ?? 0 >= length }
-        )
-    }
-}
-
-// MARK: - Identifiable Extension
-
-extension Identifiable {
-    var id: Self.ID { self.id }
 }

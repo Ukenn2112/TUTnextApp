@@ -1,8 +1,112 @@
 import Foundation
 
-// MARK: - HTTP Method
+/// Protocol for network client operations
+public protocol NetworkClientProtocol {
+    /// Perform a network request and decode response
+    func request<T: Decodable>(_ endpoint: APIEndpoint) async throws -> T
+    
+    /// Perform a network request without decoding
+    func requestRaw(_ endpoint: APIEndpoint) async throws -> Data
+}
 
-enum HTTPMethod: String {
+/// Network errors
+public enum NetworkError: LocalizedError {
+    case invalidURL
+    case noData
+    case decodingError(Error)
+    case encodingError(Error)
+    case serverError(statusCode: Int, message: String?)
+    case networkError(Error)
+    case unauthorized
+    case notFound
+    case timeout
+    
+    public var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL"
+        case .noData:
+            return "No data received"
+        case .decodingError(let error):
+            return "Failed to decode response: \(error.localizedDescription)"
+        case .encodingError(let error):
+            return "Failed to encode request: \(error.localizedDescription)"
+        case .serverError(let statusCode, let message):
+            return "Server error (\(statusCode)): \(message ?? "Unknown error")"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .unauthorized:
+            return "Unauthorized access"
+        case .notFound:
+            return "Resource not found"
+        case .timeout:
+            return "Request timeout"
+        }
+    }
+}
+
+/// API endpoint configuration
+public enum APIEndpoint {
+    case users(UsersEndpoint)
+    case timetable(TimetableEndpoint)
+    case bus(BusEndpoint)
+    case assignments(AssignmentsEndpoint)
+    
+    public var path: String {
+        switch self {
+        case .users(let endpoint):
+            return "/api/users/\(endpoint.path)"
+        case .timetable(let endpoint):
+            return "/api/timetable/\(endpoint.path)"
+        case .bus(let endpoint):
+            return "/api/bus/\(endpoint.path)"
+        case .assignments(let endpoint):
+            return "/api/assignments/\(endpoint.path)"
+        }
+    }
+    
+    public var method: HTTPMethod {
+        switch self {
+        case .users(let endpoint):
+            return endpoint.method
+        case .timetable(let endpoint):
+            return endpoint.method
+        case .bus(let endpoint):
+            return endpoint.method
+        case .assignments(let endpoint):
+            return endpoint.method
+        }
+    }
+    
+    public var headers: [String: String] {
+        switch self {
+        case .users:
+            return ["Content-Type": "application/json"]
+        case .timetable:
+            return ["Content-Type": "application/json"]
+        case .bus:
+            return ["Content-Type": "application/json"]
+        case .assignments:
+            return ["Content-Type": "application/json"]
+        }
+    }
+    
+    public var body: Data? {
+        switch self {
+        case .users(let endpoint):
+            return endpoint.body
+        case .timetable(let endpoint):
+            return endpoint.body
+        case .bus(let endpoint):
+            return endpoint.body
+        case .assignments(let endpoint):
+            return endpoint.body
+        }
+    }
+}
+
+/// HTTP methods
+public enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
     case put = "PUT"
@@ -10,249 +114,176 @@ enum HTTPMethod: String {
     case delete = "DELETE"
 }
 
-// MARK: - API Endpoint
+// MARK: - Users Endpoints
 
-struct APIEndpoint {
-    let path: String
-    let method: HTTPMethod
-    let headers: [String: String]?
-    let queryItems: [URLQueryItem]?
+public enum UsersEndpoint {
+    case fetchCurrent
+    case updateProfile(UserProfileUpdate)
+    case login(UserCredentials)
+    case logout
+    case refreshToken(String)
+    case updateDeviceToken(String)
+    case getUnreadCount
     
-    init(
-        path: String,
-        method: HTTPMethod = .get,
-        headers: [String: String]? = nil,
-        queryItems: [URLQueryItem]? = nil
-    ) {
-        self.path = path
-        self.method = method
-        self.headers = headers
-        self.queryItems = queryItems
-    }
-}
-
-// MARK: - API Configuration
-
-struct APIConfiguration {
-    let baseURL: String
-    let timeout: TimeInterval
-    let defaultHeaders: [String: String]
-    let retryPolicy: RetryPolicy
-    
-    static let `default` = APIConfiguration(
-        baseURL: "https://next.tama.ac.jp/uprx/webapi",
-        timeout: 30,
-        defaultHeaders: [
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        ],
-        retryPolicy: .exponential(maxDelay: 30, maxAttempts: 3)
-    )
-    
-    static let development = APIConfiguration(
-        baseURL: "https://dev.next.tama.ac.jp/uprx/webapi",
-        timeout: 60,
-        defaultHeaders: [
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        ],
-        retryPolicy: .retry(count: 5, delay: 5)
-    )
-}
-
-// MARK: - NetworkClient Protocol
-
-protocol NetworkClientProtocol {
-    func request<T: Decodable>(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> T
-    func request(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> Data
-    func requestJSON(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> [String: Any]
-}
-
-// MARK: - NetworkClient
-
-final class NetworkClient: NetworkClientProtocol {
-    static let shared = NetworkClient()
-    
-    private let configuration: APIConfiguration
-    private let session: URLSession
-    private let interceptorChain: InterceptorChain
-    private let decoder: JSONDecoder
-    
-    init(
-        configuration: APIConfiguration = .default,
-        session: URLSession = .shared
-    ) {
-        self.configuration = configuration
-        self.session = session
-        self.interceptorChain = InterceptorChain()
-        self.decoder = JSONDecoder()
-        
-        setupDefaultInterceptors()
-    }
-    
-    private func setupDefaultInterceptors() {
-        let loggingInterceptor = LoggingInterceptor(logTag: "Network", verbose: false)
-        interceptorChain.add(loggingInterceptor)
-    }
-    
-    func addInterceptor(_ interceptor: NetworkInterceptor) {
-        interceptorChain.add(interceptor)
-    }
-    
-    // MARK: - Request Methods
-    
-    func request<T: Decodable>(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> T {
-        let data = try await request(endpoint, body: body)
-        
-        do {
-            return try decoder.decode(T.self, from: data)
-        } catch {
-            throw AppError.decodingError(underlying: error)
+    var path: String {
+        switch self {
+        case .fetchCurrent:
+            return "current"
+        case .updateProfile:
+            return "profile"
+        case .login:
+            return "login"
+        case .logout:
+            return "logout"
+        case .refreshToken:
+            return "refresh"
+        case .updateDeviceToken:
+            return "device-token"
+        case .getUnreadCount:
+            return "unread-count"
         }
     }
     
-    func request(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> Data {
-        let request = try buildRequest(for: endpoint, body: body)
-        let interceptedRequest = interceptorChain.processRequest(request)
-        
-        var attempt = 0
-        var lastError: AppError?
-        
-        while true {
-            attempt += 1
-            
-            do {
-                let (data, response) = try await session.data(for: interceptedRequest)
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    throw AppError.invalidResponse
-                }
-                
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    throw AppError.from(statusCode: httpResponse.statusCode)
-                }
-                
-                let (_, processedData) = interceptorChain.processResponse(response, data: data)
-                return processedData
-                
-            } catch let error as AppError {
-                lastError = error
-                
-                // Check if we should retry
-                if let retryDelay = shouldRetry(error: error, attempt: attempt) {
-                    try await Task.sleep(nanoseconds: UInt64(retryDelay * 1_000_000_000))
-                    continue
-                }
-                
-                throw interceptorChain.processError(error, attempt: attempt)
-                
-            } catch {
-                let appError = AppError.networkError(underlying: error)
-                if let retryDelay = shouldRetry(error: appError, attempt: attempt) {
-                    try await Task.sleep(nanoseconds: UInt64(retryDelay * 1_000_000_000))
-                    continue
-                }
-                throw appError
-            }
+    var method: HTTPMethod {
+        switch self {
+        case .fetchCurrent, .getUnreadCount:
+            return .get
+        case .updateProfile, .updateDeviceToken:
+            return .put
+        case .login:
+            return .post
+        case .logout, .refreshToken:
+            return .post
         }
     }
     
-    func requestJSON(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> [String: Any] {
-        let data = try await request(endpoint, body: body)
-        
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw AppError.invalidResponseFormat
-        }
-        
-        return json
-    }
-    
-    // MARK: - Private Helpers
-    
-    private func buildRequest(for endpoint: APIEndpoint, body: [String: Any]?) throws -> URLRequest {
-        // Build URL with query items
-        var components = URLComponents(string: configuration.baseURL + endpoint.path)
-        components?.queryItems = endpoint.queryItems
-        
-        guard let url = components?.url else {
-            throw AppError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = endpoint.method.rawValue
-        request.timeoutInterval = configuration.timeout
-        
-        // Apply default headers
-        for (key, value) in configuration.defaultHeaders {
-            request.setValue(value, forHTTPHeaderField: key)
-        }
-        
-        // Apply endpoint-specific headers
-        if let headers = endpoint.headers {
-            for (key, value) in headers {
-                request.setValue(value, forHTTPHeaderField: key)
-            }
-        }
-        
-        // Add body if present
-        if let body = body {
-            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        }
-        
-        return request
-    }
-    
-    private func shouldRetry(error: AppError, attempt: Int) -> TimeInterval? {
-        // Only retry on network errors or server errors (5xx)
-        let retryableErrors: [AppError] = [
-            .networkError(underlying: NSError(domain: "", code: -1)),
-            .timeout,
-            .httpError(statusCode: 500),
-            .httpError(statusCode: 503)
-        ]
-        
-        switch error {
-        case .networkError, .timeout, .httpError:
-            return configuration.retryPolicy.shouldRetry(attempt: attempt, error: error)?.1
+    var body: Data? {
+        switch self {
+        case .updateProfile(let profile):
+            return try? JSONEncoder().encode(profile)
+        case .login(let credentials):
+            return try? JSONEncoder().encode(credentials)
+        case .refreshToken(let token):
+            return try? JSONEncoder().encode(["refreshToken": token])
+        case .updateDeviceToken(let token):
+            return try? JSONEncoder().encode(["deviceToken": token])
         default:
             return nil
         }
     }
 }
 
-// MARK: - Mock NetworkClient for Previews
+// MARK: - Timetable Endpoints
 
-#if DEBUG
-final class MockNetworkClient: NetworkClientProtocol {
-    var mockData: Data?
-    var mockError: Error?
+public enum TimetableEndpoint {
+    case fetch(userId: String)
+    case fetch(semesterId: String)
+    case fetchCourseDetail(courseId: String)
+    case updateColor(courseId: String, colorIndex: Int)
+    case fetchSemesters
     
-    func request<T: Decodable>(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> T {
-        if let error = mockError {
-            throw error
+    var path: String {
+        switch self {
+        case .fetch(let userId):
+            return "user/\(userId)"
+        case .fetch(let semesterId):
+            return "semester/\(semesterId)"
+        case .fetchCourseDetail(let courseId):
+            return "course/\(courseId)/detail"
+        case .updateColor(let courseId, _):
+            return "course/\(courseId)/color"
+        case .fetchSemesters:
+            return "semesters"
         }
-        guard let data = mockData else {
-            throw AppError.noData
-        }
-        return try JSONDecoder().decode(T.self, from: data)
     }
     
-    func request(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> Data {
-        if let error = mockError {
-            throw error
+    var method: HTTPMethod {
+        switch self {
+        case .fetch, .fetchCourseDetail, .fetchSemesters:
+            return .get
+        case .updateColor:
+            return .put
         }
-        return mockData ?? Data()
     }
     
-    func requestJSON(_ endpoint: APIEndpoint, body: [String: Any]?) async throws -> [String: Any] {
-        if let error = mockError {
-            throw error
+    var body: Data? {
+        switch self {
+        case .updateColor(_, let colorIndex):
+            return try? JSONEncoder().encode(["colorIndex": colorIndex])
+        default:
+            return nil
         }
-        guard let data = mockData,
-              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw AppError.noData
-        }
-        return json
     }
 }
-#endif
+
+// MARK: - Bus Endpoints
+
+public enum BusEndpoint {
+    case fetchSchedule
+    case fetchTemporaryMessages
+    case refresh
+    
+    var path: String {
+        switch self {
+        case .fetchSchedule:
+            return "schedule"
+        case .fetchTemporaryMessages:
+            return "messages"
+        case .refresh:
+            return "refresh"
+        }
+    }
+    
+    var method: HTTPMethod {
+        switch self {
+        case .fetchSchedule, .fetchTemporaryMessages:
+            return .get
+        case .refresh:
+            return .post
+        }
+    }
+}
+
+// MARK: - Assignments Endpoints
+
+public enum AssignmentsEndpoint {
+    case fetchAll
+    case fetch(id: String)
+    case submit(assignmentId: String, submission: AssignmentSubmission)
+    case updateStatus(assignmentId: String, status: AssignmentStatus)
+    
+    var path: String {
+        switch self {
+        case .fetchAll:
+            return ""
+        case .fetch(let id):
+            return id
+        case .submit(let assignmentId, _):
+            return "\(assignmentId)/submit"
+        case .updateStatus(let assignmentId, _):
+            return "\(assignmentId)/status"
+        }
+    }
+    
+    var method: HTTPMethod {
+        switch self {
+        case .fetchAll, .fetch:
+            return .get
+        case .submit:
+            return .post
+        case .updateStatus:
+            return .patch
+        }
+    }
+    
+    var body: Data? {
+        switch self {
+        case .submit(_, let submission):
+            return try? JSONEncoder().encode(submission)
+        case .updateStatus(_, let status):
+            return try? JSONEncoder().encode(["status": status.rawValue])
+        default:
+            return nil
+        }
+    }
+}

@@ -1,198 +1,204 @@
 import Foundation
 
-// MARK: - User Defaults Manager
+// MARK: - UserDefaultsManager
 
+/// Wrapper for UserDefaults with type-safe accessors
 final class UserDefaultsManager {
     static let shared = UserDefaultsManager()
     
     private let defaults: UserDefaults
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+    private let suiteName = "group.com.tutnext.tama"
     
     private init() {
-        if let sharedDefaults = UserDefaults(suiteName: "group.com.tama.tutnext") {
-            self.defaults = sharedDefaults
+        // Use shared group for extension data sharing
+        if let suite = UserDefaults(suiteName: suiteName) {
+            self.defaults = suite
         } else {
-            self.defaults = .standard
+            self.defaults = UserDefaults.standard
         }
     }
     
-    // MARK: - String Operations
+    // MARK: - String
     
-    func setString(_ value: String, forKey key: String) {
-        defaults.set(value, forKey: key)
-    }
-    
-    func getString(forKey key: String) -> String? {
+    func get(key: String) -> String? {
         defaults.string(forKey: key)
     }
     
-    // MARK: - Bool Operations
-    
-    func setBool(_ value: Bool, forKey key: String) {
+    func set(value: String, key: String) {
         defaults.set(value, forKey: key)
     }
     
-    func getBool(forKey key: String) -> Bool {
+    // MARK: - Int
+    
+    func getInt(key: String) -> Int? {
+        if defaults.object(forKey: key) == nil {
+            return nil
+        }
+        return defaults.integer(forKey: key)
+    }
+    
+    func set(value: Int, key: String) {
+        defaults.set(value, forKey: key)
+    }
+    
+    // MARK: - Double
+    
+    func getDouble(key: String) -> Double? {
+        if defaults.object(forKey: key) == nil {
+            return nil
+        }
+        return defaults.double(forKey: key)
+    }
+    
+    func set(value: Double, key: String) {
+        defaults.set(value, forKey: key)
+    }
+    
+    // MARK: - Bool
+    
+    func getBool(key: String) -> Bool {
         defaults.bool(forKey: key)
     }
     
-    // MARK: - Int Operations
-    
-    func setInt(_ value: Int, forKey key: String) {
+    func set(value: Bool, key: String) {
         defaults.set(value, forKey: key)
     }
     
-    func getInt(forKey key: String) -> Int {
-        defaults.integer(forKey: key)
-    }
+    // MARK: - Date
     
-    // MARK: - Double Operations
-    
-    func setDouble(_ value: Double, forKey key: String) {
-        defaults.set(value, forKey: key)
-    }
-    
-    func getDouble(forKey key: String) -> Double? {
-        let value = defaults.double(forKey: key)
-        return defaults.object(forKey: key) != nil ? value : nil
-    }
-    
-    // MARK: - Date Operations
-    
-    func setDate(_ value: Date, forKey key: String) {
-        defaults.set(value, forKey: key)
-    }
-    
-    func getDate(forKey key: String) -> Date? {
+    func getDate(key: String) -> Date? {
         defaults.object(forKey: key) as? Date
     }
     
-    // MARK: - Object Operations
-    
-    func setObject(_ value: Any, forKey key: String) {
+    func set(value: Date, key: String) {
         defaults.set(value, forKey: key)
     }
     
-    func getObject(forKey key: String) -> Any? {
-        defaults.object(forKey: key)
+    // MARK: - Array
+    
+    func getArray<T>(key: String) -> [T]? {
+        defaults.array(forKey: key) as? [T]
     }
     
-    // MARK: - Codable Operations
+    func set(value: [Any], key: String) {
+        defaults.set(value, forKey: key)
+    }
     
-    func setCodable<T: Encodable>(_ value: T, forKey key: String) {
-        if let data = try? encoder.encode(value) {
-            defaults.set(data, forKey: key)
+    // MARK: - Dictionary
+    
+    func getDictionary<T>(key: String) -> [String: T]? {
+        defaults.dictionary(forKey: key) as? [String: T]
+    }
+    
+    func set(value: [String: Any], key: String) {
+        defaults.set(value, forKey: key)
+    }
+    
+    // MARK: - Codable Support
+    
+    func set<T: Encodable>(object: T, key: String, encoder: JSONEncoder = JSONEncoder()) throws {
+        let data = try encoder.encode(object)
+        defaults.set(data, forKey: key)
+    }
+    
+    func get<T: Decodable>(key: String, decoder: JSONDecoder = JSONDecoder()) throws -> T {
+        guard let data = defaults.data(forKey: key) else {
+            throw AppError.userDefaultsError(error: NSError(domain: "UserDefaults", code: -1))
         }
+        return try decoder.decode(T.self, from: data)
     }
     
-    func getCodable<T: Decodable>(forKey key: String) -> T? {
-        guard let data = defaults.data(forKey: key) else { return nil }
-        return try? decoder.decode(T.self, from: data)
-    }
+    // MARK: - Remove & Clear
     
-    // MARK: - Array Operations
-    
-    func setArray(_ value: [Any], forKey key: String) {
-        defaults.set(value, forKey: key)
-    }
-    
-    func getArray(forKey key: String) -> [Any]? {
-        defaults.array(forKey: key)
-    }
-    
-    // MARK: - Dictionary Operations
-    
-    func setDictionary(_ value: [String: Any], forKey key: String) {
-        defaults.set(value, forKey: key)
-    }
-    
-    func getDictionary(forKey key: String) -> [String: Any]? {
-        defaults.dictionary(forKey: key)
-    }
-    
-    // MARK: - Remove Operations
-    
-    func removeValue(forKey key: String) {
+    func remove(key: String) {
         defaults.removeObject(forKey: key)
     }
     
-    // MARK: - Synchronize
-    
-    func synchronize() {
-        defaults.synchronize()
+    func clear() {
+        let keys = defaults.dictionaryRepresentation().keys
+        for key in keys {
+            defaults.removeObject(forKey: key)
+        }
     }
     
-    // MARK: - Clear All
+    // MARK: - Subscript Support
     
-    func clearAll() {
-        if let bundleID = Bundle.main.bundleIdentifier {
-            defaults.removePersistentDomain(forName: bundleID)
-        }
+    subscript<T>(key: String) -> T? {
+        get(key: key)
+        set(value: $0, forKey: key)
     }
 }
 
-// MARK: - User Defaults Keys
+// MARK: - Preference Keys
 
-enum UserDefaultsKey {
-    static let currentUser = "currentUser"
-    static let deviceToken = "deviceToken"
-    static let languageCode = "languageCode"
-    static let themeMode = "themeMode"
-    static let lastSyncDate = "lastSyncDate"
-    static let notificationEnabled = "notificationEnabled"
-    static let hasCompletedOnboarding = "hasCompletedOnboarding"
+/// Type-safe keys for UserDefaults
+struct PreferenceKey<T> {
+    let key: String
+    
+    static func string(_ key: String) -> PreferenceKey<String> {
+        PreferenceKey(key: key)
+    }
+    
+    static func int(_ key: String) -> PreferenceKey<Int> {
+        PreferenceKey(key: key)
+    }
+    
+    static func bool(_ key: String) -> PreferenceKey<Bool> {
+        PreferenceKey(key: key)
+    }
+    
+    static func date(_ key: String) -> PreferenceKey<Date> {
+        PreferenceKey(key: key)
+    }
 }
 
-// MARK: - Preference Manager
+// MARK: - App Preferences
 
-final class PreferenceManager {
-    static let shared = PreferenceManager()
+struct AppPreferences {
+    static let manager = UserDefaultsManager.shared
     
-    private let defaults: UserDefaultsManager
-    
-    private init(defaults: UserDefaultsManager = .shared) {
-        self.defaults = defaults
+    enum Keys {
+        static let isLoggedIn = "is_logged_in"
+        static let lastSyncDate = "last_sync_date"
+        static let selectedLanguage = "selected_language"
+        static let notificationsEnabled = "notifications_enabled"
+        static let darkModeEnabled = "dark_mode_enabled"
+        static let selectedSemester = "selected_semester"
     }
     
-    // MARK: - Theme
-    
-    var themeMode: Int {
-        get { defaults.getInt(forKey: UserDefaultsKey.themeMode) }
-        set { defaults.setInt(newValue, forKey: UserDefaultsKey.themeMode) }
+    // Authentication state
+    static var isLoggedIn: Bool {
+        get { manager.getBool(key: Keys.isLoggedIn) }
+        set { manager.set(value: newValue, key: Keys.isLoggedIn) }
     }
     
-    // MARK: - Language
-    
-    var languageCode: String {
-        get { defaults.getString(forKey: UserDefaultsKey.languageCode) ?? "ja" }
-        set { defaults.setString(newValue, forKey: UserDefaultsKey.languageCode) }
+    // Last sync timestamp
+    static var lastSyncDate: Date? {
+        get { manager.getDate(key: Keys.lastSyncDate) }
+        set { manager.set(value: newValue!, key: Keys.lastSyncDate) }
     }
     
-    // MARK: - Notifications
-    
-    var isNotificationEnabled: Bool {
-        get { defaults.getBool(forKey: UserDefaultsKey.notificationEnabled) }
-        set { defaults.setBool(newValue, forKey: UserDefaultsKey.notificationEnabled) }
+    // Selected language code
+    static var selectedLanguage: String? {
+        get { manager.get(key: Keys.selectedLanguage) }
+        set { manager.set(value: newValue!, key: Keys.selectedLanguage) }
     }
     
-    // MARK: - Onboarding
-    
-    var hasCompletedOnboarding: Bool {
-        get { defaults.getBool(forKey: UserDefaultsKey.hasCompletedOnboarding) }
-        set { defaults.setBool(newValue, forKey: UserDefaultsKey.hasCompletedOnboarding) }
+    // Notifications setting
+    static var notificationsEnabled: Bool {
+        get { manager.getBool(key: Keys.notificationsEnabled) }
+        set { manager.set(value: newValue, key: Keys.notificationsEnabled) }
     }
     
-    // MARK: - Last Sync
+    // Dark mode setting
+    static var darkModeEnabled: Bool {
+        get { manager.getBool(key: Keys.darkModeEnabled) }
+        set { manager.set(value: newValue, key: Keys.darkModeEnabled) }
+    }
     
-    var lastSyncDate: Date? {
-        get { defaults.getDate(forKey: UserDefaultsKey.lastSyncDate) }
-        set { 
-            if let date = newValue {
-                defaults.setDate(date, forKey: UserDefaultsKey.lastSyncDate)
-            } else {
-                defaults.removeValue(forKey: UserDefaultsKey.lastSyncDate)
-            }
-        }
+    // Selected semester code
+    static var selectedSemester: String? {
+        get { manager.get(key: Keys.selectedSemester) }
+        set { manager.set(value: newValue!, key: Keys.selectedSemester) }
     }
 }

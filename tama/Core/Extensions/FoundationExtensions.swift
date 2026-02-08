@@ -1,54 +1,125 @@
 import Foundation
 
+// MARK: - Data Extensions
+
+extension Data {
+    /// Initialize Data from a hex string
+    init?(hexString: String) {
+        let len = hexString.count / 2
+        var data = Data(capacity: len)
+        var index = hexString.startIndex
+        
+        for _ in 0..<len {
+            let nextIndex = hexString.index(index, offsetBy: 2)
+            guard let byte = UInt8(hexString[index..<nextIndex], radix: 16) else {
+                return nil
+            }
+            data.append(byte)
+            index = nextIndex
+        }
+        
+        self = data
+    }
+    
+    /// Convert Data to hex string
+    func toHexString() -> String {
+        return map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+// MARK: - String Extensions
+
+extension String {
+    /// Trim and encode for URL
+    var urlEncoded: String? {
+        addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+    }
+    
+    /// Check if string is empty or whitespace only
+    var isBlank: Bool {
+        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    /// Truncate string to specified length
+    func truncated(to length: Int, trailing: String = "...") -> String {
+        if count > length {
+            return String(prefix(length)) + trailing
+        }
+        return self
+    }
+    
+    /// Initialize String from hex
+    init?(hex: String) {
+        guard let data = Data(hexString: hex) else {
+            return nil
+        }
+        self.init(data: data, encoding: .utf8)
+    }
+}
+
 // MARK: - Date Extensions
 
 extension Date {
+    /// ISO8601 formatter
+    static let iso8601: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
+    /// Short date formatter
+    static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter
+    }()
+    
+    /// Medium date formatter
+    static let mediumDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+    
+    /// Time only formatter
+    static let timeOnly: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter
+    }()
+    
+    /// Full date and time formatter
+    static let fullDateTime: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        formatter.timeStyle = .short
+        return formatter
+    }()
+    
+    /// Check if date is today
     var isToday: Bool {
         Calendar.current.isDateInToday(self)
     }
     
+    /// Check if date is yesterday
     var isYesterday: Bool {
         Calendar.current.isDateInYesterday(self)
     }
     
+    /// Check if date is tomorrow
     var isTomorrow: Bool {
         Calendar.current.isDateInTomorrow(self)
     }
     
-    var isThisWeek: Bool {
-        Calendar.current.isDate(self, equalTo: Date(), toGranularity: .weekOfYear)
-    }
-    
-    var isThisMonth: Bool {
-        Calendar.current.isDate(self, equalTo: Date(), toGranularity: .month)
-    }
-    
-    var isThisYear: Bool {
-        Calendar.current.isDate(self, equalTo: Date(), toGranularity: .year)
-    }
-    
-    func formatted(style: DateFormatter.Style) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = style
-        return formatter.string(from: self)
-    }
-    
-    func formatted(format: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = format
-        return formatter.string(from: self)
-    }
-    
-    func relativeFormatted() -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: self, relativeTo: Date())
-    }
-    
+    /// Start of day
     var startOfDay: Date {
         Calendar.current.startOfDay(for: self)
     }
     
+    /// End of day
     var endOfDay: Date {
         var components = DateComponents()
         components.day = 1
@@ -56,139 +127,85 @@ extension Date {
         return Calendar.current.date(byAdding: components, to: startOfDay) ?? self
     }
     
-    var startOfWeek: Date {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: self)
-        return calendar.date(from: components) ?? self
+    /// Format to short date string
+    func shortDate() -> String {
+        Date.shortDate.string(from: self)
     }
     
-    var startOfMonth: Date {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month], from: self)
-        return calendar.date(from: components) ?? self
+    /// Format to medium date string
+    func mediumDate() -> String {
+        Date.mediumDate.string(from: self)
     }
     
-    func adding(days: Int) -> Date {
-        Calendar.current.date(byAdding: .day, value: days, to: self) ?? self
+    /// Format to time string
+    func timeOnly() -> String {
+        Date.timeOnly.string(from: self)
     }
     
-    func adding(hours: Int) -> Date {
-        Calendar.current.date(byAdding: .hour, value: hours, to: self) ?? self
-    }
-    
-    func adding(minutes: Int) -> Date {
-        Calendar.current.date(byAdding: .minute, value: minutes, to: self) ?? self
+    /// Relative date string (Today, Yesterday, etc.)
+    func relativeDate() -> String {
+        if isToday { return "Today" }
+        if isYesterday { return "Yesterday" }
+        if isTomorrow { return "Tomorrow" }
+        return mediumDate()
     }
 }
 
-// MARK: - String Extensions
+// MARK: - Collection Extensions
 
-extension String {
-    var isEmptyOrWhitespace: Bool {
-        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+extension Collection {
+    /// Safe subscript that returns nil for out-of-bounds
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
-    
-    func trimmed() -> String {
-        trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
-    func localized() -> String {
-        NSLocalizedString(self, comment: "")
-    }
-    
-    func localized(tableName: String? = nil) -> String {
-        NSLocalizedString(self, tableName: tableName, bundle: .main, comment: "")
-    }
-    
-    var firstCharacter: String? {
-        guard !isEmpty else { return nil }
-        return String(prefix(1))
-    }
-    
-    func toURL() -> URL? {
-        URL(string: self)
-    }
-    
-    func toDate(format: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = format
-        return formatter.date(from: self)
-    }
-    
-    var htmlDecoded: String {
-        guard let data = self.data(using: .utf8) else { return self }
-        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-            .documentType: NSAttributedString.DocumentType.html,
-            .characterEncoding: String.Encoding.utf8.rawValue
-        ]
-        if let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
-            return attributedString.string
+}
+
+// MARK: - Result Extensions
+
+extension Result {
+    /// Get value or throw
+    func get() throws -> Success {
+        switch self {
+        case .success(let value):
+            return value
+        case .failure(let error):
+            throw error
         }
-        return self
     }
 }
 
-// MARK: - Data Extensions
+// MARK: - Optional Extensions
 
-extension Data {
-    func toString(encoding: String.Encoding = .utf8) -> String? {
-        String(data: self, encoding: encoding)
-    }
-    
-    func toDictionary() -> [String: Any]? {
-        try? JSONSerialization.jsonObject(with: self) as? [String: Any]
-    }
-    
-    var prettyPrintedString: String? {
-        guard let object = try? JSONSerialization.jsonObject(with: self),
-              let data = try? JSONSerialization.data(withJSONObject: object, options: .prettyPrinted),
-              let string = String(data: data, encoding: .utf8) else {
+extension Optional where Wrapped == String {
+    /// Return nil if string is empty
+    var nilIfEmpty: String? {
+        switch self {
+        case .some(let str) where !str.isEmpty:
+            return str
+        default:
             return nil
         }
-        return string
     }
 }
 
 // MARK: - Array Extensions
 
 extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        stride(from: 0, to: count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, count)])
-        }
-    }
-}
-
-extension Array where Element: Hashable {
-    func uniqued() -> [Element] {
-        Array(Set(self))
+    /// Safe subscript
+    subscript(safe index: Int) -> Element? {
+        index >= 0 && index < count ? self[index] : nil
     }
 }
 
 // MARK: - Dictionary Extensions
 
-extension Dictionary where Key == String {
-    func string(forKey key: String) -> String? {
-        self[key] as? String
-    }
-    
-    func int(forKey key: String) -> Int? {
-        self[key] as? Int
-    }
-    
-    func double(forKey key: String) -> Double? {
-        self[key] as? Double
-    }
-    
-    func bool(forKey key: String) -> Bool? {
-        self[key] as? Bool
-    }
-    
-    func array(forKey key: String) -> [Any]? {
-        self[key] as? [Any]
-    }
-    
-    func dictionary(forKey key: String) -> [String: Any]? {
-        self[key] as? [String: Any]
+extension Dictionary {
+    /// Merge with another dictionary
+    func merged(with other: [Key: Value]) -> [Key: Value] {
+        var result = self
+        for (key, value) in other {
+            result[key] = value
+        }
+        return result
     }
 }

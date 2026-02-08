@@ -1,52 +1,55 @@
 import Foundation
 import Security
 
-// MARK: - Keychain Manager
+// MARK: - KeychainManager
 
+/// Secure storage for sensitive data using iOS Keychain
 final class KeychainManager {
     static let shared = KeychainManager()
     
-    private let serviceName = "com.tama.tutnext"
+    private let serviceName = "com.tutnext.tama"
     
     private init() {}
     
-    // MARK: - String Operations
+    // MARK: - CRUD Operations
     
-    func setString(_ value: String, forKey key: String) {
-        guard let data = value.data(using: .utf8) else { return }
-        setData(data, forKey: key)
+    /// Save a string value to Keychain
+    @discardableResult
+    func set(key: String, value: String) -> Bool {
+        guard let data = value.data(using: .utf8) else {
+            return false
+        }
+        return set(key: key, data: data)
     }
     
-    func getString(forKey key: String) -> String? {
-        guard let data = getData(forKey: key) else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-    
-    func deleteValue(forKey key: String) {
-        deleteData(forKey: key)
-    }
-    
-    // MARK: - Data Operations
-    
-    func setData(_ data: Data, forKey key: String) {
+    /// Save data to Keychain
+    @discardableResult
+    func set(key: String, data: Data) -> Bool {
         // Delete existing item first
-        deleteData(forKey: key)
+        delete(key: key)
         
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
         
         let status = SecItemAdd(query as CFDictionary, nil)
-        if status != errSecSuccess {
-            print("Keychain set error: \(status)")
-        }
+        return status == errSecSuccess
     }
     
-    func getData(forKey key: String) -> Data? {
+    /// Retrieve a string value from Keychain
+    func get(key: String) -> String? {
+        guard let data = getData(key: key) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
+    
+    /// Retrieve data from Keychain
+    func getData(key: String) -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -58,38 +61,31 @@ final class KeychainManager {
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         
-        if status == errSecSuccess {
-            return result as? Data
+        guard status == errSecSuccess else {
+            return nil
         }
-        return nil
+        return result as? Data
     }
     
-    func deleteData(forKey key: String) {
+    /// Delete an item from Keychain
+    @discardableResult
+    func delete(key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
             kSecAttrAccount as String: key
         ]
         
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
     }
     
-    // MARK: - Codable Operations
-    
-    func setCodable<T: Encodable>(_ value: T, forKey key: String) throws {
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(value)
-        setData(data, forKey: key)
+    /// Check if an item exists
+    func exists(key: String) -> Bool {
+        getData(key: key) != nil
     }
     
-    func getCodable<T: Decodable>(forKey key: String) throws -> T? {
-        guard let data = getData(forKey: key) else { return nil }
-        let decoder = JSONDecoder()
-        return try decoder.decode(T.self, from: data)
-    }
-    
-    // MARK: - Clear All
-    
+    /// Clear all Keychain items for this service
     func clearAll() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -98,13 +94,33 @@ final class KeychainManager {
         
         SecItemDelete(query as CFDictionary)
     }
+    
+    // MARK: - Codable Support
+    
+    /// Save a Codable object to Keychain
+    func set<T: Encodable>(key: String, object: T, encoder: JSONEncoder = JSONEncoder()) throws {
+        let data = try encoder.encode(object)
+        guard set(key: key, data: data) else {
+            throw AppError.keychainError(status: errSecUnableToSave)
+        }
+    }
+    
+    /// Retrieve a Codable object from Keychain
+    func get<T: Decodable>(key: String, decoder: JSONDecoder = JSONDecoder()) throws -> T {
+        guard let data = getData(key: key) else {
+            throw AppError.keychainError(status: errSecItemNotFound)
+        }
+        return try decoder.decode(T.self, from: data)
+    }
 }
 
-// MARK: - Keychain Keys
+// MARK: - KeychainError
 
-enum KeychainKey {
-    static let accessToken = "accessToken"
-    static let refreshToken = "refreshToken"
-    static let userCredentials = "userCredentials"
-    static let deviceToken = "deviceToken"
+extension KeychainManager {
+    enum KeychainError: Error {
+        case unableToSave
+        case unableToLoad
+        case itemNotFound
+        case unexpectedStatus(OSStatus)
+    }
 }

@@ -1,75 +1,122 @@
 import Foundation
+import UIKit
+
+// MARK: - View Protocol
+
+/// Protocol for SwiftUI views
+@MainActor
+protocol ViewProtocol: AnyObject {
+    func showLoading()
+    func hideLoading()
+    func showError(_ message: String)
+    func showSuccess(_ message: String)
+}
+
+// MARK: - ViewModel Protocol
+
+/// Base protocol for ViewModels
+protocol ViewModelProtocol: AnyObject {
+    associatedtype State
+    var state: State { get }
+    func updateState(_ newState: State)
+}
 
 // MARK: - Service Protocol
 
-protocol ServiceProtocol: AnyObject {
+/// Base protocol for services
+protocol ServiceProtocol {
     var isInitialized: Bool { get }
     func initialize()
-    func reset()
+}
+
+// MARK: - Coordinator Protocol
+
+/// Protocol for navigation coordinators
+protocol Coordinator: AnyObject {
+    var navigationController: UINavigationController? { get set }
+    var childCoordinators: [Coordinator] { get set }
+    
+    func start()
+    func addChild(_ coordinator: Coordinator)
+    func removeChild(_ coordinator: Coordinator)
 }
 
 // MARK: - Network Service Protocol
 
-protocol NetworkServiceProtocol {
-    func fetch<T: Decodable>(_ endpoint: APIEndpoint) async throws -> T
-    func post<T: Decodable>(_ endpoint: APIEndpoint) async throws -> T
-    func put<T: Decodable>(_ endpoint: APIEndpoint) async throws -> T
-    func delete<T: Decodable>(_ endpoint: APIEndpoint) async throws -> T
+/// Protocol for network-dependent services
+protocol NetworkDependent {
+    var isNetworkAvailable: Bool { get }
+    func handleNetworkUnavailability()
 }
 
-// MARK: - Repository Protocol
+// MARK: - Observable ViewModel
 
-protocol RepositoryProtocol {
-    associatedtype Model
+/// Base class for observable ViewModels
+@MainActor
+class ObservableViewModel<State> {
+    @Published private(set) var state: State
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var error: Error?
     
-    func fetchAll() async throws -> [Model]
-    func fetch(by id: String) async throws -> Model?
-    func create(_ model: Model) async throws -> Model
-    func update(_ model: Model) async throws -> Model
-    func delete(_ model: Model) async throws
-    func delete(by id: String) async throws
-}
-
-// MARK: - Cache Protocol
-
-protocol CacheProtocol {
-    associatedtype Key: Hashable
-    associatedtype Value
+    init(initialState: State) {
+        self.state = initialState
+    }
     
-    func get(forKey key: Key) -> Value?
-    func set(_ value: Value, forKey key: Key)
-    func remove(forKey key: Key)
-    func clear()
-    func contains(_ key: Key) -> Bool
-}
-
-// MARK: - Logger Protocol
-
-protocol LoggerProtocol {
-    func log(_ message: String, level: LogLevel, file: String, function: String, line: Int)
-}
-
-enum LogLevel: String {
-    case debug
-    case info
-    case warning
-    case error
+    func setLoading(_ loading: Bool) {
+        isLoading = loading
+    }
     
-    var emoji: String {
-        switch self {
-        case .debug: return "🔍"
-        case .info: return "ℹ️"
-        case .warning: return "⚠️"
-        case .error: return "❌"
-        }
+    func setError(_ error: Error?) {
+        self.error = error
+    }
+    
+    func updateState(_ newState: State) {
+        state = newState
     }
 }
 
-// MARK: - Analytics Protocol
+// MARK: - Debouncer
 
-protocol AnalyticsProtocol {
-    func trackEvent(_ event: String, parameters: [String: Any]?)
-    func trackScreen(_ screenName: String)
-    func setUserProperty(_ property: String, value: Any)
-    func logError(_ error: Error, context: [String: Any]?)
+/// Utility for debouncing operations
+final class Debouncer {
+    private let delay: TimeInterval
+    private var workItem: DispatchWorkItem?
+    
+    init(delay: TimeInterval) {
+        self.delay = delay
+    }
+    
+    func debounce(action: @escaping () -> Void) {
+        workItem?.cancel()
+        workItem = DispatchWorkItem(block: action)
+        if let workItem = workItem {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+        }
+    }
+    
+    func cancel() {
+        workItem?.cancel()
+        workItem = nil
+    }
+}
+
+// MARK: - Throttler
+
+/// Utility for throttling operations
+final class Throttler {
+    private let delay: TimeInterval
+    private var lastExecutionTime: Date?
+    
+    init(delay: TimeInterval) {
+        self.delay = delay
+    }
+    
+    func throttle(action: () -> Void) {
+        let now = Date()
+        if let lastTime = lastExecutionTime {
+            guard now.timeIntervalSince(lastTime) >= delay else { return }
+        }
+        lastExecutionTime = now
+        action()
+    }
 }

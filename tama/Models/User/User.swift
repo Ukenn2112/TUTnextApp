@@ -1,14 +1,14 @@
 import Foundation
 
 /// User model with full Codable support and validation
-public struct User: Codable, Identifiable, Equatable, Validatable {
+public struct User: Codable, Identifiable, Equatable {
     public let id: String
-    @NonEmpty public var username: String
-    @NonEmpty public var fullName: String
-    @MinLength(minLength: 8) public var encryptedPassword: String?
-    @Positive public var allKeijiMidokCnt: Int?
+    public var username: String
+    public var fullName: String
+    public var encryptedPassword: String?
+    public var allKeijiMidokCnt: Int?
     public var deviceToken: String?
-    public var email: Email?
+    public var email: String?
     public var studentId: String?
     public var department: String?
     public var grade: Int?
@@ -22,7 +22,7 @@ public struct User: Codable, Identifiable, Equatable, Validatable {
         encryptedPassword: String? = nil,
         allKeijiMidokCnt: Int? = nil,
         deviceToken: String? = nil,
-        email: Email? = nil,
+        email: String? = nil,
         studentId: String? = nil,
         department: String? = nil,
         grade: Int? = nil,
@@ -30,10 +30,10 @@ public struct User: Codable, Identifiable, Equatable, Validatable {
         updatedAt: Date? = nil
     ) {
         self.id = id
-        self._username = NonEmpty(wrappedValue: username)
-        self._fullName = NonEmpty(wrappedValue: fullName)
-        self._encryptedPassword = encryptedPassword != nil ? MinLength(minLength: 8, wrappedValue: encryptedPassword!) : nil
-        self._allKeijiMidokCnt = allKeijiMidokCnt != nil ? Positive(wrappedValue: allKeijiMidokCnt!) : nil
+        self.username = username
+        self.fullName = fullName
+        self.encryptedPassword = encryptedPassword
+        self.allKeijiMidokCnt = allKeijiMidokCnt
         self.deviceToken = deviceToken
         self.email = email
         self.studentId = studentId
@@ -50,17 +50,26 @@ public struct User: Codable, Identifiable, Equatable, Validatable {
 
 /// User login credentials
 public struct UserCredentials: Codable, Validatable {
-    @NonEmpty public var username: String
-    @NonEmpty public var password: String
+    public var username: String
+    public var password: String
     
     public init(username: String, password: String) {
-        self._username = NonEmpty(wrappedValue: username)
-        self._password = NonEmpty(wrappedValue: password)
+        self.username = username
+        self.password = password
+    }
+    
+    public func validate() throws {
+        guard !username.isEmpty else {
+            throw ValidationError.nonEmpty(field: "username")
+        }
+        guard !password.isEmpty else {
+            throw ValidationError.nonEmpty(field: "password")
+        }
     }
 }
 
 /// User profile update request
-public struct UserProfileUpdate: Codable, Validatable {
+public struct UserProfileUpdate: Codable {
     public var fullName: String?
     public var email: String?
     public var deviceToken: String?

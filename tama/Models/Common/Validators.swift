@@ -95,25 +95,3 @@ public struct Positive: Codable, Equatable {
         projectedValue
     }
 }
-
-/// Property wrapper for range validation
-@propertyWrapper
-public struct InRange<T: Comparable>: Codable, Equatable {
-    public let min: T
-    public let max: T
-    public var wrappedValue: T
-    
-    public init(min: T, max: T, wrappedValue: T) {
-        self.min = min
-        self.max = max
-        self.wrappedValue = wrappedValue
-    }
-    
-    public var projectedValue: Bool {
-        wrappedValue >= min && wrappedValue <= max
-    }
-    
-    public func validate() -> Bool {
-        projectedValue
-    }
-}
