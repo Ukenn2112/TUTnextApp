@@ -1,0 +1,115 @@
+import Foundation
+
+/// Date transformation utilities for Codable conformance
+public enum DateTransformer {
+    /// ISO 8601 date format
+    public static let iso8601: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
+    
+    /// Japanese date format (yyyy-MM-dd)
+    public static let japaneseDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter
+    }()
+    
+    /// Japanese datetime format (yyyy-MM-dd HH:mm)
+    public static let japaneseDateTime: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter
+    }()
+    
+    /// API date format (yyyy/MM/dd)
+    public static let apiDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy/MM/dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
+}
+
+/// String transformation utilities
+public enum StringTransformer {
+    /// Trim whitespace from both ends
+    public static func trimmed(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    /// Convert to uppercase
+    public static func uppercase(_ value: String) -> String {
+        value.uppercased()
+    }
+    
+    /// Convert to lowercase
+    public static func lowercase(_ value: String) -> String {
+        value.lowercased()
+    }
+}
+
+/// Color index to/from hex transformation utilities
+public enum ColorTransformer {
+    /// Default course colors
+    public static let defaultColors: [String: String] = [
+        "1": "#FF6B6B",
+        "2": "#4ECDC4",
+        "3": "#45B7D1",
+        "4": "#96CEB4",
+        "5": "#FFEAA7",
+        "6": "#DDA0DD",
+        "7": "#98D8C8",
+        "8": "#F7DC6F",
+        "9": "#BB8FCE",
+        "10": "#85C1E9"
+    ]
+    
+    public static func colorIndexToHex(_ index: Int) -> String {
+        let key = String(min(index, 10))
+        return defaultColors[key] ?? defaultColors["1"]!
+    }
+    
+    public static func hexToColorIndex(_ hex: String) -> Int {
+        for (index, color) in defaultColors.values.enumerated() {
+            if color == hex {
+                return index + 1
+            }
+        }
+        return 1
+    }
+}
+
+/// Custom decoding strategies
+public enum ModelDecodingStrategy {
+    /// Convert snake_case keys to camelCase
+    public static func convertFromSnakeCase(_ string: String) -> String {
+        let first = string.prefix(1).lowercased()
+        let remaining = String(string.dropFirst())
+        return first + remaining
+    }
+}
+
+/// Common coding keys with custom implementations
+public struct CommonCodingKeys: CodingKey {
+    public var stringValue: String
+    public var intValue: Int?
+    
+    public init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+    
+    public init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
+    }
+    
+    public static let id = CommonCodingKeys(stringValue: "id")!
+    public static let message = CommonCodingKeys(stringValue: "message")!
+    public static let data = CommonCodingKeys(stringValue: "data")!
+}
