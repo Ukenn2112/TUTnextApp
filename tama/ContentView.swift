@@ -1,12 +1,12 @@
 //
 //  ContentView.swift
-//  tama
+//  TUTnext
 //
-//  Created by 维安雨轩 on 2025/02/27.
+//  Main Glassmorphism Content View with Navigation
 //
 
-import SwiftData
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     @State private var selectedTab = 1
@@ -14,130 +14,104 @@ struct ContentView: View {
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var ratingService: RatingService
-
+    @EnvironmentObject private var themeManager: ThemeManager
+    
     var body: some View {
         Group {
             if !isLoggedIn {
                 LoginView(isLoggedIn: $isLoggedIn)
                     .transition(.opacity)
             } else {
-                VStack(spacing: 0) {
-                    HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
-
-                    TabView(selection: $selectedTab) {
-                        BusScheduleView()
-                            .tag(0)
-
-                        TimetableView(isLoggedIn: $isLoggedIn)
-                            .tag(1)
-
-                        AssignmentView(isLoggedIn: $isLoggedIn)
-                            .tag(2)
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                    .edgesIgnoringSafeArea(.bottom)
-
-                    TabBarView(selectedTab: $selectedTab)
-                }
-                .transition(.opacity)
+                mainContentView
+                    .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.5), value: isLoggedIn)
         .onAppear {
-            // アプリ起動時にログイン状態を確認
             checkLoginStatus()
-
-            // URLスキームからのディープリンク処理を確認
             processInitialURL()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HandleURLScheme")))
-        { notification in
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HandleURLScheme"))) { notification in
             if let url = notification.object as? URL {
                 handleDeepLink(url: url)
             }
         }
-        // 通知からの画面遷移通知を処理
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: Notification.Name("NavigateToPageFromNotification"))
-        ) { notification in
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("NavigateToPageFromNotification"))) { notification in
             if let page = notification.userInfo?["page"] as? String {
                 navigateBasedOnPath(page)
             }
         }
-        // アプリ全体のダークモード設定
         .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
-        .onChange(of: appearanceManager.isDarkMode) { oldValue, newValue in
+        .onChange(of: appearanceManager.isDarkMode) { _, newValue in
             print("ContentView detected isDarkMode change: \(newValue)")
         }
-        // 通知センターでの変更監視も追加
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: Notification.Name("AppearanceDidChangeNotification"))
-        ) { _ in
-            // 通知を受け取ったら強制的に再描画
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppearanceDidChangeNotification"))) { _ in
             print("ContentView received appearance change notification")
         }
     }
-
-    // ログイン状態を確認
+    
+    // MARK: - Main Content View
+    private var mainContentView: some View {
+        VStack(spacing: 0) {
+            // Header
+            GlassHeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+            
+            // Tab Content
+            TabView(selection: $selectedTab) {
+                BusScheduleView()
+                    .tag(0)
+                    .environmentObject(themeManager)
+                
+                TimetableView(isLoggedIn: $isLoggedIn)
+                    .tag(1)
+                    .environmentObject(themeManager)
+                
+                AssignmentView(isLoggedIn: $isLoggedIn)
+                    .tag(2)
+                    .environmentObject(themeManager)
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .edgesIgnoringSafeArea(.bottom)
+            
+            // Tab Bar
+            GlassTabBar(selectedTab: $selectedTab)
+        }
+    }
+    
+    // MARK: - Login Status Check
     private func checkLoginStatus() {
-        // UserServiceからユーザー情報を取得
         let user = UserService.shared.getCurrentUser()
-        // ユーザー情報があればログイン状態とする
         isLoggedIn = user != nil
     }
-
-    // アプリ起動時に初期URLを処理
+    
+    // MARK: - URL Processing
     private func processInitialURL() {
         if let path = AppDelegate.shared.getPathComponent() {
-            print("Processing initial URL path: \(path)")
-            // ログインしていない場合は一旦スキップ（ログイン後に処理される）
             guard isLoggedIn else {
                 print("User not logged in, skipping URL processing")
                 return
             }
-
             navigateBasedOnPath(path)
-
-            // URLによる遷移が完了したらリセット
             AppDelegate.shared.resetURLProcessing()
         }
     }
-
-    // URLスキームの処理
+    
     private func handleDeepLink(url: URL) {
-        guard isLoggedIn else { return }  // ログインしていない場合は無視
-
-        print("Handling deep link: \(url.absoluteString)")
-        // ホスト部分を取得（例：tama://timetable なら "timetable"）
+        guard isLoggedIn else { return }
         let path = url.host ?? ""
-        print("URL path component: \(path)")
         navigateBasedOnPath(path)
     }
-
-    // パスに基づいてタブに遷移
+    
     private func navigateBasedOnPath(_ path: String) {
-        print("Navigating based on path: \(path)")
-
         switch path {
         case "timetable":
-            print("Switching to timetable tab")
             selectedTab = 1
         case "assignment":
-            print("Switching to assignment tab")
             selectedTab = 2
         case "bus":
-            print("Switching to bus tab")
             selectedTab = 0
-            // URLからバスのパラメータを取得して通知を送信
-            let route = AppDelegate.shared.getQueryValue(for: "route")
-            let schedule = AppDelegate.shared.getQueryValue(for: "schedule")
-
-            print("Bus parameters - route: \(route ?? "nil"), schedule: \(schedule ?? "nil")")
-
-            if route != nil || schedule != nil {
-                // パラメータをNotificationCenterを通じてBusScheduleViewに送信
+            if let route = AppDelegate.shared.getQueryValue(for: "route"),
+               let schedule = AppDelegate.shared.getQueryValue(for: "schedule") {
                 let userInfo: [String: Any?] = ["route": route, "schedule": schedule]
                 NotificationCenter.default.post(
                     name: Notification.Name("BusParametersFromURL"),
@@ -146,26 +120,125 @@ struct ContentView: View {
                 )
             }
         case "print":
-            print("Opening print system view")
-            // 印刷システム画面を表示するための処理
-            let printSystemView = PrintSystemView.handleURLScheme()
-
-            // モーダルで表示するためのホストコントローラを取得
             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                let rootController = scene.windows.first?.rootViewController
-            {
-                let hostingController = UIHostingController(rootView: printSystemView)
+               let rootController = scene.windows.first?.rootViewController {
+                let hostingController = UIHostingController(rootView: PrintSystemView.handleURLScheme())
                 rootController.present(hostingController, animated: true)
             }
         default:
-            print("Unknown path: \(path)")
             break
         }
     }
 }
 
-#Preview() {
+// MARK: - Glass Header View
+struct GlassHeaderView: View {
+    @Binding var selectedTab: Int
+    @Binding var isLoggedIn: Bool
+    @EnvironmentObject private var appearanceManager: AppearanceManager
+    
+    var body: some View {
+        GlassCard(variant: .elevated) {
+            HStack {
+                // Title based on selected tab
+                HStack(spacing: 8) {
+                    Image(systemName: headerIcon)
+                        .font(.system(size: 20, weight: .semibold))
+                    Text(headerTitle)
+                        .font(.system(size: 20, weight: .bold))
+                }
+                
+                Spacer()
+                
+                // Settings Button
+                NavigationLink {
+                    UserSettingsView(isLoggedIn: $isLoggedIn)
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.primary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 8)
+    }
+    
+    private var headerIcon: String {
+        switch selectedTab {
+        case 0: return "bus.fill"
+        case 1: return "calendar"
+        case 2: return "doc.text.fill"
+        default: return "graduationcap.fill"
+        }
+    }
+    
+    private var headerTitle: String {
+        switch selectedTab {
+        case 0: return "バス時刻表"
+        case 1: return "時間割"
+        case 2: return "課題"
+        default: return "TUTnext"
+        }
+    }
+}
+
+// MARK: - Glass Tab Bar
+struct GlassTabBar: View {
+    @Binding var selectedTab: Int
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach([(icon: "bus.fill", label: "バス", tag: 0),
+                     (icon: "calendar", label: "時間割", tag: 1),
+                     (icon: "doc.text.fill", label: "課題", tag: 2)], id: \.tag) { item in
+                tabBarItem(item)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(ThemeColors.Glass.medium)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.1), radius: 8, y: -2)
+        )
+        .padding(.horizontal, 8)
+        .padding(.bottom, 8)
+    }
+    
+    private func tabBarItem(_ item: (icon: String, label: String, tag: Int)) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedTab = item.tag
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 22, weight: selectedTab == item.tag ? .semibold : .regular))
+                    .foregroundColor(selectedTab == item.tag ? .accentColor : .secondary)
+                
+                Text(item.label)
+                    .font(.system(size: 11, weight: selectedTab == item.tag ? .semibold : .regular))
+                    .foregroundColor(selectedTab == item.tag ? .accentColor : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Preview
+#Preview {
     ContentView()
         .environmentObject(AppearanceManager())
         .environmentObject(NotificationService.shared)
+        .environmentObject(RatingService.shared)
+        .environmentObject(ThemeManager.shared)
 }

@@ -1,110 +1,95 @@
-import Combine
-import SwiftUI
+//
+//  CourseDetailViewModel.swift
+//  TUTnext
+//
+//  MVVM Course Detail ViewModel with async/await
+//
 
+import Foundation
+import Combine
+
+@MainActor
 class CourseDetailViewModel: ObservableObject {
-    @Published var isLoading = false
-    @Published var errorMessage: String? = nil
-    @Published var courseDetail: CourseDetailResponse? = nil
+    // MARK: - Published Properties
+    @Published private(set) var courseDetail: CourseDetailModel?
+    @Published private(set) var isLoading = false
+    @Published private(set) var errorMessage: String?
     @Published var memo: String = ""
     @Published var isMemoChanged = false
-
-    private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Private Properties
     private let course: CourseModel
-
-    init(course: CourseModel) {
+    private let courseDetailService: CourseDetailService
+    private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Initialization
+    init(course: CourseModel, courseDetailService: CourseDetailService = .shared) {
         self.course = course
-        self.memo = ""
+        self.courseDetailService = courseDetailService
+        loadMemo()
     }
-
-    // 課程詳細情報を取得
-    func fetchCourseDetail() {
+    
+    // MARK: - Public Methods
+    func fetchCourseDetail() async {
         isLoading = true
         errorMessage = nil
-
-        CourseDetailService.shared.fetchCourseDetail(course: course) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoading = false
-
-                switch result {
-                case .success(let detailResponse):
-                    self.courseDetail = detailResponse
-                    self.memo = detailResponse.memo
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    print("課程詳細の取得に失敗しました: \(error.localizedDescription)")
-                }
-            }
+        
+        do {
+            let detail = try await courseDetailService.fetchCourseDetail(for: course)
+            self.courseDetail = detail
+            isLoading = false
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoading = false
         }
     }
-
-    // メモを保存
+    
     func saveMemo() {
-        isLoading = true
-        errorMessage = nil
-
-        CourseDetailService.shared.saveMemo(course: course, memo: memo) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoading = false
-
-                switch result {
-                case .success:
-                    print("メモを保存しました")
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    print("メモの保存に失敗しました: \(error.localizedDescription)")
-                }
-            }
+        guard let jugyoCd = course.jugyoCd else { return }
+        
+        if let error = CourseColorService.shared.saveMemo(jugyoCd: jugyoCd, memo: memo) {
+            print("Failed to save memo: \(error)")
+        } else {
+            isMemoChanged = false
         }
     }
-
-    // 出欠データを取得
-    var attendanceData: [AttendanceData] {
-        guard let detail = courseDetail else {
-            return [
-                AttendanceData(type: NSLocalizedString("出席", comment: ""), count: 0, color: .green),
-                AttendanceData(type: NSLocalizedString("欠席", comment: ""), count: 0, color: .red),
-                AttendanceData(
-                    type: NSLocalizedString("遅早", comment: ""), count: 0, color: .yellow),
-            ]
-        }
-
-        return [
-            AttendanceData(
-                type: NSLocalizedString("出席", comment: ""), count: detail.attendance.present,
-                color: .green),
-            AttendanceData(
-                type: NSLocalizedString("欠席", comment: ""), count: detail.attendance.absent,
-                color: .red),
-            AttendanceData(
-                type: NSLocalizedString("遅早", comment: ""),
-                count: detail.attendance.late + detail.attendance.early, color: .yellow),
-        ]
+    
+    private func loadMemo() {
+        guard let jugyoCd = course.jugyoCd else { return }
+        memo = CourseColorService.shared.getMemo(jugyoCd: jugyoCd) ?? ""
     }
-
-    // 掲示件数
+    
+    // MARK: - Computed Properties
     var announcementCount: Int {
-        return courseDetail?.announcements.count ?? 0
+        courseDetail?.announcements.count ?? 0
     }
-
-    // 合計出欠回数
+    
     var totalAttendance: Int {
-        return attendanceData.reduce(0) { $0 + $1.count }
+        courseDetail?.attendance.total ?? 0
+    }
+    
+    var attendanceData: [AttendanceData] {
+        guard let attendance = courseDetail?.attendance else { return [] }
+        
+        return [
+            AttendanceData(type: "出席", count: attendance.present, color: .green),
+            AttendanceData(type: "欠席", count: attendance.absent, color: .red),
+            AttendanceData(type: "遅刻", count: attendance.late, color: .orange),
+            AttendanceData(type: "早退", count: attendance.earlyLeave, color: .yellow)
+        ].filter { $0.count > 0 }
     }
 }
 
-// 出欠情報の構造体
+// MARK: - Attendance Data Model
 struct AttendanceData: Identifiable {
     let id = UUID()
     let type: String
     let count: Int
     let color: Color
-
-    // パーセンテージを計算するプロパティ
+    
     func percentage(total: Int) -> String {
         guard total > 0 else { return "0%" }
-        let value = Double(count) / Double(total) * 100
-        return String(format: "%.0f%%", value)  // 小数点以下を切り捨てて表示
+        let percent = Double(count) / Double(total) * 100
+        return String(format: "%.1f%%", percent)
     }
 }
