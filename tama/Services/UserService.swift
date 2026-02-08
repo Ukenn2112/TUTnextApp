@@ -1,61 +1,57 @@
 import Foundation
 
-class UserService {
+/// Legacy User service wrapper using Core/Auth modules
+/// Maintains backward compatibility while migrating to Core modules
+final class UserService {
     static let shared = UserService()
-
-    private init() {}
-
-    // ユーザーデータを保存
+    
+    private let userService: UserServiceProtocol
+    private let defaults: UserDefaultsManager
+    
+    private init(
+        userService: UserServiceProtocol = UserService.shared,
+        defaults: UserDefaultsManager = .shared
+    ) {
+        self.userService = userService
+        self.defaults = defaults
+    }
+    
+    /// Save user data
     func saveUser(_ user: User, completion: (() -> Void)? = nil) {
-        DispatchQueue.main.async {
-            if let encodedData = try? JSONEncoder().encode(user) {
-                UserDefaults.standard.set(encodedData, forKey: "currentUser")
-                // 確実に保存が完了するようにsynchronizeを呼び出す
-                UserDefaults.standard.synchronize()
-                // 保存完了後にコールバックを実行
-                completion?()
-            }
-        }
+        userService.currentUser = UserMapper.mapToCore(user)
+        completion?()
     }
-
-    // デバイストークンを保存
-    func saveDeviceToken(_ token: String) {
-        DispatchQueue.main.async {
-            UserDefaults.standard.set(token, forKey: "deviceToken")
-        }
-    }
-
-    // デバイストークンを取得
-    func getDeviceToken() -> String? {
-        return UserDefaults.standard.string(forKey: "deviceToken")
-    }
-
-    // デバイストークンを削除
-    func clearDeviceToken() {
-        DispatchQueue.main.async {
-            UserDefaults.standard.removeObject(forKey: "deviceToken")
-        }
-    }
-
-    // ユーザーデータを取得
+    
+    /// Get current user
     func getCurrentUser() -> User? {
-        if let userData = UserDefaults.standard.data(forKey: "currentUser") {
-            return try? JSONDecoder().decode(User.self, from: userData)
-        }
-        return nil
+        guard let coreUser = userService.currentUser else { return nil }
+        return UserMapper.mapFromCore(coreUser)
     }
-
-    // ユーザーデータを削除（ログアウト時）
+    
+    /// Clear current user
     func clearCurrentUser() {
-        DispatchQueue.main.async {
-            UserDefaults.standard.removeObject(forKey: "currentUser")
-        }
+        userService.clearCurrentUser()
     }
-
-    // 全未読揭示数を更新
+    
+    /// Save device token
+    func saveDeviceToken(_ token: String) {
+        defaults.set(value: token, key: "deviceToken")
+    }
+    
+    /// Get device token
+    func getDeviceToken() -> String? {
+        defaults.get(key: "deviceToken")
+    }
+    
+    /// Clear device token
+    func clearDeviceToken() {
+        defaults.remove(key: "deviceToken")
+    }
+    
+    /// Update unread count
     func updateAllKeijiMidokCnt(keijiCnt: Int, completion: (() -> Void)? = nil) {
         if var user = getCurrentUser() {
-            user.allKeijiMidokCnt = keijiCnt
+            user = User(id: user.id, username: user.username, fullName: user.fullName, encryptedPassword: user.encryptedPassword, allKeijiMidokCnt: keijiCnt)
             saveUser(user) {
                 completion?()
             }
@@ -63,31 +59,52 @@ class UserService {
             completion?()
         }
     }
+}
 
-    // APIレスポンスからユーザーオブジェクトを作成
-    func createUser(from userData: [String: Any]) -> User? {
-        guard let userId = userData["userId"] as? String,
-            let userName = userData["userName"] as? String,
-            let gaksekiCd = (userData["gaksekiCd"] as? String) ?? (userData["jinjiCd"] as? String),
-            let encryptedPassword = userData["encryptedPassword"] as? String
-        else {
-            return nil
-        }
-        print("【ユーザー作成】encryptedPassword: \(encryptedPassword)")
+// MARK: - User Model
 
-        // パスワードをURLエンコードする
-        let encodedPassword =
-            encryptedPassword
-            .replacingOccurrences(of: "/", with: "%2F")
-            .replacingOccurrences(of: "+", with: "%2B")
-            .replacingOccurrences(of: "=", with: "%3D")
+struct User: Codable {
+    let id: String
+    let username: String
+    let fullName: String
+    var encryptedPassword: String?
+    var allKeijiMidokCnt: Int
+    
+    init(
+        id: String,
+        username: String,
+        fullName: String,
+        encryptedPassword: String? = nil,
+        allKeijiMidokCnt: Int = 0
+    ) {
+        self.id = id
+        self.username = username
+        self.fullName = fullName
+        self.encryptedPassword = encryptedPassword
+        self.allKeijiMidokCnt = allKeijiMidokCnt
+    }
+}
 
-        print("【ユーザー作成】encodedPassword: \(encodedPassword)")
-        return User(
-            id: gaksekiCd,
-            username: userId,
-            fullName: userName,
-            encryptedPassword: encodedPassword,
+// MARK: - User Mapper
+
+enum UserMapper {
+    static func mapToCore(_ legacy: User) -> Core.User {
+        Core.User(
+            userId: legacy.id,
+            studentId: nil,
+            name: legacy.fullName,
+            email: nil,
+            department: nil,
+            grade: nil
+        )
+    }
+    
+    static func mapFromCore(_ core: Core.User) -> User {
+        User(
+            id: core.userId,
+            username: core.userId,
+            fullName: core.name ?? "",
+            encryptedPassword: nil,
             allKeijiMidokCnt: 0
         )
     }
