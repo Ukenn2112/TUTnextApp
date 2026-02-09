@@ -19,7 +19,8 @@ struct TeacherResponse: Codable {
 }
 
 class TeacherEmailListService {
-    private let apiService = APIService.shared
+    // Use Core.Networking.APIService instead of deprecated typealias
+    private let apiService = Core.Networking.APIService.shared
     
     func fetchTeachers() -> AnyPublisher<[Teacher], Error> {
         return Future<[Teacher], Error> { promise in

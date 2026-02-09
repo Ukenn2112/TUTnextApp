@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
+@MainActor
 class CourseColorService {
     static let shared = CourseColorService()
 
