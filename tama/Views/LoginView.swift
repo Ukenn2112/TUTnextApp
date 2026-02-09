@@ -372,10 +372,12 @@ struct LoginView: View {
     }
 
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            guard let self = self else { return }
+            let status = settings.authorizationStatus
             DispatchQueue.main.async {
-                print("ログイン成功後の通知権限状態: \(settings.authorizationStatus.rawValue)")
-                switch settings.authorizationStatus {
+                print("ログイン成功後の通知権限状態: \(status.rawValue)")
+                switch status {
                 case .authorized:
                     // 既に許可されている場合、リモート通知を登録
                     self.notificationService.registerForRemoteNotifications()

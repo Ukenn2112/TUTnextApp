@@ -20,8 +20,8 @@ class TimetableViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
-    init(timetableService: TimetableService = .shared) {
-        self.timetableService = timetableService
+    init(timetableService: TimetableService? = nil) {
+        self.timetableService = timetableService ?? TimetableService()
         setupBindings()
     }
     

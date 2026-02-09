@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 class AppearanceManager: ObservableObject {
 
     enum AppearanceColor: Int {

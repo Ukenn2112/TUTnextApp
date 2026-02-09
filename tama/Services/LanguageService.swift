@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 
+@MainActor
 class LanguageService: NSObject, ObservableObject {
     @Published var currentLanguage: String = "日本語"
 

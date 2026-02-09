@@ -10,6 +10,7 @@ public protocol TimetableServiceProtocol {
 }
 
 /// Timetable service implementation using Core modules
+@MainActor
 public final class TimetableService: TimetableServiceProtocol {
     public static let shared = TimetableService()
     

@@ -13,6 +13,7 @@ public protocol NotificationServiceProtocol {
 }
 
 /// Notification service implementation using Core modules
+@MainActor
 public final class NotificationService: NotificationServiceProtocol {
     public static let shared = NotificationService()
     

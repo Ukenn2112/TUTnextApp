@@ -8,6 +8,7 @@ public protocol BusScheduleServiceProtocol {
 }
 
 /// Bus schedule service implementation using Core modules
+@MainActor
 public final class BusScheduleService: BusScheduleServiceProtocol {
     public static let shared = BusScheduleService()
     

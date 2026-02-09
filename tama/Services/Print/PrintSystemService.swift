@@ -8,6 +8,7 @@ public protocol PrintSystemServiceProtocol {
 }
 
 /// Print system service implementation using Core modules
+@MainActor
 public final class PrintSystemService: PrintSystemServiceProtocol {
     public static let shared = PrintSystemService()
     

@@ -8,6 +8,7 @@ public protocol CourseDetailServiceProtocol {
 }
 
 /// Course detail service implementation using Core modules
+@MainActor
 public final class CourseDetailService: CourseDetailServiceProtocol {
     public static let shared = CourseDetailService()
     

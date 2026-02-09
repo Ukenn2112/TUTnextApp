@@ -9,6 +9,7 @@ public protocol AssignmentServiceProtocol {
 }
 
 /// Assignment service implementation using Core modules
+@MainActor
 public final class AssignmentService: AssignmentServiceProtocol {
     public static let shared = AssignmentService()
     

@@ -9,6 +9,7 @@ import Foundation
 import StoreKit
 import SwiftUI
 
+@MainActor
 class RatingService: ObservableObject {
     static let shared = RatingService()
     
