@@ -19,14 +19,14 @@
 - [x] 统一 Button, Card, Modal 组件
 - [x] 暗色模式优化
 - [x] 动效系统
-- [ ] Views 层重构 (进行中)
+- [x] Views 层重构 ✅ (LoginView, WelcomeView, TimetableView, BusScheduleView, AssignmentView, UserSettingsView)
 
 ### Phase 3: 功能模块重构
 - [x] Auth 模块 (OAuth, Session)
 - [x] Timetable 模块
 - [x] BusSchedule 模块
 - [x] Assignment 模块
-- [ ] Notification 模块 (进行中)
+- [x] Notification 模块 ✅
 
 ### Phase 4: Widgets 重构
 - [ ] TimetableWidget (iOS 17+)
