@@ -1,3 +1,9 @@
+//
+//  BusScheduleService
+//  TUTnext
+//
+//  Service layer implementation using Core modules
+//
 import Foundation
 
 /// Bus schedule service protocol

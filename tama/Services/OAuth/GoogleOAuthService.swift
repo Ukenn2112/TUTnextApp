@@ -1,3 +1,9 @@
+//
+//  GoogleOAuthService
+//  TUTnext
+//
+//  Service layer implementation using Core modules
+//
 import Foundation
 import SwiftUI
 import CryptoKit

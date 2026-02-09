@@ -1,3 +1,9 @@
+//
+//  Validators
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// Property wrapper for minimum string length validation

@@ -1,3 +1,9 @@
+//
+//  AssignmentModels
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// Assignment submission status

@@ -1,3 +1,9 @@
+//
+//  User
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// User model with full Codable support and validation

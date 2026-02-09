@@ -1,3 +1,9 @@
+//
+//  UserRepository
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// User repository protocol defining data access operations

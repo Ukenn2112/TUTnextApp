@@ -1,3 +1,9 @@
+//
+//  AssignmentRepository
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// Assignment repository protocol defining data access operations

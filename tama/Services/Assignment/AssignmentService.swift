@@ -1,3 +1,9 @@
+//
+//  AssignmentService
+//  TUTnext
+//
+//  Service layer implementation using Core modules
+//
 import Foundation
 import UserNotifications
 

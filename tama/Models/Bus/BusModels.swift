@@ -1,3 +1,9 @@
+//
+//  BusModels
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// Bus route type enumeration

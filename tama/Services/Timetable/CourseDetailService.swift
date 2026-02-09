@@ -1,3 +1,9 @@
+//
+//  CourseDetailService
+//  TUTnext
+//
+//  Service layer implementation using Core modules
+//
 import Foundation
 
 /// Course detail service protocol

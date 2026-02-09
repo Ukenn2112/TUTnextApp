@@ -1,3 +1,9 @@
+//
+//  MockAssignment
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// Assignment mock data for previews and testing

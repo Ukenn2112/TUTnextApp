@@ -1,3 +1,9 @@
+//
+//  MockBus
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 
 /// Bus mock data for previews and testing

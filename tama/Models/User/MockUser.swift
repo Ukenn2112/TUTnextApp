@@ -1,3 +1,9 @@
+//
+//  MockUser
+//  TUTnext
+//
+//  Data models for the application
+//
 import Foundation
 import SwiftUI
 

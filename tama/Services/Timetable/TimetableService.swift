@@ -1,3 +1,9 @@
+//
+//  TimetableService
+//  TUTnext
+//
+//  Service layer implementation using Core modules
+//
 import Foundation
 
 /// Timetable service protocol

@@ -1,3 +1,9 @@
+//
+//  PrintSystemService
+//  TUTnext
+//
+//  Service layer implementation using Core modules
+//
 import Foundation
 
 /// Print system service protocol
