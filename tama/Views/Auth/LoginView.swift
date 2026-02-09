@@ -2,14 +2,14 @@
 //  LoginView.swift
 //  TUTnext
 //
-//  Glassmorphism Auth View
+//  Glassmorphism Auth View with NFC Support
 //
 
 import SwiftUI
-import CoreNFC
 import CoreAuth
 import CoreNetworking
 import CoreStorage
+import CoreNFC
 
 struct LoginView: View {
     @Binding var isLoggedIn: Bool
