@@ -26,7 +26,7 @@ enum WeekdaySelection: String, AppEnum {
     case current
     case monday
     case tuesday
-    wednesday
+    case wednesday
     case thursday
     case friday
     case saturday
