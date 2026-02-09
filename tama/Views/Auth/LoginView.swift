@@ -18,10 +18,14 @@ struct LoginView: View {
     @Environment(\.userService) private var userService
     @Environment(\.userDefaultsManager) private var userDefaultsManager
     
+    @StateObject private var nfcReader = NFCReader()
+    
     @State private var account = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var loginErrorMessage: String? = nil
+    @State private var userName: String = ""
+    @State private var showNFCTip = false
     @FocusState private var focusedField: Field?
     
     enum Field {
@@ -53,6 +57,33 @@ struct LoginView: View {
         }
         .onTapGesture {
             focusedField = nil
+        }
+        .alert("ログイン方法を選択", isPresented: $showNFCTip) {
+            Button("手入力") {
+                showNFCTip = false
+                focusedField = .account
+            }
+            Button("学生証をスキャン", role: .cancel) {
+                showNFCTip = false
+                clearErrors()
+                nfcReader.startSession()
+            }
+        } message: {
+            Text("学生証をスキャンして自動入力するか、手動でアカウントを入力することができます。")
+        }
+        .onAppear(perform: checkAndShowNFCTip)
+        .onChange(of: nfcReader.studentID) { _, newValue in
+            handleStudentIDChange(newValue)
+        }
+        .onChange(of: nfcReader.userName) { _, newValue in
+            withAnimation(.easeInOut) {
+                userName = newValue
+            }
+        }
+        .onChange(of: nfcReader.errorMessage) { _, newValue in
+            if newValue != nil {
+                loginErrorMessage = nil
+            }
         }
     }
     
@@ -197,7 +228,24 @@ struct LoginView: View {
     }
     
     // MARK: - Methods
+    private func checkAndShowNFCTip() {
+        if !userDefaultsManager.getBool(key: "hasShownNFCTip") {
+            showNFCTip = true
+            userDefaultsManager.set(value: true, key: "hasShownNFCTip")
+        }
+    }
+    
+    private func handleStudentIDChange(_ newValue: String) {
+        if !newValue.isEmpty {
+            account = newValue
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                focusedField = .password
+            }
+        }
+    }
+    
     private func clearErrors() {
+        nfcReader.errorMessage = nil
         loginErrorMessage = nil
     }
     
@@ -294,25 +342,8 @@ struct LoginView: View {
         
         userService.saveLegacyUser(user) {
             DispatchQueue.main.async {
-                requestNotificationPermission()
-                ratingService.recordSignificantEvent()
                 withAnimation(.easeInOut(duration: 0.3)) {
-                    isLoggedIn = true
-                }
-            }
-        }
-    }
-    
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            DispatchQueue.main.async {
-                switch settings.authorizationStatus {
-                case .authorized:
-                    self.notificationService.registerForRemoteNotifications()
-                case .notDetermined:
-                    self.notificationService.requestAuthorization()
-                default:
-                    break
+                    self.isLoggedIn = true
                 }
             }
         }
