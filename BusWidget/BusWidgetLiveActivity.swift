@@ -1,10 +1,3 @@
-//
-//  BusWidgetLiveActivity.swift
-//  BusWidget
-//
-//  Created by 维安雨轩 on 2025/03/22.
-//
-
 import ActivityKit
 import SwiftUI
 import WidgetKit

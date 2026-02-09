@@ -1,10 +1,3 @@
-//
-//  ShareViewController.swift
-//  PrintShareExtension
-//
-//  Created by 维安雨轩 on 2025/04/01.
-//
-
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
