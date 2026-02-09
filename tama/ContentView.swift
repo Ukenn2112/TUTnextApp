@@ -1,19 +1,18 @@
-//
-//  ContentView.swift
-//  tama
-//
-//  Created by 维安雨轩 on 2025/02/27.
-//
-
-import SwiftData
 import SwiftUI
 
+/// アプリのルートコンテンツビュー
+/// ログイン状態に応じてLoginViewまたはメインタブビューを表示する
 struct ContentView: View {
+
+    // MARK: - プロパティ
+
     @State private var selectedTab = 1
     @State private var isLoggedIn = false
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var ratingService: RatingService
+
+    // MARK: - ボディ
 
     var body: some View {
         Group {
@@ -21,151 +20,133 @@ struct ContentView: View {
                 LoginView(isLoggedIn: $isLoggedIn)
                     .transition(.opacity)
             } else {
-                VStack(spacing: 0) {
-                    HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
-
-                    TabView(selection: $selectedTab) {
-                        BusScheduleView()
-                            .tag(0)
-
-                        TimetableView(isLoggedIn: $isLoggedIn)
-                            .tag(1)
-
-                        AssignmentView(isLoggedIn: $isLoggedIn)
-                            .tag(2)
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                    .edgesIgnoringSafeArea(.bottom)
-
-                    TabBarView(selectedTab: $selectedTab)
-                }
-                .transition(.opacity)
+                mainTabView
+                    .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.5), value: isLoggedIn)
         .onAppear {
-            // アプリ起動時にログイン状態を確認
             checkLoginStatus()
-
-            // URLスキームからのディープリンク処理を確認
             processInitialURL()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HandleURLScheme")))
-        { notification in
+        .onReceive(
+            NotificationCenter.default.publisher(for: AppDelegate.handleURLSchemeNotification)
+        ) { notification in
             if let url = notification.object as? URL {
                 handleDeepLink(url: url)
             }
         }
-        // 通知からの画面遷移通知を処理
         .onReceive(
             NotificationCenter.default.publisher(
                 for: Notification.Name("NavigateToPageFromNotification"))
         ) { notification in
             if let page = notification.userInfo?["page"] as? String {
-                navigateBasedOnPath(page)
+                navigateToTab(for: page)
             }
         }
-        // アプリ全体のダークモード設定
-        .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
-        .onChange(of: appearanceManager.isDarkMode) { oldValue, newValue in
-            print("ContentView detected isDarkMode change: \(newValue)")
-        }
-        // 通知センターでの変更監視も追加
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: Notification.Name("AppearanceDidChangeNotification"))
-        ) { _ in
-            // 通知を受け取ったら強制的に再描画
-            print("ContentView received appearance change notification")
+        .preferredColorScheme(appearanceManager.colorSchemeOverride)
+    }
+
+    // MARK: - サブビュー
+
+    /// メインタブビュー（ログイン後に表示）
+    private var mainTabView: some View {
+        VStack(spacing: 0) {
+            HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+
+            TabView(selection: $selectedTab) {
+                BusScheduleView()
+                    .tag(0)
+                TimetableView(isLoggedIn: $isLoggedIn)
+                    .tag(1)
+                AssignmentView(isLoggedIn: $isLoggedIn)
+                    .tag(2)
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .edgesIgnoringSafeArea(.bottom)
+
+            TabBarView(selectedTab: $selectedTab)
         }
     }
 
-    // ログイン状態を確認
+    // MARK: - プライベートメソッド
+
+    /// ログイン状態を確認する
     private func checkLoginStatus() {
-        // UserServiceからユーザー情報を取得
         let user = UserService.shared.getCurrentUser()
-        // ユーザー情報があればログイン状態とする
         isLoggedIn = user != nil
     }
 
-    // アプリ起動時に初期URLを処理
+    /// アプリ起動時に初期URLを処理する
     private func processInitialURL() {
-        if let path = AppDelegate.shared.getPathComponent() {
-            print("Processing initial URL path: \(path)")
-            // ログインしていない場合は一旦スキップ（ログイン後に処理される）
-            guard isLoggedIn else {
-                print("User not logged in, skipping URL processing")
-                return
-            }
-
-            navigateBasedOnPath(path)
-
-            // URLによる遷移が完了したらリセット
-            AppDelegate.shared.resetURLProcessing()
+        guard let path = AppDelegate.shared.getPathComponent(),
+              isLoggedIn
+        else {
+            return
         }
+        navigateToTab(for: path)
+        AppDelegate.shared.resetURLProcessing()
     }
 
-    // URLスキームの処理
+    /// URLスキームのディープリンクを処理する
     private func handleDeepLink(url: URL) {
-        guard isLoggedIn else { return }  // ログインしていない場合は無視
-
-        print("Handling deep link: \(url.absoluteString)")
-        // ホスト部分を取得（例：tama://timetable なら "timetable"）
+        guard isLoggedIn else { return }
         let path = url.host ?? ""
-        print("URL path component: \(path)")
-        navigateBasedOnPath(path)
+        navigateToTab(for: path)
     }
 
-    // パスに基づいてタブに遷移
-    private func navigateBasedOnPath(_ path: String) {
-        print("Navigating based on path: \(path)")
-
+    /// パスに基づいて適切なタブに遷移する
+    private func navigateToTab(for path: String) {
         switch path {
         case "timetable":
-            print("Switching to timetable tab")
             selectedTab = 1
         case "assignment":
-            print("Switching to assignment tab")
             selectedTab = 2
         case "bus":
-            print("Switching to bus tab")
             selectedTab = 0
-            // URLからバスのパラメータを取得して通知を送信
-            let route = AppDelegate.shared.getQueryValue(for: "route")
-            let schedule = AppDelegate.shared.getQueryValue(for: "schedule")
-
-            print("Bus parameters - route: \(route ?? "nil"), schedule: \(schedule ?? "nil")")
-
-            if route != nil || schedule != nil {
-                // パラメータをNotificationCenterを通じてBusScheduleViewに送信
-                let userInfo: [String: Any?] = ["route": route, "schedule": schedule]
-                NotificationCenter.default.post(
-                    name: Notification.Name("BusParametersFromURL"),
-                    object: nil,
-                    userInfo: userInfo as [AnyHashable: Any]
-                )
-            }
+            sendBusParameters()
         case "print":
-            print("Opening print system view")
-            // 印刷システム画面を表示するための処理
-            let printSystemView = PrintSystemView.handleURLScheme()
-
-            // モーダルで表示するためのホストコントローラを取得
-            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                let rootController = scene.windows.first?.rootViewController
-            {
-                let hostingController = UIHostingController(rootView: printSystemView)
-                rootController.present(hostingController, animated: true)
-            }
+            presentPrintSystemView()
         default:
-            print("Unknown path: \(path)")
             break
         }
     }
+
+    /// バスパラメータをBusScheduleViewに送信する
+    private func sendBusParameters() {
+        let route = AppDelegate.shared.getQueryValue(for: "route")
+        let schedule = AppDelegate.shared.getQueryValue(for: "schedule")
+
+        guard route != nil || schedule != nil else { return }
+
+        let userInfo: [String: Any?] = ["route": route, "schedule": schedule]
+        NotificationCenter.default.post(
+            name: Notification.Name("BusParametersFromURL"),
+            object: nil,
+            userInfo: userInfo as [AnyHashable: Any]
+        )
+    }
+
+    /// 印刷システム画面をモーダルで表示する
+    private func presentPrintSystemView() {
+        let printSystemView = PrintSystemView.handleURLScheme()
+
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootController = scene.windows.first?.rootViewController
+        else {
+            return
+        }
+
+        let hostingController = UIHostingController(rootView: printSystemView)
+        rootController.present(hostingController, animated: true)
+    }
 }
 
-#Preview() {
+// MARK: - プレビュー
+
+#Preview {
     ContentView()
         .environmentObject(AppearanceManager())
         .environmentObject(NotificationService.shared)
+        .environmentObject(RatingService.shared)
 }

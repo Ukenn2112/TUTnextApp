@@ -1,130 +1,98 @@
 import SwiftUI
 
-class AppearanceManager: ObservableObject {
+/// アプリの外観（ダークモード等）を管理するクラス
+final class AppearanceManager: ObservableObject {
 
-    enum AppearanceColor: Int {
-        case iSystem = 0
-        case iHight = 1
-        case iDark = 2
+    // MARK: - 列挙型
+
+    /// 外観モードの種類
+    enum AppearanceMode: Int {
+        case system = 0
+        case light = 1
+        case dark = 2
     }
 
-    @Published var isDarkMode: Bool = false {
-        didSet {
-            if oldValue != isDarkMode {
-                print("isDarkMode changed from \(oldValue) to \(isDarkMode)")
-                // 明示的に変更を通知
-                DispatchQueue.main.async {
-                    self.objectWillChange.send()
-                }
-            }
+    // MARK: - プロパティ
+
+    @Published var isDarkMode: Bool = false
+    @Published var mode: AppearanceMode
+
+    /// SwiftUIの `preferredColorScheme` に渡すための計算プロパティ
+    var colorSchemeOverride: ColorScheme? {
+        switch mode {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
         }
     }
 
-    @Published var type: AppearanceColor {
-        didSet {
-            print("Appearance type changed to: \(type)")
+    // MARK: - UserDefaultsキー
 
-            // タイプに応じてダークモードを設定
-            let newDarkMode: Bool
-            switch type {
-            case .iSystem:
-                newDarkMode = (getCurrentInterfaceStyle() == .dark)
-            case .iHight:
-                newDarkMode = false
-            case .iDark:
-                newDarkMode = true
-            }
-
-            // 変更があった場合のみ更新（無限ループ防止）
-            if isDarkMode != newDarkMode {
-                isDarkMode = newDarkMode
-            }
-
-            // UserDefaultsに保存
-            UserDefaults.standard.set(type.rawValue, forKey: "darkMode")
-            print("isDarkMode set to: \(isDarkMode)")
-
-            // 明示的に変更を通知（二重通知を防ぐためディスパッチで遅延）
-            DispatchQueue.main.async {
-                self.objectWillChange.send()
-            }
-
-            // 全アプリに変更を通知するため通知を送信
-            NotificationCenter.default.post(
-                name: Notification.Name("AppearanceDidChangeNotification"), object: nil)
-        }
+    private enum DefaultsKey {
+        static let darkMode = "darkMode"
     }
+
+    // MARK: - 初期化
 
     init() {
-        print("AppearanceManager initialized")
+        let savedRawValue = UserDefaults.standard.integer(forKey: DefaultsKey.darkMode)
+        let savedMode = AppearanceMode(rawValue: savedRawValue) ?? .system
+        self.mode = savedMode
 
-        // UserDefaultsから設定を読み込み
-        type =
-            AppearanceColor(rawValue: UserDefaults.standard.integer(forKey: "darkMode")) ?? .iSystem
-
-        // 初期値を設定
-        switch type {
-        case .iSystem:
-            isDarkMode = (getCurrentInterfaceStyle() == .dark)
-        case .iHight:
+        switch savedMode {
+        case .system:
+            isDarkMode = Self.currentSystemIsDark
+        case .light:
             isDarkMode = false
-        case .iDark:
+        case .dark:
             isDarkMode = true
         }
-
-        print("Initial isDarkMode: \(isDarkMode)")
     }
 
-    func getCurrentInterfaceStyle() -> UIUserInterfaceStyle {
-        if #available(iOS 13.0, *) {
-            return UIScreen.main.traitCollection.userInterfaceStyle
-        } else {
-            return .light
+    // MARK: - 公開メソッド
+
+    /// 外観モードを変更する
+    func setMode(_ newMode: AppearanceMode) {
+        mode = newMode
+        UserDefaults.standard.set(newMode.rawValue, forKey: DefaultsKey.darkMode)
+
+        switch newMode {
+        case .system:
+            isDarkMode = Self.currentSystemIsDark
+        case .light:
+            isDarkMode = false
+        case .dark:
+            isDarkMode = true
         }
     }
 
-    // システムのダークモード変更を監視
+    /// システムの外観変更の監視を開始する
     func startObservingSystemAppearance() {
-        // アプリがアクティブになったときに確認
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(systemAppearanceChanged),
+            selector: #selector(handleSystemAppearanceChange),
             name: UIApplication.didBecomeActiveNotification,
-            object: nil)
-
-        // カスタム通知も監視
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(appearanceDidChange),
-            name: Notification.Name("AppearanceDidChangeNotification"),
-            object: nil)
-
-        // トレイト変更（ダークモード切替など）の監視を設定
-        if #available(iOS 13.0, *) {
-            // UITraitCollectionのトレイト変更通知を監視
-            NotificationCenter.default.addObserver(
-                forName: NSNotification.Name("UITraitCollectionDidChangeNotification"),
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                self?.systemAppearanceChanged()
-            }
-        }
+            object: nil
+        )
     }
 
-    @objc private func systemAppearanceChanged() {
-        if type == .iSystem {
-            let newDarkMode = (getCurrentInterfaceStyle() == .dark)
-            if isDarkMode != newDarkMode {
-                print("System appearance changed, updating isDarkMode to \(newDarkMode)")
-                isDarkMode = newDarkMode
-            }
+    // MARK: - プライベートメソッド
+
+    /// 現在のシステムがダークモードかどうかを取得
+    private static var currentSystemIsDark: Bool {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first
+        else {
+            return false
         }
+        return window.traitCollection.userInterfaceStyle == .dark
     }
 
-    @objc private func appearanceDidChange() {
-        print("Received appearance change notification")
-        // 全アプリのビューを更新するためのヘルパー
-        objectWillChange.send()
+    @objc private func handleSystemAppearanceChange() {
+        guard mode == .system else { return }
+        let newDarkMode = Self.currentSystemIsDark
+        if isDarkMode != newDarkMode {
+            isDarkMode = newDarkMode
+        }
     }
 }

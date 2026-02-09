@@ -1,24 +1,25 @@
 //
-//  tamaApp.swift
+//  TamaApp.swift
 //  tama
 //
 //  Created by 维安雨轩 on 2025/02/27.
 //
 
-import SwiftData
 import SwiftUI
 
+/// アプリケーションのエントリーポイント
 @main
-struct tamaApp: App {
+struct TamaApp: App {
+
+    // MARK: - プロパティ
+
     @StateObject private var appearanceManager = AppearanceManager()
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var languageService = LanguageService.shared
     @StateObject private var ratingService = RatingService.shared
-
-    // AppDelegateを使用
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    @Environment(\.colorScheme) var colorScheme
+    // MARK: - ボディ
 
     var body: some Scene {
         WindowGroup {
@@ -28,20 +29,14 @@ struct tamaApp: App {
                 .environmentObject(languageService)
                 .environmentObject(ratingService)
                 .environmentObject(GoogleOAuthService.shared)
-                .preferredColorScheme(appearanceManager.isDarkMode ? .dark : .light)
+                .preferredColorScheme(appearanceManager.colorSchemeOverride)
                 .onAppear {
-                    print("tamaApp: Application appeared")
                     appearanceManager.startObservingSystemAppearance()
-                    // アプリ起動時に通知権限をチェック
                     notificationService.checkAuthorizationStatus()
-                    // アプリ起動時に評価リクエストをチェック
                     ratingService.onAppLaunch()
                 }
-                // URLスキームを処理
                 .onOpenURL { url in
-                    print("tamaApp: Received openURL: \(url)")
-                    // AppDelegateにURLを処理させる
-                    let _ = AppDelegate.shared.handleURL(url)
+                    _ = AppDelegate.shared.handleURL(url)
                 }
         }
     }
