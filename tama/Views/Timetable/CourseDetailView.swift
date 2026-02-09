@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import CoreStorage
 
 struct CourseDetailView: View {
     @Environment(\.dismiss) private var dismiss

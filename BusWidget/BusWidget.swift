@@ -397,7 +397,7 @@ struct BusWidgetEntryView: View {
                 mediumWidgetLayout
             }
         }
-        .glassEffect(
+        .busWidgetGlassEffect(
             opacity: colorScheme == .dark ? 0.45 : 0.35,
             blurRadius: 20,
             cornerRadius: 16
@@ -606,7 +606,7 @@ struct BusWidgetEntryView: View {
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(ThemeColors.Glass.light)
+                .fill(BusWidgetThemeColors.Glass.light)
         )
     }
     
@@ -708,21 +708,21 @@ struct BusWidget: Widget {
         .configurationDisplayName("学校バス時刻表")
         .description("次のバスの発車時刻を表示します")
         .supportedFamilies([.systemSmall, .systemMedium])
-        .disableContentMarginsIfAvailable()
+        
     }
     
     private var glassBackground: some View {
         GeometryReader { geometry in
             LinearGradient(
                 colors: [
-                    ThemeColors.Gradient.startGradient(for: .light),
-                    ThemeColors.Gradient.endGradient(for: .light)
+                    BusWidgetThemeColors.Gradient.startGradient,
+                    BusWidgetThemeColors.Gradient.endGradient
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .overlay {
-                GlassBackground(
+                BusWidgetGlassBackground(
                     opacity: 0.3,
                     blurRadius: 20,
                     saturation: 1.5,

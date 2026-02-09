@@ -8,9 +8,6 @@
 import SwiftUI
 import SafariServices
 import MessageUI
-import CoreAuth
-import CoreNetworking
-import CoreStorage
 
 struct UserSettingsView: View {
     @Environment(\.dismiss) private var dismiss

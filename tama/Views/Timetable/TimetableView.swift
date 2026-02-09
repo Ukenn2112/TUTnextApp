@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import CoreStorage
 
 struct TimetableView: View {
     @Binding var isLoggedIn: Bool
