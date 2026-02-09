@@ -7,6 +7,9 @@
 
 import SwiftUI
 import SwiftData
+import CoreAuth
+import CoreNetworking
+import CoreStorage
 
 struct ContentView: View {
     @State private var selectedTab = 1
@@ -15,6 +18,7 @@ struct ContentView: View {
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var ratingService: RatingService
     @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(\.userService) private var userService
     
     var body: some View {
         Group {
@@ -80,8 +84,7 @@ struct ContentView: View {
     
     // MARK: - Login Status Check
     private func checkLoginStatus() {
-        let user = UserService.shared.getCurrentUser()
-        isLoggedIn = user != nil
+        isLoggedIn = userService.isLoggedIn
     }
     
     // MARK: - URL Processing

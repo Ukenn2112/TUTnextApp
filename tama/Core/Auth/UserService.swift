@@ -100,4 +100,43 @@ extension UserService {
     var userId: String {
         currentUser?.userId ?? ""
     }
+    
+    /// Save legacy user (for backward compatibility)
+    func saveLegacyUser(_ user: LegacyUser, completion: (() -> Void)? = nil) {
+        let coreUser = User(
+            userId: user.id,
+            studentId: nil,
+            name: user.fullName,
+            email: nil,
+            department: nil,
+            grade: nil
+        )
+        currentUser = coreUser
+        completion?()
+    }
+}
+
+// MARK: - Legacy User Model (for backward compatibility)
+
+@available(*, deprecated, message: "Use Core.Auth.User instead")
+public struct LegacyUser {
+    public let id: String
+    public let username: String
+    public let fullName: String
+    public var encryptedPassword: String?
+    public var allKeijiMidokCnt: Int
+    
+    public init(
+        id: String,
+        username: String,
+        fullName: String,
+        encryptedPassword: String? = nil,
+        allKeijiMidokCnt: Int = 0
+    ) {
+        self.id = id
+        self.username = username
+        self.fullName = fullName
+        self.encryptedPassword = encryptedPassword
+        self.allKeijiMidokCnt = allKeijiMidokCnt
+    }
 }

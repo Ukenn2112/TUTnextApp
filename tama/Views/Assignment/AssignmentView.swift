@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreNetworking
 
 struct AssignmentView: View {
     @Binding var isLoggedIn: Bool

@@ -8,16 +8,21 @@
 import SwiftUI
 import SafariServices
 import MessageUI
+import CoreAuth
+import CoreNetworking
+import CoreStorage
 
 struct UserSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var isLoggedIn: Bool
-    @State private var user: User?
+    @State private var user: LegacyUser?
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var languageService: LanguageService
     @EnvironmentObject private var ratingService: RatingService
+    @Environment(\.authService) private var authService
+    @Environment(\.userService) private var userService
     
     @State private var showSafari: Bool = false
     @State private var urlToOpen: URL? = nil
@@ -300,7 +305,15 @@ struct UserSettingsView: View {
     
     // MARK: - Helper Methods
     private func loadUserData() {
-        user = UserService.shared.getCurrentUser()
+        if let coreUser = userService.currentUser {
+            user = LegacyUser(
+                id: coreUser.userId,
+                username: coreUser.userId,
+                fullName: coreUser.name ?? "",
+                encryptedPassword: nil,
+                allKeijiMidokCnt: 0
+            )
+        }
     }
     
     private func getInitials() -> String {
@@ -358,23 +371,22 @@ struct UserSettingsView: View {
     }
     
     private func logout() {
-        guard let user = user, let encryptedPassword = user.encryptedPassword else {
-            performLocalLogout()
-            return
-        }
-        
-        AuthService.shared.logout(userId: user.username, encryptedPassword: encryptedPassword) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success: self.performLocalLogout()
-                case .failure: self.performLocalLogout()
+        Task {
+            do {
+                _ = try await authService.logout()
+                await MainActor.run {
+                    performLocalLogout()
+                }
+            } catch {
+                await MainActor.run {
+                    performLocalLogout()
                 }
             }
         }
     }
     
     private func performLocalLogout() {
-        UserService.shared.clearCurrentUser()
+        userService.clearCurrentUser()
         dismiss()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             withAnimation(.easeInOut(duration: 0.5)) {

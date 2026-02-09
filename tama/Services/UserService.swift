@@ -75,6 +75,13 @@ final class UserService {
             completion?()
         }
     }
+    
+    /// Save legacy user (for backward compatibility with Views)
+    func saveLegacyUser(_ user: User, completion: (() -> Void)? = nil) {
+        saveUser(user) {
+            completion?()
+        }
+    }
 }
 
 // MARK: - User Model

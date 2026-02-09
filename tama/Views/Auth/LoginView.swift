@@ -7,12 +7,18 @@
 
 import SwiftUI
 import CoreNFC
+import CoreAuth
+import CoreNetworking
+import CoreStorage
 
 struct LoginView: View {
     @Binding var isLoggedIn: Bool
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var ratingService: RatingService
+    @Environment(\.authService) private var authService
+    @Environment(\.userService) private var userService
+    @Environment(\.userDefaultsManager) private var userDefaultsManager
     
     @State private var account = ""
     @State private var password = ""
@@ -225,9 +231,9 @@ struct LoginView: View {
     
     // MARK: - Methods
     private func checkAndShowNFCTip() {
-        if !UserDefaults.standard.bool(forKey: "hasShownNFCTip") {
+        if !userDefaultsManager.getBool(key: "hasShownNFCTip") {
             showNFCTip = true
-            UserDefaults.standard.set(true, forKey: "hasShownNFCTip")
+            userDefaultsManager.set(value: true, key: "hasShownNFCTip")
         }
     }
     
@@ -252,16 +258,20 @@ struct LoginView: View {
         let timeoutTask = createTimeoutTask()
         DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeoutTask)
         
-        AuthService.shared.login(account: account, password: password) { result in
-            timeoutTask.cancel()
-            
-            DispatchQueue.main.async {
-                self.isLoading = false
+        Task {
+            do {
+                let response = try await authService.login(account: account, password: password)
+                timeoutTask.cancel()
                 
-                switch result {
-                case .success(let json):
-                    handleLoginResponse(json)
-                case .failure(let error):
+                await MainActor.run {
+                    self.isLoading = false
+                    handleLoginResponse(response)
+                }
+            } catch {
+                timeoutTask.cancel()
+                
+                await MainActor.run {
+                    self.isLoading = false
                     handleLoginError(error)
                 }
             }
@@ -318,14 +328,26 @@ struct LoginView: View {
     }
     
     private func saveUserData(_ userData: [String: Any]) {
-        if let user = UserService.shared.createUser(from: userData) {
-            UserService.shared.saveUser(user) {
-                DispatchQueue.main.async {
-                    requestNotificationPermission()
-                    ratingService.recordSignificantEvent()
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isLoggedIn = true
-                    }
+        guard let id = userData["userId"] as? String,
+              let username = userData["username"] as? String,
+              let fullName = userData["fullName"] as? String else {
+            return
+        }
+        
+        let user = LegacyUser(
+            id: id,
+            username: username,
+            fullName: fullName,
+            encryptedPassword: userData["encryptedPassword"] as? String,
+            allKeijiMidokCnt: userData["allKeijiMidokCnt"] as? Int ?? 0
+        )
+        
+        userService.saveLegacyUser(user) {
+            DispatchQueue.main.async {
+                requestNotificationPermission()
+                ratingService.recordSignificantEvent()
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isLoggedIn = true
                 }
             }
         }

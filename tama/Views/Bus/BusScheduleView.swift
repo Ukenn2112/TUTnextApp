@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreLocation
+import CoreStorage
 
 struct BusScheduleView: View {
     @State private var selectedScheduleType: BusSchedule.ScheduleType = .weekday
