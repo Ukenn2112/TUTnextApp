@@ -329,7 +329,7 @@ struct UserSettingsView: View {
 /// アイコン、タイトル、詳細テキスト、シェブロンを含む設定行
 private struct SettingsDetailRow: View {
     let icon: String
-    let title: String
+    let title: LocalizedStringKey
     let detail: String
 
     var body: some View {

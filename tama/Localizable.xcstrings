@@ -612,35 +612,6 @@
         }
       }
     },
-    "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Do you want to revoke Classroom authentication?\nYou will need to authenticate again after revocation."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "인증을 취소하시겠습니까?\n취소 후에는 Classroom의 과제가 표시되지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确定要取消授权吗？\n撤销后将无法显示 Classroom 的作业哦。"
-          }
-        }
-      }
-    },
     "Classroom 認証" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1001,7 +972,7 @@
       }
     },
     "キャンセル" : {
-      "comment" : "取消按钮",
+      "comment" : "キャンセルボタン",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1157,7 +1128,7 @@
       }
     },
     "スクールバス" : {
-      "comment" : "顶部tab",
+      "comment" : "ヘッダータイトル",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1429,7 +1400,7 @@
       }
     },
     "バス" : {
-      "comment" : "底部tab",
+      "comment" : "タブバー",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2531,35 +2502,6 @@
         }
       }
     },
-    "認証取り消し" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revoke"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "認証取り消し"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "인증 취소"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消授权"
-          }
-        }
-      }
-    },
     "土" : {
       "localizations" : {
         "en" : {
@@ -3256,7 +3198,7 @@
       }
     },
     "時間割" : {
-      "comment" : "底部tab",
+      "comment" : "タブバー",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4255,6 +4197,35 @@
         }
       }
     },
+    "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you want to revoke Classroom authentication?\nYou will need to authenticate again after revocation."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인증을 취소하시겠습니까?\n취소 후에는 Classroom의 과제가 표시되지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定要取消授权吗？\n撤销后将无法显示 Classroom 的作业哦。"
+          }
+        }
+      }
+    },
     "認証中" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4280,6 +4251,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "认证中"
+          }
+        }
+      }
+    },
+    "認証取り消し" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoke"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証取り消し"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인증 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消授权"
           }
         }
       }
@@ -4387,7 +4387,7 @@
       }
     },
     "課題" : {
-      "comment" : "底部tab",
+      "comment" : "タブバー\nヘッダータイトル",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4427,29 +4427,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无作业"
-          }
-        }
-      }
-    },
-    "课题" : {
-      "comment" : "顶部tab",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Assignments"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "과제"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "作业"
           }
         }
       }
