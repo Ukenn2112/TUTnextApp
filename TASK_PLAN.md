@@ -29,8 +29,8 @@
 - [x] Notification 模块 ✅
 
 ### Phase 4: Widgets 重构
-- [ ] TimetableWidget (iOS 17+ with App Intents, Glassmorphism)
-- [ ] BusWidget (iOS 17+ with App Intents, Glassmorphism)
+- [x] TimetableWidget (iOS 17+ with App Intents, Glassmorphism)
+- [x] BusWidget (iOS 17+ with App Intents, Glassmorphism)
 
 ### Phase 5: 测试与优化
 - [ ] 单元测试覆盖
