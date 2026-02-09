@@ -2,13 +2,6 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-/// 部屋変更の情報を保持するモデル
-struct RoomChange: Codable {
-    let courseName: String
-    let newRoom: String
-    let expiryDate: Date
-}
-
 /// 時間割データ管理サービス
 final class TimetableService {
     static let shared = TimetableService()
