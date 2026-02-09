@@ -125,8 +125,12 @@ final class UserDefaultsManager {
     // MARK: - Subscript Support
     
     subscript<T>(key: String) -> T? {
-        get(key: key)
-        set(value: $0, forKey: key)
+        get {
+            get(key: key)
+        }
+        set {
+            set(value: newValue, forKey: key)
+        }
     }
 }
 

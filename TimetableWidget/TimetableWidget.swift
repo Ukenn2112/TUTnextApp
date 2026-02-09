@@ -228,7 +228,7 @@ struct GlassWidgetContainer<Content: View>: View {
     
     var body: some View {
         content
-            .glassEffect(
+            .widgetGlassEffect(
                 opacity: colorScheme == .dark ? 0.45 : 0.35,
                 blurRadius: 20,
                 cornerRadius: 16
@@ -288,7 +288,7 @@ struct LargeTimetableView: View {
     private func currentDayBadge(day: String) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 6)
-                .fill(ThemeColors.Semantic.success)
+                .fill(WidgetThemeColors.Semantic.success)
                 .frame(height: 12)
             Text(dataProvider.getWeekdayDisplayString(from: day))
                 .font(.system(size: 9, weight: .bold))
@@ -360,7 +360,7 @@ struct TimeSlotCellWidget: View {
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(
                             (isCurrentDay && isCurrentPeriod)
-                                ? ThemeColors.Semantic.success.opacity(0.9)
+                                ? WidgetThemeColors.Semantic.success.opacity(0.9)
                                 : (colorScheme == .dark
                                     ? Color.gray.opacity(0.5) : Color.gray.opacity(0.3)),
                             lineWidth: (isCurrentDay && isCurrentPeriod) ? 1.2 : 0.6
@@ -368,7 +368,7 @@ struct TimeSlotCellWidget: View {
                 )
                 .shadow(
                     color: (isCurrentDay && isCurrentPeriod)
-                        ? ThemeColors.Semantic.success.opacity(0.3) : .clear,
+                        ? WidgetThemeColors.Semantic.success.opacity(0.3) : .clear,
                     radius: 1, x: 0, y: 0
                 )
             
@@ -430,7 +430,7 @@ struct SmallTimetableView: View {
                 .font(.system(size: 12, weight: .bold))
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
-                .background(ThemeColors.Semantic.success.opacity(0.8))
+                .background(WidgetThemeColors.Semantic.success.opacity(0.8))
                 .foregroundColor(.white)
                 .cornerRadius(4)
         }
@@ -546,7 +546,7 @@ struct SmallTimetableView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1)
-                        .background(ThemeColors.Semantic.success.opacity(0.8))
+                        .background(WidgetThemeColors.Semantic.success.opacity(0.8))
                         .cornerRadius(3)
                 }
                 
@@ -624,7 +624,7 @@ struct MediumTimetableView: View {
                     .font(.system(size: 12, weight: .bold))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
-                    .background(ThemeColors.Semantic.success.opacity(0.8))
+                    .background(WidgetThemeColors.Semantic.success.opacity(0.8))
                     .foregroundColor(.white)
                     .cornerRadius(4)
             }
@@ -701,7 +701,7 @@ struct MediumTimetableView: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(
                     isCurrentPeriod
-                        ? ThemeColors.Semantic.success.opacity(0.9)
+                        ? WidgetThemeColors.Semantic.success.opacity(0.9)
                         : (colorScheme == .dark
                             ? Color.gray.opacity(0.5) : Color.gray.opacity(0.3)),
                     lineWidth: isCurrentPeriod ? 1.2 : 0.6
@@ -717,7 +717,7 @@ struct MediumTimetableView: View {
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(
                         isCurrentPeriod
-                            ? ThemeColors.Semantic.success.opacity(0.9)
+                            ? WidgetThemeColors.Semantic.success.opacity(0.9)
                             : (colorScheme == .dark
                                 ? Color.gray.opacity(0.4) : Color.gray.opacity(0.25)),
                         lineWidth: isCurrentPeriod ? 1.2 : 0.5
@@ -836,21 +836,20 @@ struct TimetableWidget: Widget {
         .configurationDisplayName("時間割表")
         .description("時間割を表示します")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .disableContentMarginsIfAvailable()
     }
     
     private var glassBackground: some View {
         GeometryReader { geometry in
             LinearGradient(
                 colors: [
-                    ThemeColors.Gradient.startGradient(for: .light),
-                    ThemeColors.Gradient.endGradient(for: .light)
+                    WidgetThemeColors.Gradient.startGradient,
+                    WidgetThemeColors.Gradient.endGradient
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .overlay {
-                GlassBackground(
+                WidgetGlassBackground(
                     opacity: 0.3,
                     blurRadius: 20,
                     saturation: 1.5,
@@ -877,8 +876,8 @@ struct TimetableWidget_Previews: PreviewProvider {
             )
             .containerBackground(
                 LinearGradient(
-                    colors: [ThemeColors.Gradient.startGradient(for: .light),
-                             ThemeColors.Gradient.endGradient(for: .light)],
+                    colors: [WidgetThemeColors.Gradient.startGradient,
+                             WidgetThemeColors.Gradient.endGradient],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ),
@@ -896,8 +895,8 @@ struct TimetableWidget_Previews: PreviewProvider {
             )
             .containerBackground(
                 LinearGradient(
-                    colors: [ThemeColors.Gradient.startGradient(for: .light),
-                             ThemeColors.Gradient.endGradient(for: .light)],
+                    colors: [WidgetThemeColors.Gradient.startGradient,
+                             WidgetThemeColors.Gradient.endGradient],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ),
@@ -915,8 +914,8 @@ struct TimetableWidget_Previews: PreviewProvider {
             )
             .containerBackground(
                 LinearGradient(
-                    colors: [ThemeColors.Gradient.startGradient(for: .light),
-                             ThemeColors.Gradient.endGradient(for: .light)],
+                    colors: [WidgetThemeColors.Gradient.startGradient,
+                             WidgetThemeColors.Gradient.endGradient],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ),

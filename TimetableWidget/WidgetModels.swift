@@ -109,23 +109,6 @@ public struct Course: Codable, Identifiable, Equatable {
 
 extension Course {
     public var color: Color {
-        let colors: [Color] = [
-            .clear,
-            Color(red: 1.0, green: 0.8, blue: 0.8),
-            Color(red: 1.0, green: 0.9, blue: 0.8),
-            Color(red: 1.0, green: 1.0, blue: 0.8),
-            Color(red: 0.9, green: 1.0, blue: 0.8),
-            Color(red: 0.8, green: 1.0, blue: 0.8),
-            Color(red: 0.8, green: 1.0, blue: 1.0),
-            Color(red: 1.0, green: 0.8, blue: 0.9),
-            Color(red: 0.9, green: 0.8, blue: 1.0),
-            Color(red: 0.8, green: 0.9, blue: 1.0),
-            Color(red: 1.0, green: 0.9, blue: 1.0),
-        ]
-        
-        guard colorIndex >= 0 && colorIndex < colors.count else {
-            return colors[0]
-        }
-        return colors[colorIndex]
+        WidgetCourseColorPalette.getColor(for: colorIndex)
     }
 }

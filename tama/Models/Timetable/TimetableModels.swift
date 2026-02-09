@@ -44,8 +44,8 @@ public enum Weekday: Int, Codable, CaseIterable {
     case wednesday = 3
     case thursday = 4
     case friday = 5
-    saturday = 6
-    sunday = 7
+    case saturday = 6
+    case sunday = 7
     
     public var displayName: String {
         switch self {
