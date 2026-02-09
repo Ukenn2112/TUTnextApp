@@ -21,13 +21,13 @@ struct TabBarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 分隔线
+            // 区切り線
             Divider()
                 .background(Color.primary.opacity(colorScheme == .dark ? 0.1 : 0.2))
 
-            // 可滑动的内容区域
+            // スライド可能なコンテンツエリア
             VStack(spacing: 0) {
-                // 拖动指示器
+                // ドラッグインジケーター
                 ZStack {
                     RoundedRectangle(cornerRadius: 2.5)
                         .fill(Color.secondary.opacity(isExpanded ? 0.5 : 0.3))
@@ -36,9 +36,9 @@ struct TabBarView: View {
                 }
                 .contentShape(Rectangle().size(CGSize(width: 60, height: 30)))  // 明確なタップ領域の設定
                 .gesture(
-                    DragGesture(minimumDistance: 10)  // 最小拖动距离，防止轻触误操作
+                    DragGesture(minimumDistance: 10)  // 最小ドラッグ距離（軽いタッチの誤操作を防止）
                         .onEnded { value in
-                            if abs(value.translation.height) > 5 {  // 垂直方向の移動が5ポイント以上あるときのみ反応
+                            if abs(value.translation.height) > 5 {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                     isExpanded.toggle()
                                 }
@@ -54,7 +54,7 @@ struct TabBarView: View {
                 }
                 .focused($isFocused)
 
-                // 第二层级功能按钮
+                // サブメニューボタン
                 if isExpanded {
                     HStack(spacing: 20) {
                         SecondaryTabButton(
@@ -116,11 +116,11 @@ struct TabBarView: View {
                     .focused($isFocused)
                 }
 
-                // 主标签栏
+                // メインタブバー
                 HStack {
                     TabBarButton(
                         image: "bus",
-                        text: NSLocalizedString("バス", comment: "底部tab"),
+                        text: NSLocalizedString("バス", comment: "タブバー"),
                         isSelected: selectedTab == 0,
                         colorScheme: colorScheme,
                         action: {
@@ -131,7 +131,7 @@ struct TabBarView: View {
 
                     TabBarButton(
                         image: "calendar",
-                        text: NSLocalizedString("時間割", comment: "底部tab"),
+                        text: NSLocalizedString("時間割", comment: "タブバー"),
                         isSelected: selectedTab == 1,
                         colorScheme: colorScheme,
                         action: {
@@ -142,7 +142,7 @@ struct TabBarView: View {
 
                     TabBarButton(
                         image: "pencil.line",
-                        text: NSLocalizedString("課題", comment: "底部tab"),
+                        text: NSLocalizedString("課題", comment: "タブバー"),
                         isSelected: selectedTab == 2,
                         colorScheme: colorScheme,
                         badgeCount: assignmentCount,
@@ -177,7 +177,7 @@ struct TabBarView: View {
                 }
             }
 
-            // 底部安全区域占位
+            // セーフエリア下部スペーサー
             if getSafeAreaBottom() > 0 {
                 Color(UIColor.systemBackground)
                     .frame(height: 0)
@@ -218,7 +218,7 @@ struct TabBarView: View {
         }
     }
 
-    // 获取安全区域底部高度
+    // セーフエリア下部の高さを取得
     private func getSafeAreaBottom() -> CGFloat {
         let scenes = UIApplication.shared.connectedScenes
         let windowScene = scenes.first as? UIWindowScene

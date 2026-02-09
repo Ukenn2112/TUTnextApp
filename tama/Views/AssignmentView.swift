@@ -7,7 +7,7 @@ struct AssignmentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
     @EnvironmentObject private var oauthService: GoogleOAuthService
-    // 前台通知观察者
+    // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
 
     enum AssignmentFilter {
@@ -110,7 +110,7 @@ struct AssignmentView: View {
                 await oauthService.loadAuthorizationStatus()
             }
             
-            // 应用程序从后台恢复时刷新页面
+            // アプリがフォアグラウンドに復帰した時にページを更新
             willEnterForegroundObserver = NotificationCenter.default.addObserver(
                 forName: UIApplication.willEnterForegroundNotification,
                 object: nil,
@@ -125,17 +125,17 @@ struct AssignmentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .googleOAuthSuccess)) { _ in
-            // Google OAuth授权成功时刷新课题列表
-            print("AssignmentView: Google OAuth授权成功，刷新课题列表")
+            // Google OAuth認証成功時に課題リストを更新
+            print("AssignmentView: Google OAuth認証成功、課題リストを更新")
             viewModel.loadAssignments()
         }
         .onReceive(NotificationCenter.default.publisher(for: .googleOAuthStatusChanged)) { _ in
-            // Google OAuth状态变化时刷新课题列表（包括取消授权）
-            print("AssignmentView: Google OAuth状态变化，刷新课题列表")
+            // Google OAuthステータス変化時に課題リストを更新（認証取り消しを含む）
+            print("AssignmentView: Google OAuthステータス変化、課題リストを更新")
             viewModel.loadAssignments()
         }
         .onDisappear {
-            // 移除通知观察者
+            // 通知オブザーバーを削除
             if let observer = willEnterForegroundObserver {
                 NotificationCenter.default.removeObserver(observer)
                 willEnterForegroundObserver = nil

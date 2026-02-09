@@ -5,7 +5,7 @@ struct AssignmentCardView: View {
     var onTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
-    // 根据课题状态返回适当的颜色
+    // 課題の状態に応じた色を返す
     private var timeColor: Color {
         if assignment.isOverdue {
             return .red
@@ -16,7 +16,7 @@ struct AssignmentCardView: View {
         }
     }
 
-    // 根据课题状态返回适当的背景颜色
+    // 課題の状態に応じた背景色を返す
     private var timeBackgroundColor: Color {
         if assignment.isOverdue {
             return Color.red.opacity(0.1)

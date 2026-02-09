@@ -9,8 +9,8 @@ struct HeaderView: View {
     @State private var user: User?
     @State private var showSafariView = false
     @State private var keijiBoardURL: URL?
-    @State private var semester: Semester = .current  // 使用当前学期数据
-    @State private var showRevokeConfirmation = false  // 取消授权确认对话框
+    @State private var semester: Semester = .current
+    @State private var showRevokeConfirmation = false
 
     // NotificationCenterを使用してUserDefaultsの変更を監視
     private let userDefaultsObserver = NotificationCenter.default
@@ -19,12 +19,12 @@ struct HeaderView: View {
     // ビュー表示時にユーザー情報を読み込む
     var body: some View {
         HStack(spacing: 8) {
-            // 标题区域
+            // タイトルエリア
             currentTitle
 
             Spacer()
 
-            // 右侧按钮
+            // 右側ボタン
             HStack(spacing: 16) {
                 // 掲示板
                 Button(action: { showSafariView = true }) {
@@ -58,7 +58,7 @@ struct HeaderView: View {
                 }
                 .offset(y: -2)
 
-                // 用户头像
+                // ユーザーアバター
                 Button(action: { showingUserSettings = true }) {
                     Text(getInitials())
                         .font(.system(size: 12))
@@ -121,30 +121,30 @@ struct HeaderView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .googleOAuthSuccess)) { _ in
             // OAuth成功時の処理
-            print("Google OAuth 授权成功")
+            print("HeaderView: Google OAuth認証成功")
         }
         .onReceive(NotificationCenter.default.publisher(for: .googleOAuthError)) { notification in
-            // OAuth失败时的处理
+            // OAuthエラー時の処理
             if let error = notification.userInfo?["error"] as? String {
-                print("Google OAuth 授权失败: \(error)")
+                print("HeaderView: Google OAuth認証失敗: \(error)")
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .googleOAuthWebViewDismissed)) { _ in
-            // OAuth WebView关闭时的处理
-            print("Google OAuth WebView 已关闭")
+            // OAuth WebView閉じた時の処理
+            print("HeaderView: Google OAuth WebViewが閉じられました")
         }
         .onReceive(NotificationCenter.default.publisher(for: .googleOAuthCallbackReceived)) { _ in
-            // OAuth回调收到时立即关闭WebView
-            print("Google OAuth 回调已收到，强制关闭WebView")
+            // OAuthコールバック受信時にWebViewを閉じる
+            print("HeaderView: Google OAuthコールバック受信、WebViewを閉じます")
             oauthService.showOAuthWebView = false
         }
-        .alert(NSLocalizedString("認証取り消し確認", comment: "取消授权确认对话框标题"), isPresented: $showRevokeConfirmation) {
-            Button(NSLocalizedString("キャンセル", comment: "取消按钮"), role: .cancel) { }
-            Button(NSLocalizedString("認証取り消し", comment: "确认取消按钮"), role: .destructive) {
+        .alert(NSLocalizedString("認証取り消し確認", comment: "認証取り消し確認ダイアログタイトル"), isPresented: $showRevokeConfirmation) {
+            Button(NSLocalizedString("キャンセル", comment: "キャンセルボタン"), role: .cancel) { }
+            Button(NSLocalizedString("認証取り消し", comment: "認証取り消しボタン"), role: .destructive) {
                 oauthService.clearAuthorization()
             }
         } message: {
-            Text(NSLocalizedString("認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。", comment: "取消授权确认消息"))
+            Text(NSLocalizedString("認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。", comment: "認証取り消し確認メッセージ"))
         }
     }
 
@@ -218,7 +218,7 @@ struct HeaderView: View {
         }
     }
 
-    // 获取当前标题
+    // 現在のタイトルを取得
     private var currentTitle: some View {
         Group {
             if selectedTab == 1 {
@@ -239,7 +239,7 @@ struct HeaderView: View {
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.primary)
                     
-                    // Google OAuth授权按钮
+                    // Google OAuth認証ボタン
                     OAuthButton()
                 }
                 .padding(.horizontal, 10)
@@ -252,14 +252,14 @@ struct HeaderView: View {
         }
     }
     
-    // OAuth授权按钮组件
+    // OAuth認証ボタンコンポーネント
     private func OAuthButton() -> some View {
         Button(action: {
             if oauthService.isAuthorized {
-                // 已授权状态下显示取消授权确认对话框
+                // 認証済み状態では取り消し確認ダイアログを表示
                 showRevokeConfirmation = true
             } else {
-                // 未授权时开始OAuth流程
+                // 未認証時にOAuthフローを開始
                 oauthService.startOAuth()
             }
         }) {
@@ -295,11 +295,11 @@ struct HeaderView: View {
     
     private func getOAuthButtonText() -> String {
         if oauthService.showOAuthWebView {
-            return NSLocalizedString("認証中", comment: "认证中")
+            return NSLocalizedString("認証中", comment: "認証中ステータス")
         } else if oauthService.isAuthorized {
-            return NSLocalizedString("認証済み", comment: "已授权")
+            return NSLocalizedString("認証済み", comment: "認証済みステータス")
         } else {
-            return NSLocalizedString("Classroom 認証", comment: "Classroom 授权")
+            return NSLocalizedString("Classroom 認証", comment: "Classroom認証ボタン")
         }
     }
     
@@ -315,8 +315,8 @@ struct HeaderView: View {
 
     private func getTitleText() -> String {
         switch selectedTab {
-        case 0: return NSLocalizedString("スクールバス", comment: "顶部tab")
-        case 2: return NSLocalizedString("课题", comment: "顶部tab")
+        case 0: return NSLocalizedString("スクールバス", comment: "ヘッダータイトル")
+        case 2: return NSLocalizedString("課題", comment: "ヘッダータイトル")
         default: return ""
         }
     }

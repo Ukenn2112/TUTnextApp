@@ -163,13 +163,12 @@ struct CourseDetailView: View {
         return URL(string: urlString)
     }
 
-    // 添加一个计算属性来处理颜色的暗度调整
+    // ダークモードに応じたヘッダー色の調整
     private var adjustedHeaderColor: Color {
         let baseColor = presetColors[selectedColorIndex]
         return colorScheme == .dark
             ? baseColor.opacity(0.8)
-            :  // 暗黑模式下降低不透明度
-            baseColor
+            : baseColor
     }
 
     var body: some View {
@@ -543,16 +542,16 @@ struct CourseDetailView: View {
 
     let presetColors: [Color] = [
         .white,
-        Color(red: 1.0, green: 0.8, blue: 0.8),  // 浅粉色
-        Color(red: 1.0, green: 0.9, blue: 0.8),  // 浅橙色
-        Color(red: 1.0, green: 1.0, blue: 0.8),  // 浅黄色
-        Color(red: 0.9, green: 1.0, blue: 0.8),  // 浅绿色
-        Color(red: 0.8, green: 1.0, blue: 0.8),  // 绿色
-        Color(red: 0.8, green: 1.0, blue: 1.0),  // 青色
-        Color(red: 1.0, green: 0.8, blue: 0.9),  // 粉紫色
-        Color(red: 0.9, green: 0.8, blue: 1.0),  // 浅紫色
-        Color(red: 0.8, green: 0.9, blue: 1.0),  // 浅蓝色
-        Color(red: 1.0, green: 0.9, blue: 1.0),  // 浅紫色
+        Color(red: 1.0, green: 0.8, blue: 0.8),  // ライトピンク
+        Color(red: 1.0, green: 0.9, blue: 0.8),  // ライトオレンジ
+        Color(red: 1.0, green: 1.0, blue: 0.8),  // ライトイエロー
+        Color(red: 0.9, green: 1.0, blue: 0.8),  // ライトグリーン
+        Color(red: 0.8, green: 1.0, blue: 0.8),  // グリーン
+        Color(red: 0.8, green: 1.0, blue: 1.0),  // シアン
+        Color(red: 1.0, green: 0.8, blue: 0.9),  // ピンクパープル
+        Color(red: 0.9, green: 0.8, blue: 1.0),  // ライトパープル
+        Color(red: 0.8, green: 0.9, blue: 1.0),  // ライトブルー
+        Color(red: 1.0, green: 0.9, blue: 1.0),  // ライトパープル
     ]
 
     CourseDetailView(

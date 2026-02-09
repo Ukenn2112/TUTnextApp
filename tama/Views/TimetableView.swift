@@ -3,12 +3,12 @@ import SwiftUI
 struct TimetableView: View {
     // MARK: - Properties
     @StateObject private var viewModel = TimetableViewModel()
-    @Binding var isLoggedIn: Bool  // 添加登录状态绑定
-    @Environment(\.colorScheme) private var colorScheme  // 添加这一行
+    @Binding var isLoggedIn: Bool
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
-    // 前台通知观察者
+    // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
-    // 掲示リストSafariView閉じる通知観察者
+    // 掲示リストSafariView閉じる通知オブザーバー
     @State private var announcementSafariDismissObserver: NSObjectProtocol? = nil
 
     // 曜日インデックスを表示用文字列に変換するヘルパー
@@ -28,16 +28,16 @@ struct TimetableView: View {
 
     private let presetColors: [Color] = [
         .white,
-        Color(red: 1.0, green: 0.8, blue: 0.8),  // 浅粉色
-        Color(red: 1.0, green: 0.9, blue: 0.8),  // 浅橙色
-        Color(red: 1.0, green: 1.0, blue: 0.8),  // 浅黄色
-        Color(red: 0.9, green: 1.0, blue: 0.8),  // 浅绿色
-        Color(red: 0.8, green: 1.0, blue: 0.8),  // 绿色
-        Color(red: 0.8, green: 1.0, blue: 1.0),  // 青色
-        Color(red: 1.0, green: 0.8, blue: 0.9),  // 粉紫色
-        Color(red: 0.9, green: 0.8, blue: 1.0),  // 浅紫色
-        Color(red: 0.8, green: 0.9, blue: 1.0),  // 浅蓝色
-        Color(red: 1.0, green: 0.9, blue: 1.0),  // 浅紫色
+        Color(red: 1.0, green: 0.8, blue: 0.8),  // ライトピンク
+        Color(red: 1.0, green: 0.9, blue: 0.8),  // ライトオレンジ
+        Color(red: 1.0, green: 1.0, blue: 0.8),  // ライトイエロー
+        Color(red: 0.9, green: 1.0, blue: 0.8),  // ライトグリーン
+        Color(red: 0.8, green: 1.0, blue: 0.8),  // グリーン
+        Color(red: 0.8, green: 1.0, blue: 1.0),  // シアン
+        Color(red: 1.0, green: 0.8, blue: 0.9),  // ピンクパープル
+        Color(red: 0.9, green: 0.8, blue: 1.0),  // ライトパープル
+        Color(red: 0.8, green: 0.9, blue: 1.0),  // ライトブルー
+        Color(red: 1.0, green: 0.9, blue: 1.0),  // ライトパープル
     ]
 
     // MARK: - Body
@@ -68,7 +68,7 @@ struct TimetableView: View {
                             .padding(.horizontal)
 
                         Button("再読み込み") {
-                            // 刷新数据而不是登出
+                            // データを再取得
                             viewModel.fetchTimetableData()
                         }
                         .padding(.top, 16)
@@ -88,7 +88,7 @@ struct TimetableView: View {
                 viewModel.fetchTimetableData()
                 // 時間割表示の重要イベントを記録
                 ratingService.recordSignificantEvent()
-                // 应用程序从后台恢复时刷新页面
+                // アプリがフォアグラウンドに復帰した時にページを更新
                 willEnterForegroundObserver = NotificationCenter.default.addObserver(
                     forName: UIApplication.willEnterForegroundNotification,
                     object: nil,
@@ -113,7 +113,7 @@ struct TimetableView: View {
                 }
             }
             .onDisappear {
-                // 移除通知观察者
+                // 通知オブザーバーを削除
                 if let observer = willEnterForegroundObserver {
                     NotificationCenter.default.removeObserver(observer)
                     willEnterForegroundObserver = nil
@@ -236,7 +236,7 @@ private struct LayoutMetrics {
 }
 
 // MARK: - TimeSlotCell
-// 課程単元格視図
+/// 授業セルビュー
 struct TimeSlotCell: View {
     let dayIndex: String
     let displayDay: String
@@ -246,8 +246,8 @@ struct TimeSlotCell: View {
     let cellWidth: CGFloat
     let cellHeight: CGFloat
     let onColorChange: (Int) -> Void
-    @Binding var isLoggedIn: Bool  // 添加isLoggedIn绑定
-    @Environment(\.colorScheme) private var colorScheme  // 添加这一行
+    @Binding var isLoggedIn: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     // 現在の時限かどうかを判断するプロパティを追加
     let isCurrentDay: Bool
@@ -255,7 +255,7 @@ struct TimeSlotCell: View {
 
     @State private var showingDetail = false
 
-    // 添加颜色调整的计算属性
+    // 背景色の調整
     private var adjustedBackgroundColor: Color {
         guard let course = course else {
             return colorScheme == .dark ? Color(UIColor.systemGray6) : .white
@@ -266,7 +266,7 @@ struct TimeSlotCell: View {
 
     var body: some View {
         ZStack {
-            // 修改背景色
+            // 背景色
             RoundedRectangle(cornerRadius: 8)
                 .fill(adjustedBackgroundColor)
                 .overlay(
@@ -281,7 +281,7 @@ struct TimeSlotCell: View {
                 )
 
             if let course = course {
-                // 修改课程信息文字颜色
+                // 授業情報テキスト
                 VStack(spacing: 2) {
                     Text(course.name)
                         .font(.system(size: 12))
@@ -317,7 +317,7 @@ struct TimeSlotCell: View {
                     .frame(width: cellWidth, height: cellHeight)
                 }
             } else {
-                // 修改空格子文字颜色
+                // 空セルテキスト
                 Text("\(displayDay)\(period)")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)

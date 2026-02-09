@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 主视图
+// MARK: - メインビュー
 struct TeacherEmailListView: View {
     @StateObject private var viewModel = TeacherEmailListViewModel()
     @State private var showingCopyConfirmation = false
@@ -11,13 +11,13 @@ struct TeacherEmailListView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.presentationMode) var presentationMode
     
-    // 日语五十音行
+    // 五十音行
     private let japaneseSections = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "その他"]
     
-    // 显示用的五十音行（将"その他"替换为"#"）
+    // 表示用の五十音行（「その他」を「#」に置換）
     private let displaySections = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "#"]
     
-    // MARK: - 主体内容
+    // MARK: - Body
     var body: some View {
         NavigationView {
             ZStack(alignment: .top) {
@@ -36,7 +36,7 @@ struct TeacherEmailListView: View {
         }
     }
     
-    // MARK: - 背景视图
+    // MARK: - 背景ビュー
     private var backgroundView: some View {
         LinearGradient(
             gradient: Gradient(colors: [
@@ -49,7 +49,7 @@ struct TeacherEmailListView: View {
         .edgesIgnoringSafeArea(.all)
     }
     
-    // MARK: - 头部视图
+    // MARK: - ヘッダービュー
     private var headerView: some View {
         VStack(spacing: 0) {
             if showSearchBar {
@@ -70,7 +70,7 @@ struct TeacherEmailListView: View {
         .zIndex(1)
     }
     
-    // MARK: - 搜索栏视图
+    // MARK: - 検索バービュー
     private var searchBarView: some View {
         HStack {
             TeacherSearchBar(text: $viewModel.searchText) {
@@ -89,7 +89,7 @@ struct TeacherEmailListView: View {
         .padding(.bottom, 16)
     }
     
-    // MARK: - 标题栏视图
+    // MARK: - タイトルバービュー
     private var titleBarView: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
@@ -134,7 +134,7 @@ struct TeacherEmailListView: View {
         ))
     }
     
-    // MARK: - 选择栏视图
+    // MARK: - 選択バービュー
     private var selectionBarView: some View {
         TeacherSelectionBar(
             selectedCount: viewModel.selectedTeachers.count,
@@ -147,7 +147,7 @@ struct TeacherEmailListView: View {
         ))
     }
     
-    // MARK: - 内容视图
+    // MARK: - コンテンツビュー
     private var contentView: some View {
         ZStack {
             if viewModel.isLoading {
@@ -163,7 +163,7 @@ struct TeacherEmailListView: View {
         .zIndex(0)
     }
     
-    // MARK: - 教师列表视图
+    // MARK: - 教員一覧ビュー
     private var teacherListView: some View {
         GeometryReader { geometry in
             ZStack(alignment: .trailing) {
@@ -176,7 +176,7 @@ struct TeacherEmailListView: View {
         }
     }
     
-    // MARK: - 教师滚动视图
+    // MARK: - 教員スクロールビュー
     private var teacherScrollView: some View {
         ScrollViewReader { scrollProxy in
             ScrollView {
@@ -184,7 +184,7 @@ struct TeacherEmailListView: View {
                     ForEach(getSections(), id: \.self) { section in
                         if let teachers = getTeachersForSection(section), !teachers.isEmpty {
                             Section {
-                                // 为每个分组创建一个不可见的锚点
+                                // 各グループに不可視のアンカーポイントを作成
                                 Color.clear
                                     .frame(height: 1)
                                     .id("anchor_\(section)")
@@ -193,7 +193,7 @@ struct TeacherEmailListView: View {
                                     .padding(.horizontal, 20)
                                     .padding(.bottom, 8)
                                     .background(
-                                        // 使用GeometryReader检测标题位置
+                                        // GeometryReaderで見出し位置を検出
                                         GeometryReader { geometry in
                                             Color.clear
                                                 .onAppear {
@@ -205,7 +205,7 @@ struct TeacherEmailListView: View {
                                         }
                                     )
                                 
-                                // 教师列表
+                                // 教員一覧
                                 ForEach(teachers) { teacher in
                                     TeacherRow(
                                         teacher: teacher,
@@ -228,7 +228,7 @@ struct TeacherEmailListView: View {
         }
     }
     
-    // MARK: - 索引导航视图
+    // MARK: - インデックスナビゲーションビュー
     private var indexNavigationView: some View {
         TeacherIndexView(
             sections: getAvailableDisplaySections(),
@@ -239,50 +239,50 @@ struct TeacherEmailListView: View {
         )
     }
     
-    // MARK: - 辅助方法
-    
-    /// 判断是否显示索引视图
+    // MARK: - ヘルパーメソッド
+
+    /// インデックスビューを表示するかどうかを判定
     private func shouldShowIndexView(width: CGFloat) -> Bool {
         width > 300 && viewModel.searchText.isEmpty
     }
     
-    /// 滚动到指定分区
+    /// 指定グループにスクロール
     private func scrollToSection(_ section: String?, proxy: ScrollViewProxy) {
         if let section = section {
             withAnimation(.easeInOut(duration: 0.6)) {
-                // 滚动到锚点位置，确保分组标题在顶部可见
+                // アンカーポイントにスクロールし、グループ見出しが上部に表示されるようにする
                 proxy.scrollTo("anchor_\(section)", anchor: .top)
             }
         }
     }
     
-    /// 显示搜索栏动画
+    /// 検索バーをアニメーション付きで表示
     private func showSearchWithAnimation() {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             showSearchBar = true
         }
     }
     
-    /// 加载初始数据
+    /// 初期データを読み込む
     private func loadInitialData() {
         if viewModel.teachers.isEmpty {
             viewModel.loadTeachers()
         }
     }
     
-    /// 复制选中的邮箱
+    /// 選択中のメールアドレスをコピー
     private func copySelectedEmails() {
         viewModel.copySelectedEmails()
         showCopyConfirmation()
     }
     
-    /// 复制单个教师邮箱
+    /// 個別の教員メールアドレスをコピー
     private func copyTeacherEmail(_ teacher: Teacher) {
         UIPasteboard.general.string = teacher.email
         showCopyConfirmation()
     }
     
-    /// 显示复制确认
+    /// コピー確認を表示
     private func showCopyConfirmation() {
         showingCopyConfirmation = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
@@ -292,30 +292,30 @@ struct TeacherEmailListView: View {
         }
     }
     
-    /// 带动画地清除选择
+    /// アニメーション付きで選択をクリア
     private func clearSelectionWithAnimation() {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             viewModel.clearSelection()
         }
     }
     
-    /// 切换教师选择状态
+    /// 教員の選択状態を切り替え
     private func toggleTeacherSelection(_ teacher: Teacher) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             viewModel.toggleSelection(for: teacher)
         }
     }
     
-    /// 更新可见分组（基于标题位置）
+    /// 表示中のグループを更新（見出し位置に基づく）
     private func updateVisibleSection(section: String, geometry: GeometryProxy) {
         let headerY = geometry.frame(in: .global).minY
-        // 当标题位置在屏幕顶部100像素范围内时，认为该分组可见
+        // 見出し位置が画面上部150px以内にある場合、そのグループが表示中と判断
         if headerY <= 150 && headerY >= -50 {
             if visibleSection != section {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     visibleSection = section
                 }
-                // 如果用户之前手动选择了分组，现在滚动到了新位置，则重置为自动跟随
+                // ユーザーが手動で選択していた場合、スクロール位置変更で自動追従に戻す
                 if isManualSelection {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         isManualSelection = false
@@ -326,12 +326,12 @@ struct TeacherEmailListView: View {
         }
     }
     
-    // 获取当前应该显示的分组
+    // 現在表示すべきグループを取得
     private func getSections() -> [String] {
         if viewModel.searchText.isEmpty {
             return japaneseSections
         } else {
-            // 搜索时只显示包含结果的分组
+            // 検索時は結果を含むグループのみ表示
             return japaneseSections.filter { section in
                 guard let teachers = viewModel.teachersBySection[section] else { return false }
                 return teachers.contains { teacher in
@@ -341,7 +341,7 @@ struct TeacherEmailListView: View {
         }
     }
     
-    // 获取特定分组的教师
+    // 特定グループの教員を取得
     private func getTeachersForSection(_ section: String) -> [Teacher]? {
         if viewModel.searchText.isEmpty {
             return viewModel.teachersBySection[section]
@@ -352,14 +352,14 @@ struct TeacherEmailListView: View {
         }
     }
     
-    /// 检查教师是否匹配搜索
+    /// 教員が検索条件に一致するか確認
     private func matchesSearch(_ teacher: Teacher, query: String) -> Bool {
         teacher.name.localizedCaseInsensitiveContains(query) ||
             (teacher.furigana?.localizedCaseInsensitiveContains(query) ?? false) ||
             teacher.email.localizedCaseInsensitiveContains(query)
     }
     
-    /// 获取有数据的分组
+    /// データのあるグループを取得
     private func getAvailableSections() -> [String] {
         return japaneseSections.filter { section in
             guard let teachers = viewModel.teachersBySection[section] else { return false }
@@ -367,7 +367,7 @@ struct TeacherEmailListView: View {
         }
     }
     
-    /// 获取有数据的显示分组（将"その他"替换为"#"）
+    /// データのある表示グループを取得（「その他」を「#」に置換）
     private func getAvailableDisplaySections() -> [String] {
         return getAvailableSections().map { section in
             return section == "その他" ? "#" : section
@@ -375,9 +375,9 @@ struct TeacherEmailListView: View {
     }
 }
 
-// MARK: - 可复用组件
+// MARK: - 再利用可能なコンポーネント
 
-/// 圆形操作按钮
+/// 丸型アクションボタン
 struct CircleActionButton: View {
     let iconName: String
     let colors: [Color]
@@ -404,9 +404,9 @@ struct CircleActionButton: View {
     }
 }
 
-// MARK: - 状态视图
+// MARK: - 状態ビュー
 
-// 错误视图
+/// エラービュー
 struct TeacherErrorView: View {
     let message: String
     let onRetry: () -> Void
@@ -426,7 +426,7 @@ struct TeacherErrorView: View {
     }
 }
 
-// 空结果视图
+/// 検索結果なしビュー
 struct TeacherEmptyResultView: View {
     var body: some View {
         StatusView(
@@ -438,7 +438,7 @@ struct TeacherEmptyResultView: View {
     }
 }
 
-/// 通用状态视图
+/// 汎用ステータスビュー
 struct StatusView: View {
     let icon: String
     let iconColors: [Color]
@@ -448,7 +448,7 @@ struct StatusView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            // 图标
+            // アイコン
             Image(systemName: icon)
                 .font(.system(size: 48))
                 .foregroundStyle(
@@ -459,7 +459,7 @@ struct StatusView: View {
                     )
                 )
             
-            // 文字说明
+            // テキスト説明
             VStack(spacing: 12) {
                 Text(title)
                     .font(.system(size: 20, weight: .semibold))
@@ -472,7 +472,7 @@ struct StatusView: View {
                     .padding(.horizontal, 32)
             }
             
-            // 可选按钮
+            // オプションボタン
             if let config = buttonConfig {
                 Button(action: config.action) {
                     HStack(spacing: 8) {
@@ -504,16 +504,16 @@ struct StatusView: View {
     }
 }
 
-/// 状态按钮配置
+/// ステータスボタン設定
 struct StatusButtonConfig {
     let title: String
     let icon: String
     let action: () -> Void
 }
 
-// MARK: - 组件视图
+// MARK: - コンポーネントビュー
 
-// 的搜索栏
+/// 教員検索バー
 struct TeacherSearchBar: View {
     @Binding var text: String
     var onClose: () -> Void
@@ -567,7 +567,7 @@ struct TeacherSearchBar: View {
     }
 }
 
-// 选择控制栏
+/// 選択操作バー
 struct TeacherSelectionBar: View {
     let selectedCount: Int
     let onCopy: () -> Void
@@ -635,16 +635,16 @@ struct TeacherSelectionBar: View {
     }
 }
 
-// 五十音索引视图
+/// 五十音インデックスビュー
 struct TeacherIndexView: View {
     let sections: [String]
     let actualSections: [String]
     @Binding var selectedSection: String?
     let visibleSection: String?
-    @Binding var isManualSelection: Bool // 新增：手动选择状态绑定
+    @Binding var isManualSelection: Bool
     @Environment(\.colorScheme) private var colorScheme
     
-    // 拖拽状态管理
+    // ドラッグ状態管理
     @State private var isDragging = false
     @State private var dragLocation: CGPoint = .zero
     
@@ -726,9 +726,9 @@ struct TeacherIndexView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
     }
     
-    // MARK: - 辅助方法
-    
-    /// 判断是否为当前分组（优先显示用户手动选择的，其次显示可见的）
+    // MARK: - ヘルパーメソッド
+
+    /// 現在のグループかどうかを判定（手動選択を優先、次に表示中のグループ）
     private func isCurrentSection(_ index: Int) -> Bool {
         let actualSection = actualSections[index]
         if isManualSelection {
@@ -738,37 +738,37 @@ struct TeacherIndexView: View {
         }
     }
     
-    /// 选择指定索引的分组
+    /// 指定インデックスのグループを選択
     private func selectSection(at index: Int) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             selectedSection = actualSections[index]
-            isManualSelection = true // 标记为手动选择
+            isManualSelection = true
         }
     }
     
-    /// 处理拖拽变化
+    /// ドラッグ変化を処理
     private func handleDragChanged(_ value: DragGesture.Value) {
         if !isDragging {
             withAnimation(.easeInOut(duration: 0.2)) {
                 isDragging = true
             }
-            // 添加触觉反馈
+            // 触覚フィードバックを追加
             let impactFeedback = UIImpactFeedbackGenerator(style: .light)
             impactFeedback.prepare()
             impactFeedback.impactOccurred()
             
-            // 标记为手动选择状态
+            // 手動選択状態にマーク
             isManualSelection = true
         }
         
         dragLocation = value.location
         
-        // 根据拖拽位置计算对应的分组
+        // ドラッグ位置に対応するグループを計算
         let sectionIndex = calculateSectionIndex(for: value.location)
         if sectionIndex >= 0 && sectionIndex < actualSections.count {
             let newSection = actualSections[sectionIndex]
             if selectedSection != newSection {
-                // 轻微的触觉反馈
+                // 軽い触覚フィードバック
                 let selectionFeedback = UISelectionFeedbackGenerator()
                 selectionFeedback.prepare()
                 selectionFeedback.selectionChanged()
@@ -780,31 +780,31 @@ struct TeacherIndexView: View {
         }
     }
     
-    /// 处理拖拽结束
+    /// ドラッグ終了を処理
     private func handleDragEnded() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             isDragging = false
         }
     }
     
-    /// 根据拖拽位置计算分组索引
+    /// ドラッグ位置からグループインデックスを計算
     private func calculateSectionIndex(for location: CGPoint) -> Int {
-        // 计算每个分组的高度（包括间距）
-        let itemHeight: CGFloat = 28 + 3 // 按钮高度 + 间距
-        let topPadding: CGFloat = 8 // 顶部内边距
-        
-        // 计算相对于容器顶部的位置
+        // 各グループの高さを計算（間隔を含む）
+        let itemHeight: CGFloat = 28 + 3
+        let topPadding: CGFloat = 8
+
+        // コンテナ上部からの相対位置を計算
         let relativeY = location.y - topPadding
         
-        // 计算分组索引
+        // グループインデックスを計算
         let index = Int(relativeY / itemHeight)
         
-        // 确保索引在有效范围内
+        // インデックスが有効範囲内であることを確認
         return max(0, min(index, sections.count - 1))
     }
 }
 
-// 教师行
+/// 教員行
 struct TeacherRow: View {
     let teacher: Teacher
     let isSelected: Bool
@@ -814,7 +814,7 @@ struct TeacherRow: View {
     
     var body: some View {
         HStack(spacing: 20) {
-            // 选择按钮
+            // 選択ボタン
             Button(action: onToggle) {
                 ZStack {
                     Circle()
@@ -837,7 +837,7 @@ struct TeacherRow: View {
             .scaleEffect(isSelected ? 1.1 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
             
-            // 教师信息
+            // 教員情報
             VStack(alignment: .leading, spacing: 4) {
                 Text(teacher.name)
                     .font(.system(size: 18, weight: .semibold))
@@ -849,7 +849,7 @@ struct TeacherRow: View {
                         .foregroundColor(.secondary)
                 }
                 
-                // 邮箱和复制按钮
+                // メールアドレスとコピーボタン
                 HStack(alignment: .center, spacing: 10) {
                     Text(teacher.email)
                         .font(.system(size: 15, weight: .medium))
@@ -906,7 +906,7 @@ struct TeacherRow: View {
     }
 }
 
-// 分组标题视图
+/// グループ見出しビュー
 struct TeacherSectionHeader: View {
     let title: String
     
@@ -942,7 +942,7 @@ struct TeacherSectionHeader: View {
     }
 }
 
-// 加载视图
+/// 読み込みビュー
 struct TeacherLoadingView: View {
     @State private var isAnimating = false
     
@@ -985,7 +985,7 @@ struct TeacherLoadingView: View {
     }
 }
 
-// 复制确认提示
+/// コピー確認表示
 struct TeacherCopyConfirmationView: View {
     let showing: Bool
     @State private var scale: CGFloat = 0.8

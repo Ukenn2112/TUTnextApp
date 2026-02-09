@@ -13,7 +13,7 @@ struct BusScheduleView: View {
     @State private var cardInfoAppeared: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
-    // 前台通知观察者
+    // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
     @State private var busParametersObserver: NSObjectProtocol?  // URLスキームからのパラメータ通知用
 
@@ -181,7 +181,7 @@ struct BusScheduleView: View {
         // 位置情報の精度を設定
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
 
-        // 地理围栏（ジオフェンス）の設定
+        // ジオフェンスの設定
         setupGeofence()
 
         // 位置情報の更新を開始
@@ -385,7 +385,7 @@ struct BusScheduleView: View {
             print("BusScheduleView: 位置情報の監視を停止します")
             locationManager.stopUpdatingLocation()
 
-            // 監視中のすべての地理围栏を停止
+            // 監視中のすべてのジオフェンスを停止
             locationManager.monitoredRegions.forEach { region in
                 locationManager.stopMonitoring(for: region)
             }
@@ -398,7 +398,7 @@ struct BusScheduleView: View {
         locationDelegate = nil
         locationManager = nil
 
-        // 移除通知观察者
+        // 通知オブザーバーを削除
         if let observer = willEnterForegroundObserver {
             NotificationCenter.default.removeObserver(observer)
             willEnterForegroundObserver = nil
@@ -421,10 +421,10 @@ struct BusScheduleView: View {
     private func updateScrollToHour() {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour], from: currentTime)
-        // 先将值设为nil，然后再设置为当前小时，确保触发onChange事件
+        // 一度nilに設定してからonChangeイベントを確実にトリガーさせる
         scrollToHour = nil
 
-        // 使用延迟确保nil值被处理后再设置新值
+        // nil値が処理された後に新しい値を設定するためにディレイを使用
         DispatchQueue.main.async {
             self.scrollToHour = components.hour
         }
@@ -807,7 +807,7 @@ struct BusScheduleView: View {
     // 個別の時間エントリービュー
     private func timeEntryView(_ time: BusSchedule.TimeEntry) -> some View {
         ZStack(alignment: .topTrailing) {
-            // 时间数字
+            // 時刻数字
             Text("\(String(format: "%02d", time.minute))")
                 .font(.system(size: 16, weight: .medium, design: .monospaced))
                 .foregroundColor(
@@ -823,7 +823,7 @@ struct BusScheduleView: View {
                         )
                 )
 
-            // 特殊标记
+            // 特別マーク
             if let note = time.specialNote {
                 Text(note)
                     .font(.system(size: 10, weight: .bold))
@@ -831,10 +831,10 @@ struct BusScheduleView: View {
                     .frame(width: 18, height: 18)
                     .background(Color.red.opacity(0.8))
                     .cornerRadius(9)
-                    .offset(x: 8, y: -4)  // 将标记放在右上角
+                    .offset(x: 8, y: -4)
             }
         }
-        .frame(width: 50, height: 36)  // 固定宽度，确保所有时间条目大小一致
+        .frame(width: 50, height: 36)
         .onTapGesture {
             handleTimeEntryTap(time)
         }
