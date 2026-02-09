@@ -1,7 +1,8 @@
 import Combine
 import SwiftUI
 
-class CourseDetailViewModel: ObservableObject {
+/// 授業詳細ViewModel
+final class CourseDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
     @Published var courseDetail: CourseDetailResponse? = nil
@@ -94,7 +95,7 @@ class CourseDetailViewModel: ObservableObject {
     }
 }
 
-// 出欠情報の構造体
+/// 出欠情報の表示用モデル
 struct AttendanceData: Identifiable {
     let id = UUID()
     let type: String

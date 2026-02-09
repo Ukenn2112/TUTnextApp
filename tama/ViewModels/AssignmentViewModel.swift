@@ -1,7 +1,8 @@
 import Foundation
 import SwiftUI
 
-class AssignmentViewModel: ObservableObject {
+/// 課題一覧ViewModel
+final class AssignmentViewModel: ObservableObject {
     @Published var assignments: [Assignment] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
@@ -53,7 +54,7 @@ class AssignmentViewModel: ObservableObject {
 
                 switch result {
                 case .success(let assignments):
-                    // 截止日期从近到远排序
+                    // 締切日が近い順にソート
                     self.assignments = assignments.sorted { $0.dueDate < $1.dueDate }
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription

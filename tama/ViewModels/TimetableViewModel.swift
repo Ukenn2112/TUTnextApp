@@ -1,7 +1,8 @@
 import Combine
 import SwiftUI
 
-class TimetableViewModel: ObservableObject {
+/// 時間割ViewModel
+final class TimetableViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var courses: [String: [String: CourseModel]] = [:]
     @Published var isLoading = false

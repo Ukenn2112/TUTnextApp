@@ -2,20 +2,22 @@ import Foundation
 import Combine
 import SwiftUI
 
-class TeacherEmailListViewModel: ObservableObject {
+/// 教員メール一覧ViewModel
+final class TeacherEmailListViewModel: ObservableObject {
     @Published var teachers: [Teacher] = []
     @Published var searchText: String = ""
     @Published var selectedTeachers: Set<UUID> = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var teachersBySection: [String: [Teacher]] = [:]
-    
+
     private let service = TeacherEmailListService()
     private var cancellables = Set<AnyCancellable>()
-    
-    // 五十音行开头
+
+    /// 五十音行の見出し
     private let japaneseSections = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"]
-    
+
+    /// 検索テキストでフィルタリングされた教員一覧
     var filteredTeachers: [Teacher] {
         if searchText.isEmpty {
             return teachers
@@ -27,11 +29,12 @@ class TeacherEmailListViewModel: ObservableObject {
             }
         }
     }
-    
+
+    /// 教員一覧を読み込む
     func loadTeachers() {
         isLoading = true
         errorMessage = nil
-        
+
         service.fetchTeachers()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
@@ -45,28 +48,27 @@ class TeacherEmailListViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
-    // 将教师按五十音行分组
+
+    /// 教員を五十音行ごとにグループ分けする
     private func organizeTeachersBySection(_ teachers: [Teacher]) {
         var sections: [String: [Teacher]] = [:]
-        
-        // 初始化所有可能的分组
+
+        // 全ての五十音行グループを初期化
         for section in japaneseSections {
             sections[section] = []
         }
-        
-        // 添加"その他"(其他)分组
+
+        // 「その他」グループを追加
         sections["その他"] = []
-        
+
         for teacher in teachers {
             if let furigana = teacher.furigana, !furigana.isEmpty {
                 let firstChar = String(furigana.prefix(1))
                 var assigned = false
-                
-                // 确定该教师应该属于哪个五十音行组
+
+                // 該当する五十音行グループを判定
                 for section in japaneseSections {
-                    // 假名分类逻辑，这里是简化版，实际应考虑更详细的匹配
-                    if firstChar.hasPrefix(section) || 
+                    if firstChar.hasPrefix(section) ||
                        (section == "あ" && "あいうえお".contains(firstChar)) ||
                        (section == "か" && "かきくけこがぎぐげご".contains(firstChar)) ||
                        (section == "さ" && "さしすせそざじずぜぞ".contains(firstChar)) ||
@@ -82,28 +84,28 @@ class TeacherEmailListViewModel: ObservableObject {
                         break
                     }
                 }
-                
-                // 如果没有匹配任何组，放入"其他"分组
+
+                // どのグループにも該当しない場合は「その他」へ
                 if !assigned {
                     sections["その他"]?.append(teacher)
                 }
             } else {
-                // 没有假名信息的老师放入"其他"分组
+                // ふりがな情報がない教員は「その他」へ
                 sections["その他"]?.append(teacher)
             }
         }
-        
-        // 对每个组内的教师按假名排序
+
+        // 各グループ内をふりがな順にソート
         for (key, value) in sections {
-            sections[key] = value.sorted { 
+            sections[key] = value.sorted {
                 ($0.furigana ?? "") < ($1.furigana ?? "")
             }
         }
-        
-        // 更新已分组的教师
+
         teachersBySection = sections
     }
-    
+
+    /// 教員の選択状態を切り替える
     func toggleSelection(for teacher: Teacher) {
         if selectedTeachers.contains(teacher.id) {
             selectedTeachers.remove(teacher.id)
@@ -111,20 +113,23 @@ class TeacherEmailListViewModel: ObservableObject {
             selectedTeachers.insert(teacher.id)
         }
     }
-    
+
+    /// 教員が選択されているか確認する
     func isSelected(teacher: Teacher) -> Bool {
         return selectedTeachers.contains(teacher.id)
     }
-    
+
+    /// 選択された教員のメールアドレスをクリップボードにコピーする
     func copySelectedEmails() {
         let selectedEmails = teachers
             .filter { selectedTeachers.contains($0.id) }
             .map { $0.email }
             .joined(separator: ",")
-        
+
         UIPasteboard.general.string = selectedEmails
     }
-    
+
+    /// 選択をクリアする
     func clearSelection() {
         selectedTeachers.removeAll()
     }

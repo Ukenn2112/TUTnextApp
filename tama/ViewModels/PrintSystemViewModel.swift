@@ -2,7 +2,8 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
-class PrintSystemViewModel: ObservableObject {
+/// 印刷システムViewModel
+final class PrintSystemViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var printSettings = PrintSettings()
