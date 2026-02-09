@@ -42,8 +42,8 @@ public enum Weekday: Int, Codable, CaseIterable {
     case monday = 1
     case tuesday = 2
     case wednesday = 3
-    thursday = 4
-    friday = 5
+    case thursday = 4
+    case friday = 5
     saturday = 6
     sunday = 7
     

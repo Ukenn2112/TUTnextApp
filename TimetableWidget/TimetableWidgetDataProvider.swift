@@ -2,7 +2,7 @@
 //  TimetableWidgetDataProvider.swift
 //  TimetableWidget
 //
-//  Refactored to use Core/Storage and Core/Models
+//  Refactored to use Core/Storage and shared WidgetModels
 //
 
 import Foundation
@@ -163,38 +163,5 @@ class TimetableWidgetDataProvider {
         }
         
         return allCourses
-    }
-}
-
-// MARK: - Course Extension
-
-extension Course {
-    /// Convenience initializer for widget sample data
-    init(
-        name: String,
-        room: String,
-        teacher: String,
-        startTime: String,
-        endTime: String,
-        colorIndex: Int,
-        weekday: Weekday?,
-        period: Int?,
-        jugyoCd: String?
-    ) {
-        self.id = UUID().uuidString
-        self.name = name
-        self.room = room
-        self.teacher = teacher
-        self.startTime = startTime
-        self.endTime = endTime
-        self.colorIndex = max(1, colorIndex)
-        self.weekday = weekday
-        self.period = period
-        self.jugyoCd = jugyoCd
-        self.academicYear = nil
-        self.courseYear = nil
-        self.courseTerm = nil
-        self.jugyoKbn = nil
-        self.keijiMidokCnt = nil
     }
 }
