@@ -7,9 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import CoreAuth
-import CoreNetworking
-import CoreStorage
 
 struct ContentView: View {
     @State private var selectedTab = 1

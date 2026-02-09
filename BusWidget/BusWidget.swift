@@ -606,7 +606,7 @@ struct BusWidgetEntryView: View {
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(BusWidgetThemeColors.Glass.light)
+                .fill(.ultraThinMaterial)
         )
     }
     
