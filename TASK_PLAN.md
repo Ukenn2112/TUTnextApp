@@ -5,6 +5,7 @@
 - 液态玻璃设计 (Glassmorphism)
 - 模块化架构
 - 代码规范化
+- 清理旧代码 ✅
 
 ## 📋 任务清单
 
@@ -19,7 +20,7 @@
 - [x] 统一 Button, Card, Modal 组件
 - [x] 暗色模式优化
 - [x] 动效系统
-- [x] Views 层重构 ✅ (LoginView, WelcomeView, TimetableView, BusScheduleView, AssignmentView, UserSettingsView)
+- [x] Views 层重构 ✅ (模块化架构在 Views/Auth/, Views/Timetable/ 等)
 
 ### Phase 3: 功能模块重构
 - [x] Auth 模块 (OAuth, Session)
@@ -32,7 +33,12 @@
 - [x] TimetableWidget (iOS 17+ with App Intents, Glassmorphism)
 - [x] BusWidget (iOS 17+ with App Intents, Glassmorphism)
 
-### Phase 5: 测试与优化
+### Phase 5: 代码清理
+- [x] 删除旧的非模块化 Views 文件
+- [x] 删除重复的 CourseDetailModels
+- [ ] 迁移 Views 使用 Core 模块（待完成）
+
+### Phase 6: 测试与优化
 - [ ] 单元测试覆盖
 - [ ] 性能优化
 - [ ] 内存泄漏检测
