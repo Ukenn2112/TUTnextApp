@@ -1,31 +1,47 @@
 import Foundation
 
-/// Legacy User service wrapper using Core/Auth modules
-/// Maintains backward compatibility while migrating to Core modules
+// MARK: - Legacy UserService Wrapper
+// Uses Core.Auth.UserService for implementation
+
+@MainActor
+@available(*, deprecated, message: "Use Core.Auth.UserService instead")
 final class UserService {
     static let shared = UserService()
     
-    private let userService: UserServiceProtocol
-    private let defaults: UserDefaultsManager
+    private let userService: Core.Auth.UserService
+    private let defaults: Core.Storage.UserDefaultsManager
     
-    private init(
-        userService: UserServiceProtocol = UserService.shared,
-        defaults: UserDefaultsManager = .shared
-    ) {
-        self.userService = userService
-        self.defaults = defaults
+    private init() {
+        self.userService = Core.Auth.UserService.shared
+        self.defaults = Core.Storage.UserDefaultsManager.shared
+    }
+    
+    /// Create user from API response
+    func createUser(from userData: [String: Any]) -> User? {
+        guard let id = userData["userId"] as? String,
+              let username = userData["username"] as? String,
+              let fullName = userData["fullName"] as? String else {
+            return nil
+        }
+        
+        return User(
+            id: id,
+            username: username,
+            fullName: fullName,
+            encryptedPassword: userData["encryptedPassword"] as? String,
+            allKeijiMidokCnt: userData["allKeijiMidokCnt"] as? Int ?? 0
+        )
     }
     
     /// Save user data
     func saveUser(_ user: User, completion: (() -> Void)? = nil) {
-        userService.currentUser = UserMapper.mapToCore(user)
+        userService.saveUser(user)
         completion?()
     }
     
     /// Get current user
     func getCurrentUser() -> User? {
-        guard let coreUser = userService.currentUser else { return nil }
-        return UserMapper.mapFromCore(coreUser)
+        userService.currentUser
     }
     
     /// Clear current user
@@ -35,17 +51,17 @@ final class UserService {
     
     /// Save device token
     func saveDeviceToken(_ token: String) {
-        defaults.set(value: token, key: "deviceToken")
+        defaults.set(value: token, forKey: "deviceToken")
     }
     
     /// Get device token
     func getDeviceToken() -> String? {
-        defaults.get(key: "deviceToken")
+        defaults.get(forKey: "deviceToken")
     }
     
     /// Clear device token
     func clearDeviceToken() {
-        defaults.remove(key: "deviceToken")
+        defaults.remove(forKey: "deviceToken")
     }
     
     /// Update unread count
@@ -63,6 +79,7 @@ final class UserService {
 
 // MARK: - User Model
 
+@available(*, deprecated, message: "Use Core.Auth.User instead")
 struct User: Codable {
     let id: String
     let username: String
@@ -87,9 +104,10 @@ struct User: Codable {
 
 // MARK: - User Mapper
 
+@available(*, deprecated, message: "User mapping is now in Core.Auth.UserService")
 enum UserMapper {
-    static func mapToCore(_ legacy: User) -> Core.User {
-        Core.User(
+    static func mapToCore(_ legacy: User) -> Core.Auth.User {
+        Core.Auth.User(
             userId: legacy.id,
             studentId: nil,
             name: legacy.fullName,
@@ -99,7 +117,7 @@ enum UserMapper {
         )
     }
     
-    static func mapFromCore(_ core: Core.User) -> User {
+    static func mapFromCore(_ core: Core.Auth.User) -> User {
         User(
             id: core.userId,
             username: core.userId,

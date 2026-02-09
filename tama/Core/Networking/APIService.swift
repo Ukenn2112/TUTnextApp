@@ -11,6 +11,7 @@ protocol APIServiceProtocol {
 // MARK: - APIService
 
 /// Main API service that wraps NetworkClient with business-logic-specific methods
+@MainActor
 final class APIService: APIServiceProtocol {
     static let shared = APIService()
     

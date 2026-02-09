@@ -1,28 +1,20 @@
 import Foundation
 
-/// Legacy Auth service wrapper using Core/Auth modules
-/// Maintains backward compatibility while migrating to Core modules
+// MARK: - Legacy AuthService Wrapper
+// Uses Core.Auth.AuthService for implementation
+
+@MainActor
+@available(*, deprecated, message: "Use Core.Auth.AuthService instead")
 final class AuthService {
     static let shared = AuthService()
     
-    private let authService: AuthServiceProtocol
-    private let cookieService: CookieServiceProtocol
-    private let userService: UserServiceProtocol
-    private let notificationCenter: NotificationCenter
+    private let authService: Core.Auth.AuthService
     
-    private init(
-        authService: AuthServiceProtocol = Core.AuthService.shared,
-        cookieService: CookieServiceProtocol = CookieService.shared,
-        userService: UserServiceProtocol = UserService.shared,
-        notificationCenter: NotificationCenter = .default
-    ) {
-        self.authService = authService
-        self.cookieService = cookieService
-        self.userService = userService
-        self.notificationCenter = notificationCenter
+    private init() {
+        self.authService = Core.Auth.AuthService.shared
     }
     
-    /// Login with credentials
+    /// Login with credentials (legacy wrapper)
     func login(
         account: String, password: String,
         completion: @escaping (Result<[String: Any], Error>) -> Void
@@ -30,14 +22,18 @@ final class AuthService {
         Task {
             do {
                 let response = try await authService.login(account: account, password: password)
-                completion(.success(response))
+                await MainActor.run {
+                    completion(.success(response))
+                }
             } catch {
-                completion(.failure(error))
+                await MainActor.run {
+                    completion(.failure(error))
+                }
             }
         }
     }
     
-    /// Logout
+    /// Logout (legacy wrapper)
     func logout(
         userId: String, encryptedPassword: String,
         completion: @escaping (Result<Bool, Error>) -> Void
@@ -45,44 +41,14 @@ final class AuthService {
         Task {
             do {
                 let success = try await authService.logout()
-                completion(.success(success))
+                await MainActor.run {
+                    completion(.success(success))
+                }
             } catch {
-                completion(.failure(error))
+                await MainActor.run {
+                    completion(.failure(error))
+                }
             }
-        }
-    }
-}
-
-// MARK: - Auth Error
-
-enum AuthError: Error, LocalizedError {
-    case invalidEndpoint
-    case requestCreationFailed
-    case noDataReceived
-    case decodingFailed
-    case invalidResponse
-    case loginFailed(String)
-    case logoutFailed(String)
-    case userDataNotFound
-    
-    var errorDescription: String? {
-        switch self {
-        case .invalidEndpoint:
-            return "APIエンドポイントが無効です"
-        case .requestCreationFailed:
-            return "リクエストデータの作成に失敗しました"
-        case .noDataReceived:
-            return "データが受信できませんでした"
-        case .decodingFailed:
-            return "レスポンスのデコードに失敗しました"
-        case .invalidResponse:
-            return "レスポンスの解析に失敗しました"
-        case .loginFailed(let message):
-            return message
-        case .logoutFailed(let message):
-            return message
-        case .userDataNotFound:
-            return "ユーザーデータが見つかりません"
         }
     }
 }

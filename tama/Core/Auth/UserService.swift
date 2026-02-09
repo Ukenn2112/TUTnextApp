@@ -32,6 +32,7 @@ protocol UserServiceProtocol {
 // MARK: - UserService
 
 /// Manages user data
+@MainActor
 final class UserService: UserServiceProtocol {
     static let shared = UserService()
     

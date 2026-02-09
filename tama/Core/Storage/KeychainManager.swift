@@ -4,6 +4,7 @@ import Security
 // MARK: - KeychainManager
 
 /// Secure storage for sensitive data using iOS Keychain
+@MainActor
 final class KeychainManager {
     static let shared = KeychainManager()
     

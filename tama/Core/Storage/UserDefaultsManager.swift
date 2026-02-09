@@ -3,6 +3,7 @@ import Foundation
 // MARK: - UserDefaultsManager
 
 /// Wrapper for UserDefaults with type-safe accessors
+@MainActor
 final class UserDefaultsManager {
     static let shared = UserDefaultsManager()
     

@@ -1,15 +1,17 @@
 import Foundation
-import WebKit
 
-/// Legacy Cookie service wrapper using Core/Storage modules
-/// Maintains backward compatibility while migrating to Core modules
+// MARK: - Legacy CookieService Wrapper
+// Uses Core.Storage.CookieService for implementation
+
+@MainActor
+@available(*, deprecated, message: "Use Core.Storage.CookieService instead")
 final class CookieService {
     static let shared = CookieService()
     
-    private let cookieService: CookieServiceProtocol
+    private let cookieService: Core.Storage.CookieService
     
-    private init(cookieService: CookieServiceProtocol = CookieService.shared) {
-        self.cookieService = cookieService
+    private init() {
+        self.cookieService = Core.Storage.CookieService.shared
     }
     
     /// Add cookies to request
@@ -35,6 +37,7 @@ final class CookieService {
 
 // MARK: - Cookie Keys
 
+@available(*, deprecated, message: "Cookie keys are now in Core.Storage")
 enum CookieKeys {
     static let sessionId = "JSESSIONID"
     static let userId = "userId"

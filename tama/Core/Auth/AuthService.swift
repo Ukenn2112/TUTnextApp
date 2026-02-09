@@ -12,6 +12,7 @@ protocol AuthServiceProtocol {
 // MARK: - AuthService
 
 /// Handles authentication operations including login, logout, and token refresh
+@MainActor
 final class AuthService: AuthServiceProtocol {
     static let shared = AuthService()
     

@@ -13,6 +13,7 @@ protocol CookieServiceProtocol {
 // MARK: - CookieService
 
 /// Manages HTTP cookies for API requests
+@MainActor
 final class CookieService: CookieServiceProtocol {
     static let shared = CookieService()
     

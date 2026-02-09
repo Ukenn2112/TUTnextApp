@@ -17,6 +17,7 @@ protocol SessionManagerProtocol {
 // MARK: - SessionManager
 
 /// Manages user session data securely
+@MainActor
 final class SessionManager: SessionManagerProtocol {
     static let shared = SessionManager()
     
