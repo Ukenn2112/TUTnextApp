@@ -17,7 +17,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     // MARK: - 通知名
 
     /// URLスキーム処理用の通知名
-    static let handleURLSchemeNotification = Notification.Name("HandleURLScheme")
+    static let handleURLSchemeNotification: Notification.Name = .handleURLScheme
 
     // MARK: - UIApplicationDelegate
 

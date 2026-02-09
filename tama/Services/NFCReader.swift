@@ -2,18 +2,6 @@ import Combine
 import CoreNFC
 import Foundation
 
-/// Shift-JISデコーディングのためのヘルパー拡張
-extension Data {
-    func string(encoding: String.Encoding) -> String? {
-        return String(data: self, encoding: encoding)
-    }
-
-    // 16進数文字列表現のためのヘルパーメソッド
-    func hexEncodedString() -> String {
-        return map { String(format: "%02hhX", $0) }.joined()
-    }
-}
-
 /// NFC読み取り中に発生する可能性のあるエラー
 enum NFCReadError: LocalizedError {
     case nfcNotAvailable

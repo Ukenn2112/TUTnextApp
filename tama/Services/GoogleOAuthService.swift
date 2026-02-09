@@ -461,12 +461,3 @@ final class GoogleOAuthService: ObservableObject {
         }
     }
 }
-
-// MARK: - 通知名定義
-extension Notification.Name {
-    static let googleOAuthSuccess = Notification.Name("GoogleOAuthSuccess")
-    static let googleOAuthError = Notification.Name("GoogleOAuthError")
-    static let googleOAuthWebViewDismissed = Notification.Name("GoogleOAuthWebViewDismissed")
-    static let googleOAuthCallbackReceived = Notification.Name("GoogleOAuthCallbackReceived")
-    static let googleOAuthStatusChanged = Notification.Name("GoogleOAuthStatusChanged")
-}

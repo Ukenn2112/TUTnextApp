@@ -1201,7 +1201,7 @@ struct BusScheduleView: View {
     // MARK: - URLスキーム処理
     private func setupBusParametersObserver() {
         busParametersObserver = NotificationCenter.default.addObserver(
-            forName: Notification.Name("BusParametersFromURL"),
+            forName: .busParametersFromURL,
             object: nil,
             queue: .main
         ) { notification in

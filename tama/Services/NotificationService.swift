@@ -245,7 +245,7 @@ extension NotificationService: UNUserNotificationCenterDelegate {
     /// 通知タップ時の画面遷移処理
     private func navigateToPage(_ page: String) {
         NotificationCenter.default.post(
-            name: Notification.Name("NavigateToPageFromNotification"),
+            name: .navigateToPageFromNotification,
             object: nil,
             userInfo: ["page": page]
         )

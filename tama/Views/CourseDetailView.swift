@@ -1,10 +1,5 @@
 import SwiftUI
 
-// 掲示リストのSafariViewが閉じられた時の通知名を定義
-extension Notification.Name {
-    static let announcementSafariDismissed = Notification.Name("AnnouncementSafariDismissed")
-}
-
 struct CourseDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: CourseDetailViewModel

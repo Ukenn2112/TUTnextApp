@@ -8,8 +8,8 @@ final class AssignmentService {
     private let apiService = APIService.shared
     private let userService = UserService.shared
 
-    // 課題データが更新された時の通知名
-    static let assignmentsUpdatedNotification = Notification.Name("AssignmentsUpdatedNotification")
+    /// 課題データが更新された時の通知名
+    static let assignmentsUpdatedNotification: Notification.Name = .assignmentsUpdated
 
     private init() {}
 

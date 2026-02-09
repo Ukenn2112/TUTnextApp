@@ -38,7 +38,7 @@ struct ContentView: View {
         }
         .onReceive(
             NotificationCenter.default.publisher(
-                for: Notification.Name("NavigateToPageFromNotification"))
+                for: .navigateToPageFromNotification)
         ) { notification in
             if let page = notification.userInfo?["page"] as? String {
                 navigateToTab(for: page)
@@ -121,7 +121,7 @@ struct ContentView: View {
 
         let userInfo: [String: Any?] = ["route": route, "schedule": schedule]
         NotificationCenter.default.post(
-            name: Notification.Name("BusParametersFromURL"),
+            name: .busParametersFromURL,
             object: nil,
             userInfo: userInfo as [AnyHashable: Any]
         )
