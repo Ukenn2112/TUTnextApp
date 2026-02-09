@@ -1,7 +1,8 @@
 import Foundation
 import SwiftUI
 
-class PrintSystemService {
+/// 印刷システムサービス
+final class PrintSystemService {
     static let shared = PrintSystemService()
 
     private let fixedId = "836-tamauniv01"
@@ -340,7 +341,7 @@ class PrintSystemService {
     }
 }
 
-// 印刷設定用の構造体
+/// 印刷設定モデル
 struct PrintSettings {
     var plex: PlexType
     var nUp: NUpType
@@ -355,7 +356,7 @@ struct PrintSettings {
     }
 }
 
-// 両面印刷の種類
+/// 両面印刷の種類
 enum PlexType: String, CaseIterable, Identifiable {
     case simplex = "simplex"
     case duplex = "duplex"
@@ -376,7 +377,7 @@ enum PlexType: String, CaseIterable, Identifiable {
     }
 }
 
-// まとめて1枚の種類
+/// まとめて1枚の種類
 enum NUpType: String, CaseIterable, Identifiable {
     case none = "1"
     case two = "2"
@@ -397,7 +398,7 @@ enum NUpType: String, CaseIterable, Identifiable {
     }
 }
 
-// 印刷結果を表すモデル
+/// 印刷結果モデル
 struct PrintResult: Codable {
     let printNumber: String
     let fileName: String

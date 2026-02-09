@@ -1,7 +1,8 @@
 import Foundation
 import UIKit
 
-class LanguageService: NSObject, ObservableObject {
+/// 言語設定管理サービス
+final class LanguageService: NSObject, ObservableObject {
     @Published var currentLanguage: String = "日本語"
 
     static let shared = LanguageService()

@@ -1,15 +1,9 @@
-//
-//  RatingService.swift
-//  tama
-//
-//  Created by GitHub Copilot on 2025/07/17.
-//
-
 import Foundation
 import StoreKit
 import SwiftUI
 
-class RatingService: ObservableObject {
+/// アプリ評価リクエストサービス
+final class RatingService: ObservableObject {
     static let shared = RatingService()
     
     // UserDefaultsのキー

@@ -1,6 +1,7 @@
 import Foundation
 
-class AuthService {
+/// 認証サービス
+final class AuthService {
     static let shared = AuthService()
 
     private init() {}

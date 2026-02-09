@@ -2,14 +2,15 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-// 部屋変更の情報を保持する構造体
+/// 部屋変更の情報を保持するモデル
 struct RoomChange: Codable {
     let courseName: String
     let newRoom: String
     let expiryDate: Date
 }
 
-class TimetableService {
+/// 時間割データ管理サービス
+final class TimetableService {
     static let shared = TimetableService()
 
     /// App Group ID
@@ -163,7 +164,7 @@ class TimetableService {
                         if let data = json["data"] as? [String: Any],
                             let courseList = data["jgkmDtoList"] as? [[String: Any]]
                         {
-                            print("【時間割】全未読揭示数: \(data["keijiCnt"] as? Int ?? 0)")
+                            print("【時間割】全未読掲示数: \(data["keijiCnt"] as? Int ?? 0)")
 
                             // 授業年度と学期
                             let semesterYear = data["nendo"] as? Int ?? 0

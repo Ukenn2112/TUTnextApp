@@ -2,7 +2,7 @@ import Combine
 import CoreNFC
 import Foundation
 
-// Shift-JIS デコーディングのためのヘルパー拡張
+/// Shift-JISデコーディングのためのヘルパー拡張
 extension Data {
     func string(encoding: String.Encoding) -> String? {
         return String(data: self, encoding: encoding)
@@ -14,7 +14,7 @@ extension Data {
     }
 }
 
-// NFC読み取り中に発生する可能性のあるエラーを定義
+/// NFC読み取り中に発生する可能性のあるエラー
 enum NFCReadError: LocalizedError {
     case nfcNotAvailable
     case sessionInvalidated(reason: String)
@@ -44,8 +44,8 @@ enum NFCReadError: LocalizedError {
     }
 }
 
-// NFC読み取りロジックを処理し結果を公開するObservableObject
-class NFCReader: NSObject, ObservableObject, NFCTagReaderSessionDelegate {
+/// NFC読み取りサービス（学生証FeliCa読み取り用）
+final class NFCReader: NSObject, ObservableObject, NFCTagReaderSessionDelegate {
 
     @Published var studentID: String = ""
     @Published var userName: String = ""

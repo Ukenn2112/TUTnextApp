@@ -2,7 +2,9 @@ import Foundation
 import SwiftUI
 
 // MARK: - バス時刻表データ提供サービス
-class BusScheduleService {
+
+/// バス時刻表データ提供サービス
+final class BusScheduleService {
     /// シングルトンインスタンス
     static let shared = BusScheduleService()
 

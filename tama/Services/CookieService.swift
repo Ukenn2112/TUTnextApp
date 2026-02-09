@@ -1,6 +1,7 @@
 import Foundation
 
-class CookieService {
+/// Cookie管理サービス
+final class CookieService {
     static let shared = CookieService()
 
     private let cookieStorage = HTTPCookieStorage.shared
@@ -8,11 +9,13 @@ class CookieService {
     private let cookieKey = "savedCookies"
 
     private init() {
-        // 启动时恢复保存的Cookie
+        // 起動時に保存されたCookieを復元
         restoreCookies()
     }
 
-    // 保存从响应中获取的Cookie
+    // MARK: - パブリックメソッド
+
+    /// レスポンスからCookieを保存する
     func saveCookies(from response: URLResponse, for urlString: String) {
         guard let httpResponse = response as? HTTPURLResponse,
             let headerFields = httpResponse.allHeaderFields as? [String: String]
@@ -20,14 +23,12 @@ class CookieService {
             return
         }
 
-        // 使用响应的实际URL，如果可用
+        // レスポンスの実際のURLを使用（利用可能な場合）
         let url = response.url ?? URL(string: urlString) ?? URL(string: "https://next.tama.ac.jp")!
 
-        // 複数のSet-Cookieヘッダーを処理
         let setCookieHeaders = headerFields.filter { $0.key.lowercased() == "set-cookie" }
 
         if !setCookieHeaders.isEmpty {
-            // 各Set-Cookieヘッダーを個別に処理
             setCookieHeaders.forEach { header in
                 let cookieString = header.value
                 if let cookie = HTTPCookie(properties: [
@@ -40,20 +41,18 @@ class CookieService {
                 ]) {
                     DispatchQueue.main.async {
                         self.cookieStorage.setCookie(cookie)
-                        print(
-                            "保存されたCookie: \(cookie.name) = \(cookie.value), ドメイン: \(cookie.domain)")
                     }
                 }
             }
 
-            // 持久化存储Cookie
+            // Cookieを永続化
             DispatchQueue.main.async {
                 self.persistCookies()
             }
         }
     }
 
-    // 为请求添加Cookie
+    /// リクエストにCookieを追加する
     func addCookies(to request: URLRequest) -> URLRequest {
         var mutableRequest = request
 
@@ -69,7 +68,7 @@ class CookieService {
         return mutableRequest
     }
 
-    // 清除所有Cookie
+    /// 全てのCookieを削除する
     func clearCookies() {
         if let cookies = cookieStorage.cookies {
             cookies.forEach { cookie in
@@ -83,7 +82,26 @@ class CookieService {
         }
     }
 
-    // 持久化存储Cookie
+    /// 指定ドメインのCookieが存在するか確認する
+    func hasCookiesForDomain(_ domain: String) -> Bool {
+        guard let url = URL(string: domain) else { return false }
+        return cookieStorage.cookies(for: url)?.isEmpty == false
+    }
+
+    /// 指定名のCookie値を取得する
+    func getCookieValue(for name: String, domain: String) -> String? {
+        guard let url = URL(string: domain) else { return nil }
+        return cookieStorage.cookies(for: url)?.first(where: { $0.name == name })?.value
+    }
+
+    /// セッションが有効かどうかを確認する
+    func isSessionValid() -> Bool {
+        return hasCookiesForDomain("https://next.tama.ac.jp")
+    }
+
+    // MARK: - プライベートメソッド
+
+    /// Cookieを永続化する
     private func persistCookies() {
         guard let cookies = cookieStorage.cookies else { return }
 
@@ -103,7 +121,7 @@ class CookieService {
         }
     }
 
-    // 恢复保存的Cookie
+    /// 保存されたCookieを復元する
     private func restoreCookies() {
         guard let cookieData = defaults.array(forKey: cookieKey) as? [[String: Any]] else { return }
 
@@ -120,22 +138,5 @@ class CookieService {
                 }
             }
         }
-    }
-
-    // 检查Cookie是否有效的方法
-    func hasCookiesForDomain(_ domain: String) -> Bool {
-        guard let url = URL(string: domain) else { return false }
-        return cookieStorage.cookies(for: url)?.isEmpty == false
-    }
-
-    // 获取特定Cookie的值
-    func getCookieValue(for name: String, domain: String) -> String? {
-        guard let url = URL(string: domain) else { return nil }
-        return cookieStorage.cookies(for: url)?.first(where: { $0.name == name })?.value
-    }
-
-    // 检查会话是否有效
-    func isSessionValid() -> Bool {
-        return hasCookiesForDomain("https://next.tama.ac.jp")
     }
 }

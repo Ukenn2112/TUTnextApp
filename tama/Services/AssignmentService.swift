@@ -2,7 +2,8 @@ import Foundation
 import UIKit
 import UserNotifications
 
-class AssignmentService {
+/// 課題管理サービス
+final class AssignmentService {
     static let shared = AssignmentService()
     private let apiService = APIService.shared
     private let userService = UserService.shared

@@ -1,6 +1,7 @@
 import Foundation
 
-class CourseDetailService {
+/// 授業詳細情報サービス
+final class CourseDetailService {
     static let shared = CourseDetailService()
 
     private init() {}
@@ -349,8 +350,8 @@ class CourseDetailService {
     }
 }
 
-// エラー定義
-enum CourseDetailError: Error {
+/// 授業詳細関連のエラー定義
+enum CourseDetailError: Error, LocalizedError {
     case userNotAuthenticated
     case invalidEndpoint
     case requestCreationFailed
@@ -360,7 +361,7 @@ enum CourseDetailError: Error {
     case invalidResponse
     case apiError(String)
 
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .userNotAuthenticated:
             return "ユーザー認証情報がありません"

@@ -1,6 +1,7 @@
 import Foundation
 
-class UserService {
+/// ユーザー情報管理サービス
+final class UserService {
     static let shared = UserService()
 
     private init() {}
@@ -52,7 +53,7 @@ class UserService {
         }
     }
 
-    // 全未読揭示数を更新
+    // 全未読掲示数を更新
     func updateAllKeijiMidokCnt(keijiCnt: Int, completion: (() -> Void)? = nil) {
         if var user = getCurrentUser() {
             user.allKeijiMidokCnt = keijiCnt
