@@ -158,9 +158,9 @@ struct BusWidgetDataProvider {
                 }
             }
             
-            wednesdayDict[routeTypeKey
+            wednesdayDict[routeTypeKey] = timesArray
         }
-       ] = timesArray result["wednesday"] = wednesdayDict
+        result["wednesday"] = wednesdayDict
         
         // 土曜日スケジュール
         var saturdayDict: [String: Any] = [:]
