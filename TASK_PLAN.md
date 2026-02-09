@@ -36,7 +36,7 @@
 ### Phase 5: 代码清理
 - [x] 删除旧的非模块化 Views 文件
 - [x] 删除重复的 CourseDetailModels
-- [ ] 迁移 Views 使用 Core 模块（待完成）
+- [x] 迁移 Views 使用 Core 模块 ✅
 
 ### Phase 6: 测试与优化
 - [ ] 单元测试覆盖
