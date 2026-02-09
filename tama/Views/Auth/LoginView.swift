@@ -14,8 +14,6 @@ import CoreStorage
 struct LoginView: View {
     @Binding var isLoggedIn: Bool
     @EnvironmentObject private var themeManager: ThemeManager
-    @EnvironmentObject private var notificationService: NotificationService
-    @EnvironmentObject private var ratingService: RatingService
     @Environment(\.authService) private var authService
     @Environment(\.userService) private var userService
     @Environment(\.userDefaultsManager) private var userDefaultsManager
@@ -24,16 +22,12 @@ struct LoginView: View {
     @State private var password = ""
     @State private var isLoading = false
     @State private var loginErrorMessage: String? = nil
-    @State private var userName: String = ""
-    @State private var showNFCTip = false
     @FocusState private var focusedField: Field?
     
     enum Field {
         case account
         case password
     }
-    
-    @StateObject private var nfcReader = NFCReader()
     
     private var isLoginButtonDisabled: Bool {
         account.isEmpty || password.isEmpty || isLoading
@@ -55,33 +49,6 @@ struct LoginView: View {
                 
                 // Footer
                 footerView
-            }
-        }
-        .alert("ログイン方法を選択", isPresented: $showNFCTip) {
-            Button("手入力") {
-                showNFCTip = false
-                focusedField = .account
-            }
-            Button("学生証をスキャン", role: .cancel) {
-                showNFCTip = false
-                clearErrors()
-                nfcReader.startSession()
-            }
-        } message: {
-            Text("学生証をスキャンして自動入力するか、手動でアカウントを入力することができます。")
-        }
-        .onAppear(perform: checkAndShowNFCTip)
-        .onChange(of: nfcReader.studentID) { _, newValue in
-            handleStudentIDChange(newValue)
-        }
-        .onChange(of: nfcReader.userName) { _, newValue in
-            withAnimation(.easeInOut) {
-                userName = newValue
-            }
-        }
-        .onChange(of: nfcReader.errorMessage) { _, newValue in
-            if newValue != nil {
-                loginErrorMessage = nil
             }
         }
         .onTapGesture {
@@ -108,7 +75,7 @@ struct LoginView: View {
                 .padding(.bottom, 32)
             
             // Error Message
-            if let errorMessage = loginErrorMessage ?? nfcReader.errorMessage {
+            if let errorMessage = loginErrorMessage {
                 GlassCard(variant: .outline) {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -230,25 +197,8 @@ struct LoginView: View {
     }
     
     // MARK: - Methods
-    private func checkAndShowNFCTip() {
-        if !userDefaultsManager.getBool(key: "hasShownNFCTip") {
-            showNFCTip = true
-            userDefaultsManager.set(value: true, key: "hasShownNFCTip")
-        }
-    }
-    
     private func clearErrors() {
-        nfcReader.errorMessage = nil
         loginErrorMessage = nil
-    }
-    
-    private func handleStudentIDChange(_ newValue: String) {
-        if !newValue.isEmpty {
-            account = newValue
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                focusedField = .password
-            }
-        }
     }
     
     private func performLogin() {

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreStorage
 
 struct CourseDetailView: View {
     @Environment(\.dismiss) private var dismiss
@@ -256,7 +257,7 @@ struct CourseDetailView: View {
                             selectedColorIndex = index
                             onColorChange(index)
                             if let jugyoCd = course.jugyoCd {
-                                CourseColorService.shared.saveCourseColor(jugyoCd: jugyoCd, colorIndex: index)
+                                CoreStorage.CourseColorService.shared.saveCourseColor(jugyoCd: jugyoCd, colorIndex: index)
                             }
                         }) {
                             ZStack {

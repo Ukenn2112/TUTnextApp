@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreStorage
 
 // 掲示リストのSafariViewが閉じられた時の通知名を定義
 extension Notification.Name {
@@ -485,7 +486,7 @@ struct CourseDetailView: View {
 
                                         // 授業コードがある場合は色を保存
                                         if let jugyoCd = course.jugyoCd {
-                                            CourseColorService.shared.saveCourseColor(
+                                            CoreStorage.CourseColorService.shared.saveCourseColor(
                                                 jugyoCd: jugyoCd, colorIndex: index)
                                         }
                                     }) {
