@@ -627,7 +627,7 @@ struct BusTimeTableContent: View {
 
 // MARK: - 位置情報デリゲート
 
-class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
+final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     private let didUpdateLocation: (CLLocation) -> Void
     private let didEnterRegion: () -> Void
     private let didExitRegion: () -> Void

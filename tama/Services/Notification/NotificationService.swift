@@ -1,6 +1,6 @@
 import Foundation
-import UserNotifications
 import UIKit
+import UserNotifications
 
 /// プッシュ通知管理サービス
 final class NotificationService: NSObject, ObservableObject {

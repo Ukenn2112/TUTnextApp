@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// 教員メール一覧取得サービス
 final class TeacherEmailListService {

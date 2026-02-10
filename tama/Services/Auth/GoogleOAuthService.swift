@@ -1,6 +1,6 @@
+import CryptoKit
 import Foundation
 import SwiftUI
-import CryptoKit
 
 /// Google OAuth認証サービス
 @MainActor
