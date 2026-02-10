@@ -10,15 +10,12 @@ struct UserSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Binding var isLoggedIn: Bool
-    @State private var user: User?
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var languageService: LanguageService
     @EnvironmentObject private var ratingService: RatingService
-    @State private var showSafari = false
-    @State private var urlToOpen: URL?
-    @State private var showMailComposer = false
-    @State private var showingDarkModeSheet = false
+
+    @StateObject private var viewModel = UserSettingsViewModel()
 
     // MARK: - ボディ
 
@@ -48,18 +45,18 @@ struct UserSettingsView: View {
                 }
             )
             .onAppear {
-                loadUserData()
+                viewModel.loadUserData()
                 notificationService.checkAuthorizationStatus()
             }
-            .sheet(isPresented: $showSafari) {
-                if let url = urlToOpen {
+            .sheet(isPresented: $viewModel.showSafari) {
+                if let url = viewModel.urlToOpen {
                     SafariWebView(url: url)
                 }
             }
-            .sheet(isPresented: $showMailComposer) {
-                MailComposerView(isShowing: $showMailComposer)
+            .sheet(isPresented: $viewModel.showMailComposer) {
+                MailComposerView(isShowing: $viewModel.showMailComposer)
             }
-            .sheet(isPresented: $showingDarkModeSheet) {
+            .sheet(isPresented: $viewModel.showingDarkModeSheet) {
                 DarkModeSettingsView(appearanceManager: appearanceManager)
             }
             .preferredColorScheme(appearanceManager.colorSchemeOverride)
@@ -73,7 +70,7 @@ struct UserSettingsView: View {
     private var userInfoSection: some View {
         VStack(spacing: 0) {
             HStack(spacing: 16) {
-                Text(getInitials())
+                Text(viewModel.getInitials())
                     .font(.system(size: 18))
                     .foregroundColor(.white)
                     .frame(width: 56, height: 56)
@@ -81,10 +78,10 @@ struct UserSettingsView: View {
                     .clipShape(Circle())
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(user?.fullName ?? "ユーザー名")
+                    Text(viewModel.user?.fullName ?? "ユーザー名")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.primary)
-                    Text("@\(user?.username ?? "username")")
+                    Text("@\(viewModel.user?.username ?? "username")")
                         .font(.system(size: 15))
                         .foregroundColor(.secondary)
                 }
@@ -106,7 +103,7 @@ struct UserSettingsView: View {
                 icon: "lock.fill",
                 title: NSLocalizedString("パスワード変更", comment: "")
             ) {
-                openPasswordChangeURL()
+                viewModel.openPasswordChangeURL()
             }
 
             // アプリ設定
@@ -115,8 +112,7 @@ struct UserSettingsView: View {
                 icon: "calendar.badge.plus",
                 title: NSLocalizedString("時間割をカレンダーへ", comment: "")
             ) {
-                urlToOpen = URL(string: "https://tama.qaq.tw/")
-                showSafari = true
+                viewModel.openURL("https://tama.qaq.tw/")
             }
 
             notificationSettingsRow
@@ -129,21 +125,19 @@ struct UserSettingsView: View {
                 icon: "doc.text.fill",
                 title: NSLocalizedString("利用規約", comment: "")
             ) {
-                urlToOpen = URL(string: "https://tama.qaq.tw/user-agreement")
-                showSafari = true
+                viewModel.openURL("https://tama.qaq.tw/user-agreement")
             }
             SettingsRow(
                 icon: "hand.raised.fill",
                 title: NSLocalizedString("プライバシーポリシー", comment: "")
             ) {
-                urlToOpen = URL(string: "https://tama.qaq.tw/policy")
-                showSafari = true
+                viewModel.openURL("https://tama.qaq.tw/policy")
             }
             SettingsRow(
                 icon: "exclamationmark.bubble.fill",
                 title: NSLocalizedString("フィードバック", comment: "")
             ) {
-                sendFeedback()
+                viewModel.sendFeedback()
             }
             SettingsRow(
                 icon: "star.fill",
@@ -182,7 +176,7 @@ struct UserSettingsView: View {
 
     /// ダークモード設定行
     private var darkModeSettingsRow: some View {
-        Button(action: { showingDarkModeSheet = true }) {
+        Button(action: { viewModel.showingDarkModeSheet = true }) {
             SettingsDetailRow(
                 icon: "moon.fill",
                 title: "ダークモード",
@@ -194,7 +188,7 @@ struct UserSettingsView: View {
 
     /// ログアウトボタン
     private var logoutButton: some View {
-        Button(action: { logout() }) {
+        Button(action: { performLogout() }) {
             HStack {
                 Image(systemName: "arrow.right.square.fill")
                     .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
@@ -251,19 +245,6 @@ struct UserSettingsView: View {
 
     // MARK: - プライベートメソッド
 
-    private func loadUserData() {
-        user = UserService.shared.getCurrentUser()
-    }
-
-    private func getInitials() -> String {
-        guard let fullName = user?.fullName else { return "?" }
-        let nameParts = fullName.split(separator: "　")
-        if let firstPart = nameParts.first {
-            return String(firstPart.prefix(2))
-        }
-        return "?"
-    }
-
     private func handleNotificationSettings() {
         if notificationService.isAuthorized && !notificationService.isRegistered {
             notificationService.registerForRemoteNotifications()
@@ -280,45 +261,14 @@ struct UserSettingsView: View {
         }
     }
 
-    private func openPasswordChangeURL() {
-        urlToOpen = URL(string: "https://google.tama.ac.jp/unicornidm/user/tama/password/")
-        showSafari = true
-    }
-
-    private func sendFeedback() {
-        if MFMailComposeViewController.canSendMail() {
-            showMailComposer = true
-        } else {
-            let emailAddress = "admin@ukenn.top"
-            let subject = "TUTnext アプリフィードバック"
-            if let url = URL(
-                string:
-                    "mailto:\(emailAddress)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
-            ) {
-                UIApplication.shared.open(url)
-            }
-        }
-    }
-
-    private func logout() {
-        guard let user = user, let encryptedPassword = user.encryptedPassword else {
-            performLocalLogout()
-            return
-        }
-
-        AuthService.shared.logout(userId: user.username, encryptedPassword: encryptedPassword) { result in
-            DispatchQueue.main.async {
-                self.performLocalLogout()
-            }
-        }
-    }
-
-    private func performLocalLogout() {
-        UserService.shared.clearCurrentUser()
-        dismiss()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            withAnimation(.easeInOut(duration: 0.5)) {
-                isLoggedIn = false
+    private func performLogout() {
+        viewModel.logout {
+            UserService.shared.clearCurrentUser()
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    isLoggedIn = false
+                }
             }
         }
     }
