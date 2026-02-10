@@ -1,0 +1,79 @@
+{
+  "" : {
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetExtension-primary.dia",
+    "emit-module-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetExtension-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetExtension-primary-emit-module.dia",
+    "pch" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetExtension-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetExtension-primary.swiftdeps"
+  },
+  "/Users/meikenn/Documents/Github/TUTnextApp/BusWidget/AppIntent.swift" : {
+    "const-values" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent.swiftconstvalues",
+    "dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent.d",
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent.dia",
+    "index-unit-output-path" : "/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent.o",
+    "llvm-bc" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent.bc",
+    "object" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent.o",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent.swiftdeps",
+    "swiftmodule" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/AppIntent~partial.swiftmodule"
+  },
+  "/Users/meikenn/Documents/Github/TUTnextApp/BusWidget/BusWidget.swift" : {
+    "const-values" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget.swiftconstvalues",
+    "dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget.d",
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget.dia",
+    "index-unit-output-path" : "/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget.o",
+    "llvm-bc" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget.bc",
+    "object" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget.o",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget.swiftdeps",
+    "swiftmodule" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidget~partial.swiftmodule"
+  },
+  "/Users/meikenn/Documents/Github/TUTnextApp/BusWidget/BusWidgetBundle.swift" : {
+    "const-values" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle.swiftconstvalues",
+    "dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle.d",
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle.dia",
+    "index-unit-output-path" : "/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle.o",
+    "llvm-bc" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle.bc",
+    "object" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle.o",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle.swiftdeps",
+    "swiftmodule" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetBundle~partial.swiftmodule"
+  },
+  "/Users/meikenn/Documents/Github/TUTnextApp/BusWidget/BusWidgetDataProvider.swift" : {
+    "const-values" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider.swiftconstvalues",
+    "dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider.d",
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider.dia",
+    "index-unit-output-path" : "/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider.o",
+    "llvm-bc" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider.bc",
+    "object" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider.o",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider.swiftdeps",
+    "swiftmodule" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetDataProvider~partial.swiftmodule"
+  },
+  "/Users/meikenn/Documents/Github/TUTnextApp/BusWidget/BusWidgetLiveActivity.swift" : {
+    "const-values" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity.swiftconstvalues",
+    "dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity.d",
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity.dia",
+    "index-unit-output-path" : "/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity.o",
+    "llvm-bc" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity.bc",
+    "object" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity.o",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity.swiftdeps",
+    "swiftmodule" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/BusWidgetLiveActivity~partial.swiftmodule"
+  },
+  "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/DerivedSources/GeneratedStringSymbols_Localizable.swift" : {
+    "const-values" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable.swiftconstvalues",
+    "dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable.d",
+    "diagnostics" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable.dia",
+    "index-unit-output-path" : "/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable.o",
+    "llvm-bc" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable.bc",
+    "object" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable.o",
+    "swift-dependencies" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable.swiftdeps",
+    "swiftmodule" : "/Users/meikenn/Documents/Github/TUTnextApp/build/tama.build/Debug-iphoneos/BusWidgetExtension.build/Objects-normal/arm64/GeneratedStringSymbols_Localizable~partial.swiftmodule"
+  }
+}
