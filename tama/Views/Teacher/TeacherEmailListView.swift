@@ -17,7 +17,7 @@ struct TeacherEmailListView: View {
     // 表示用の五十音行（「その他」を「#」に置換）
     private let displaySections = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "#"]
     
-    // MARK: - Body
+    // MARK: - ボディ
     var body: some View {
         NavigationView {
             ZStack(alignment: .top) {
@@ -1030,7 +1030,7 @@ struct TeacherCopyConfirmationView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - プレビュー
 struct TeacherEmailListView_Previews: PreviewProvider {
     static var previews: some View {
         TeacherEmailListView()

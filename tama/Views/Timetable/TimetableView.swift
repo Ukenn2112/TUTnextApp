@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TimetableView: View {
-    // MARK: - Properties
+    // MARK: - プロパティ
     @StateObject private var viewModel = TimetableViewModel()
     @Binding var isLoggedIn: Bool
     @Environment(\.colorScheme) private var colorScheme
@@ -40,7 +40,7 @@ struct TimetableView: View {
         Color(red: 1.0, green: 0.9, blue: 1.0),  // ライトパープル
     ]
 
-    // MARK: - Body
+    // MARK: - ボディ
     var body: some View {
         GeometryReader { geometry in
             // Layout constants
@@ -128,7 +128,7 @@ struct TimetableView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - サブビュー
     private func weekdayHeaderView(layout: LayoutMetrics) -> some View {
         HStack(spacing: 4) {
             Text("")
@@ -215,7 +215,7 @@ struct TimetableView: View {
     }
 }
 
-// MARK: - Layout Metrics
+// MARK: - レイアウト定数
 private struct LayoutMetrics {
     let timeColumnWidth: CGFloat = 35
     let leftPadding: CGFloat = 8
@@ -235,7 +235,7 @@ private struct LayoutMetrics {
     }
 }
 
-// MARK: - TimeSlotCell
+// MARK: - 時限セル
 /// 授業セルビュー
 struct TimeSlotCell: View {
     let dayIndex: String

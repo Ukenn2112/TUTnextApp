@@ -3,17 +3,17 @@ import SwiftUI
 
 /// 時間割ViewModel
 final class TimetableViewModel: ObservableObject {
-    // MARK: - Published Properties
+    // MARK: - 公開プロパティ
     @Published var courses: [String: [String: CourseModel]] = [:]
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
     @Published var currentSemester: Semester = .current
 
-    // MARK: - Private Properties
+    // MARK: - プライベートプロパティ
     private var cancellables = Set<AnyCancellable>()
     private let timetableService = TimetableService.shared
 
-    // MARK: - Initialization
+    // MARK: - 初期化
     init() {
         // サンプルデータを初期値として設定
         self.courses = CourseModel.sampleCourses
@@ -26,7 +26,7 @@ final class TimetableViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    // MARK: - Public Methods
+    // MARK: - パブリックメソッド
 
     /// 時間割データを取得 - 新インターフェース
     func fetchTimetableData(forYear year: Int = 0, termNo: Int = 0) {
@@ -70,7 +70,7 @@ final class TimetableViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Helper Methods
+    // MARK: - ヘルパーメソッド
 
     /// 特定の時限が存在するかチェック
     func hasSpecificPeriod(_ period: String) -> Bool {
