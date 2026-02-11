@@ -115,11 +115,11 @@ struct AssignmentView: View {
                 forName: UIApplication.willEnterForegroundNotification,
                 object: nil,
                 queue: .main
-            ) { [self] _ in
-                print("AssignmentView: アプリがフォアグラウンドに復帰しました")
-                viewModel.loadAssignments()
-                // フォアグラウンド復帰時にも認証状態をチェック
-                Task {
+            ) { _ in
+                Task { @MainActor in
+                    print("AssignmentView: アプリがフォアグラウンドに復帰しました")
+                    viewModel.loadAssignments()
+                    // フォアグラウンド復帰時にも認証状態をチェック
                     await oauthService.loadAuthorizationStatus()
                 }
             }

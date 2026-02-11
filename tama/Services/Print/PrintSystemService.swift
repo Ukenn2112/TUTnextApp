@@ -125,61 +125,56 @@ final class PrintSystemService {
         var body = Data()
 
         // ファイルデータを追加
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append(
-            "Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(
-                using: .utf8)!)
-        body.append("Content-Type: \(getContentType(for: fileName))\r\n\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n")
+        body.appendString("Content-Type: \(getContentType(for: fileName))\r\n\r\n")
         body.append(fileData)
-        body.append("\r\n".data(using: .utf8)!)
+        body.appendString("\r\n")
 
         // タイトル（ファイル名）を追加
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"title\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(fileName)\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"title\"\r\n\r\n")
+        body.appendString("\(fileName)\r\n")
 
         // isGlobalを追加
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"isGlobal\"\r\n\r\n".data(using: .utf8)!)
-        body.append("true\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"isGlobal\"\r\n\r\n")
+        body.appendString("true\r\n")
 
         // colorModeを追加
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append(
-            "Content-Disposition: form-data; name=\"colorMode\"\r\n\r\n".data(using: .utf8)!)
-        body.append("auto\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"colorMode\"\r\n\r\n")
+        body.appendString("auto\r\n")
 
         // plexを追加（片面/両面の設定）
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"plex\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(settings.plex.apiValue)\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"plex\"\r\n\r\n")
+        body.appendString("\(settings.plex.apiValue)\r\n")
 
         // nUpを追加（まとめて1枚の設定）
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"nUp\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(settings.nUp.apiValue)\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"nUp\"\r\n\r\n")
+        body.appendString("\(settings.nUp.apiValue)\r\n")
 
         // startPageを追加（開始ページの設定）
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append(
-            "Content-Disposition: form-data; name=\"startPage\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(settings.startPage)\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"startPage\"\r\n\r\n")
+        body.appendString("\(settings.startPage)\r\n")
 
         // PINコードが設定されている場合は追加
         if let pin = settings.pin, !pin.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"pin\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(pin)\r\n".data(using: .utf8)!)
+            body.appendString("--\(boundary)\r\n")
+            body.appendString("Content-Disposition: form-data; name=\"pin\"\r\n\r\n")
+            body.appendString("\(pin)\r\n")
         }
 
         // autoNetprintを追加
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append(
-            "Content-Disposition: form-data; name=\"autoNetprint\"\r\n\r\n".data(using: .utf8)!)
-        body.append("false\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"autoNetprint\"\r\n\r\n")
+        body.appendString("false\r\n")
 
         // フォームデータの終了
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        body.appendString("--\(boundary)--\r\n")
 
         request.httpBody = body
 

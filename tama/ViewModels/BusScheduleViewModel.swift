@@ -73,8 +73,10 @@ final class BusScheduleViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.currentTime = Date()
-            self?.fetchBusScheduleData()
+            Task { @MainActor in
+                self?.currentTime = Date()
+                self?.fetchBusScheduleData()
+            }
         }
     }
 
@@ -472,33 +474,35 @@ final class BusScheduleViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self = self else { return }
-            if let userInfo = notification.userInfo {
-                if let routeString = userInfo["route"] as? String {
-                    switch routeString {
-                    case "fromSeisekiToSchool":
-                        self.selectedRouteType = .fromSeisekiToSchool
-                    case "fromNagayamaToSchool":
-                        self.selectedRouteType = .fromNagayamaToSchool
-                    case "fromSchoolToSeiseki":
-                        self.selectedRouteType = .fromSchoolToSeiseki
-                    case "fromSchoolToNagayama":
-                        self.selectedRouteType = .fromSchoolToNagayama
-                    default:
-                        break
+            Task { @MainActor in
+                guard let self = self else { return }
+                if let userInfo = notification.userInfo {
+                    if let routeString = userInfo["route"] as? String {
+                        switch routeString {
+                        case "fromSeisekiToSchool":
+                            self.selectedRouteType = .fromSeisekiToSchool
+                        case "fromNagayamaToSchool":
+                            self.selectedRouteType = .fromNagayamaToSchool
+                        case "fromSchoolToSeiseki":
+                            self.selectedRouteType = .fromSchoolToSeiseki
+                        case "fromSchoolToNagayama":
+                            self.selectedRouteType = .fromSchoolToNagayama
+                        default:
+                            break
+                        }
                     }
-                }
 
-                if let scheduleString = userInfo["schedule"] as? String {
-                    switch scheduleString {
-                    case "weekday":
-                        self.selectedScheduleType = .weekday
-                    case "saturday":
-                        self.selectedScheduleType = .saturday
-                    case "wednesday":
-                        self.selectedScheduleType = .wednesday
-                    default:
-                        break
+                    if let scheduleString = userInfo["schedule"] as? String {
+                        switch scheduleString {
+                        case "weekday":
+                            self.selectedScheduleType = .weekday
+                        case "saturday":
+                            self.selectedScheduleType = .saturday
+                        case "wednesday":
+                            self.selectedScheduleType = .wednesday
+                        default:
+                            break
+                        }
                     }
                 }
             }

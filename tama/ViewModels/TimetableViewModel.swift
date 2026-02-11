@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 /// 時間割ViewModel
+@MainActor
 final class TimetableViewModel: ObservableObject {
     // MARK: - 公開プロパティ
     @Published var courses: [String: [String: CourseModel]] = [:]

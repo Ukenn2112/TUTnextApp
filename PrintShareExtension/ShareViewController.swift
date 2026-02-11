@@ -22,7 +22,9 @@ class ShareViewController: UIViewController {
             guard let attachments = extensionItem.attachments else { continue }
 
             for attachment in attachments {
+                #if DEBUG
                 print("処理中のアイテムタイプ: \(attachment.registeredTypeIdentifiers)")
+                #endif
 
                 // ファイルURLの処理
                 if attachment.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
@@ -161,7 +163,6 @@ class ShareViewController: UIViewController {
             ]
 
             sharedUserDefaults?.set(fileInfo, forKey: "SharedPrintFile")
-            sharedUserDefaults?.synchronize()
 
             // アプリを開くためのURLスキームを呼び出す
             if let url = URL(string: "tama://print") {
@@ -192,7 +193,9 @@ class ShareViewController: UIViewController {
 
     private func completeRequest(error: String?) {
         if let error = error {
+            #if DEBUG
             print("共有エラー: \(error)")
+            #endif
         }
 
         DispatchQueue.main.async {

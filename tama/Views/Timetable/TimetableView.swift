@@ -93,13 +93,15 @@ struct TimetableView: View {
                     forName: UIApplication.willEnterForegroundNotification,
                     object: nil,
                     queue: .main
-                ) { [self] _ in
-                    print("TimetableView: アプリがフォアグラウンドに復帰しました")
-                    viewModel.fetchTimetableData()
+                ) { _ in
+                    Task { @MainActor in
+                        print("TimetableView: アプリがフォアグラウンドに復帰しました")
+                        viewModel.fetchTimetableData()
 
-                    // 通知設定の状態を確認してサーバーと同期
-                    NotificationService.shared.checkAuthorizationStatus()
-                    NotificationService.shared.syncNotificationStatusWithServer()
+                        // 通知設定の状態を確認してサーバーと同期
+                        NotificationService.shared.checkAuthorizationStatus()
+                        NotificationService.shared.syncNotificationStatusWithServer()
+                    }
                 }
 
                 // 掲示リストのSafariViewが閉じられた時の通知を受け取る
@@ -107,9 +109,11 @@ struct TimetableView: View {
                     forName: .announcementSafariDismissed,
                     object: nil,
                     queue: .main
-                ) { [self] _ in
-                    print("TimetableView: 掲示リストのSafariViewが閉じられました")
-                    viewModel.fetchTimetableData()
+                ) { _ in
+                    Task { @MainActor in
+                        print("TimetableView: 掲示リストのSafariViewが閉じられました")
+                        viewModel.fetchTimetableData()
+                    }
                 }
             }
             .onDisappear {

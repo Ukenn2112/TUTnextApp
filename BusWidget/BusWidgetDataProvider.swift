@@ -47,7 +47,9 @@ struct BusWidgetDataProvider {
     // App Groupsからバススケジュールデータを取得
     static func getBusScheduleData() -> [String: Any]? {
         guard let busData = sharedDefaults?.data(forKey: BusWidgetKeys.cachedBusSchedule) else {
+            #if DEBUG
             print("BusWidgetDataProvider: App Groupsからデータが見つかりませんでした")
+            #endif
             return nil
         }
 
@@ -59,7 +61,9 @@ struct BusWidgetDataProvider {
             // BusScheduleをディクショナリに変換
             return convertBusScheduleToDict(busSchedule)
         } catch {
+            #if DEBUG
             print("BusWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)")
+            #endif
             return nil
         }
     }

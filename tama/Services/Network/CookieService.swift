@@ -24,7 +24,7 @@ final class CookieService {
         }
 
         // レスポンスの実際のURLを使用（利用可能な場合）
-        let url = response.url ?? URL(string: urlString) ?? URL(string: "https://next.tama.ac.jp")!
+        guard let url = response.url ?? URL(string: urlString) else { return }
 
         let setCookieHeaders = headerFields.filter { $0.key.lowercased() == "set-cookie" }
 

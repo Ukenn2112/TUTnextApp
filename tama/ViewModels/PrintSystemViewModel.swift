@@ -3,6 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// 印刷システムViewModel
+@MainActor
 final class PrintSystemViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?

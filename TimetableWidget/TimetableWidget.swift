@@ -65,7 +65,7 @@ struct Provider: TimelineProvider {
         var updateTimes: [Date] = []
 
         // 定期更新（10分ごと）- 基本的な更新頻度を確保
-        let tenMinutesLater = Calendar.current.date(byAdding: .minute, value: 10, to: currentDate)!
+        let tenMinutesLater = Calendar.current.date(byAdding: .minute, value: 10, to: currentDate) ?? currentDate.addingTimeInterval(Double(10 * 60))
         updateTimes.append(tenMinutesLater)
 
         // 1. 今日の各授業の開始時間と終了時間（終了1分後）を取得
@@ -170,18 +170,18 @@ struct Provider: TimelineProvider {
         if let fetchTime = lastFetchTime {
             let timeSinceFetch = currentDate.timeIntervalSince(fetchTime)
             if timeSinceFetch > 30 * 60 {  // 30分以上経過している場合
-                let immediateUpdate = calendar.date(byAdding: .minute, value: 1, to: currentDate)!
+                let immediateUpdate = calendar.date(byAdding: .minute, value: 1, to: currentDate) ?? currentDate.addingTimeInterval(Double(1 * 60))
                 updateTimes.append(immediateUpdate)
             }
         } else {
             // データがない場合もすぐに更新
-            let immediateUpdate = calendar.date(byAdding: .minute, value: 1, to: currentDate)!
+            let immediateUpdate = calendar.date(byAdding: .minute, value: 1, to: currentDate) ?? currentDate.addingTimeInterval(Double(1 * 60))
             updateTimes.append(immediateUpdate)
         }
 
         // 4. 現在授業中なら短い間隔で更新（現在時刻の状態を正確に表示するため）
         if dataProvider.getCurrentPeriod() != nil {
-            let fiveMinutesLater = calendar.date(byAdding: .minute, value: 5, to: currentDate)!
+            let fiveMinutesLater = calendar.date(byAdding: .minute, value: 5, to: currentDate) ?? currentDate.addingTimeInterval(Double(5 * 60))
             updateTimes.append(fiveMinutesLater)
         }
 
@@ -190,10 +190,7 @@ struct Provider: TimelineProvider {
 
         // 最も近い更新時間を取得（デフォルトは15分後）
         let nextUpdateDate =
-            updateTimes.first ?? calendar.date(byAdding: .minute, value: 15, to: currentDate)!
-
-        // デバッグ用（必要に応じてコメントアウト）
-        // print("Next update scheduled at: \(nextUpdateDate)")
+            updateTimes.first ?? (calendar.date(byAdding: .minute, value: 15, to: currentDate) ?? currentDate.addingTimeInterval(Double(15 * 60)))
 
         completion(Timeline(entries: [entry], policy: .after(nextUpdateDate)))
     }
@@ -638,8 +635,8 @@ struct SmallTimetableView: View {
 
                     Spacer()
 
-                    if course.period != nil {
-                        let periodInfo = dataProvider.getPeriods()[course.period! - 1]
+                    if let period = course.period {
+                        let periodInfo = dataProvider.getPeriods()[period - 1]
                         Text("\(periodInfo.1)-\(periodInfo.2)")
                             .font(.system(size: 9))
                             .foregroundColor(.secondary)
@@ -801,7 +798,7 @@ struct MediumTimetableView: View {
     private func getSortedPeriods(from courses: [CourseModel]) -> [String] {
         // 実際の授業がある時限を取得
         let periods = courses.compactMap { $0.period }.map { String($0) }
-        let sortedActualPeriods = Array(Set(periods)).sorted { Int($0)! < Int($1)! }
+        let sortedActualPeriods = Array(Set(periods)).sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
 
         // 最低限表示する時限数（1-5）
         let minimumPeriods = (1...5).map { String($0) }
@@ -813,7 +810,7 @@ struct MediumTimetableView: View {
         }
 
         // 時限番号でソート
-        return Array(allPeriods).sorted { Int($0)! < Int($1)! }
+        return Array(allPeriods).sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
     }
 
     // 今日の授業を取得

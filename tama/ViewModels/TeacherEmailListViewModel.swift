@@ -3,6 +3,7 @@ import Foundation
 import SwiftUI
 
 /// 教員メール一覧ViewModel
+@MainActor
 final class TeacherEmailListViewModel: ObservableObject {
     @Published var teachers: [Teacher] = []
     @Published var searchText: String = ""

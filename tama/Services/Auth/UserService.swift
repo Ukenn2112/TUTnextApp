@@ -11,8 +11,6 @@ final class UserService {
         DispatchQueue.main.async {
             if let encodedData = try? JSONEncoder().encode(user) {
                 UserDefaults.standard.set(encodedData, forKey: "currentUser")
-                // 確実に保存が完了するようにsynchronizeを呼び出す
-                UserDefaults.standard.synchronize()
                 // 保存完了後にコールバックを実行
                 completion?()
             }

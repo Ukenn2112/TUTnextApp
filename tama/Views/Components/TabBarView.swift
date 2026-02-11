@@ -259,27 +259,7 @@ struct TabBarView: View {
             return nil
         }
 
-        // カスタムエンコーディング
-        let customEncoded =
-            jsonString
-            .replacingOccurrences(of: " ", with: "%20")
-            .replacingOccurrences(of: "\"", with: "%22")
-            .replacingOccurrences(of: "\\", with: "%5C")
-            .replacingOccurrences(of: "'", with: "%27")
-            .replacingOccurrences(of: "+", with: "%2B")
-            .replacingOccurrences(of: ",", with: "%2C")
-            .replacingOccurrences(of: "/", with: "%2F")
-            .replacingOccurrences(of: ":", with: "%3A")
-            .replacingOccurrences(of: ";", with: "%3B")
-            .replacingOccurrences(of: "=", with: "%3D")
-            .replacingOccurrences(of: "?", with: "%3F")
-            .replacingOccurrences(of: "{", with: "%7B")
-            .replacingOccurrences(of: "}", with: "%7D")
-
-        let encodedLoginInfo =
-            customEncoded
-            .replacingOccurrences(of: "%2522", with: "%22")
-            .replacingOccurrences(of: "%255C", with: "%5C")
+        let encodedLoginInfo = jsonString.webAPIEncoded
 
         let urlString =
             "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"

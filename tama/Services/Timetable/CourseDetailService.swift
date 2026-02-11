@@ -81,8 +81,8 @@ final class CourseDetailService {
                 print("【課程詳細】HTTPステータスコード: \(httpResponse.statusCode)")
 
                 // 保存Cookie
-                if let url = response?.url {
-                    CookieService.shared.saveCookies(from: response!, for: url.absoluteString)
+                if let responseURL = httpResponse.url {
+                    CookieService.shared.saveCookies(from: httpResponse, for: responseURL.absoluteString)
                     print("【課程詳細】Cookieを保存しました")
                 }
             }
@@ -281,8 +281,8 @@ final class CourseDetailService {
                 print("【メモ保存】HTTPステータスコード: \(httpResponse.statusCode)")
 
                 // 保存Cookie
-                if let url = response?.url {
-                    CookieService.shared.saveCookies(from: response!, for: url.absoluteString)
+                if let responseURL = httpResponse.url {
+                    CookieService.shared.saveCookies(from: httpResponse, for: responseURL.absoluteString)
                     print("【メモ保存】Cookieを保存しました")
                 }
             }

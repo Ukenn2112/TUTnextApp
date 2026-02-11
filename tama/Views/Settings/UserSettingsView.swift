@@ -20,7 +20,7 @@ struct UserSettingsView: View {
     // MARK: - ボディ
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 ScrollView {
                     VStack(spacing: 0) {
@@ -38,12 +38,14 @@ struct UserSettingsView: View {
                 }
             }
             .navigationBarTitle("設定", displayMode: .inline)
-            .navigationBarItems(
-                leading: Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.primary)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    }
                 }
-            )
+            }
             .onAppear {
                 viewModel.loadUserData()
                 notificationService.checkAuthorizationStatus()
@@ -315,10 +317,10 @@ struct DarkModeSettingsView: View {
     @ObservedObject var appearanceManager: AppearanceManager
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color(UIColor.systemGroupedBackground)
-                    .edgesIgnoringSafeArea(.all)
+                    .ignoresSafeArea()
 
                 VStack(spacing: 24) {
                     // ヘッダーアイコン
@@ -373,13 +375,15 @@ struct DarkModeSettingsView: View {
                 }
             }
             .navigationTitle("外観モード")
-            .navigationBarItems(
-                trailing: Button(action: { dismiss() }) {
-                    Text("完了")
-                        .fontWeight(.medium)
-                        .foregroundColor(.blue)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Text("完了")
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                    }
                 }
-            )
+            }
             .preferredColorScheme(appearanceManager.colorSchemeOverride)
         }
     }

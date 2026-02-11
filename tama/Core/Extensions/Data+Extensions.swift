@@ -12,4 +12,11 @@ extension Data {
     func hexEncodedString() -> String {
         return map { String(format: "%02hhX", $0) }.joined()
     }
+
+    /// UTF-8文字列をDataに安全に追加する
+    mutating func appendString(_ string: String) {
+        if let data = string.data(using: .utf8) {
+            append(data)
+        }
+    }
 }

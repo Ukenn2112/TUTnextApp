@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 /// 授業詳細ViewModel
+@MainActor
 final class CourseDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String? = nil

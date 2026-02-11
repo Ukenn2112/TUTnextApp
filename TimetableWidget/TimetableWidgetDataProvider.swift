@@ -178,7 +178,9 @@ class TimetableWidgetDataProvider {
         do {
             // UserDefaultsへのアクセスチェック
             guard let userDefaults = sharedDefaults else {
+                #if DEBUG
                 print("TimetableWidgetDataProvider: App Groupsにアクセスできません")
+                #endif
                 return CourseModel.sampleCourses
             }
 
@@ -187,7 +189,9 @@ class TimetableWidgetDataProvider {
                 let timetableData = userDefaults.data(
                     forKey: TimetableWidgetKeys.cachedTimetableData)
             else {
+                #if DEBUG
                 print("TimetableWidgetDataProvider: App Groupsからデータが見つかりませんでした")
+                #endif
                 // データがなければサンプルデータでフォールバック
                 return CourseModel.sampleCourses
             }
@@ -199,7 +203,9 @@ class TimetableWidgetDataProvider {
 
             return timetableDataDecoded
         } catch {
+            #if DEBUG
             print("TimetableWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)")
+            #endif
             return CourseModel.sampleCourses
         }
     }

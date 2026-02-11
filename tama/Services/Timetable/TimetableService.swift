@@ -110,8 +110,8 @@ final class TimetableService {
                 print("【時間割】HTTPステータスコード: \(httpResponse.statusCode)")
 
                 // 保存Cookie
-                if let url = response?.url {
-                    CookieService.shared.saveCookies(from: response!, for: url.absoluteString)
+                if let responseURL = httpResponse.url {
+                    CookieService.shared.saveCookies(from: httpResponse, for: responseURL.absoluteString)
                     print("【時間割】Cookieを保存しました")
                 }
             }
@@ -352,7 +352,7 @@ final class TimetableService {
         print("【時間割】部屋変更処理: \(courseName) → \(newRoom)")
 
         // 48時間後の日時を計算
-        let expiryDate = Calendar.current.date(byAdding: .hour, value: 48, to: Date())!
+        guard let expiryDate = Calendar.current.date(byAdding: .hour, value: 48, to: Date()) else { return }
 
         // 部屋変更情報を作成
         let roomChange = RoomChange(

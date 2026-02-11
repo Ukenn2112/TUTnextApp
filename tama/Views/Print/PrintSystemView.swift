@@ -12,7 +12,7 @@ struct PrintSystemView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // 背景色
                 Color(UIColor.systemBackground)
@@ -357,7 +357,7 @@ struct PrintResultView: View {
     @State private var showCopiedAlert = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 // 成功メッセージ
                 VStack(spacing: 8) {
@@ -441,15 +441,17 @@ struct PrintResultView: View {
                 .padding(.bottom, 30)
             }
             .navigationBarTitle("アップロード完了", displayMode: .inline)
-            .navigationBarItems(
-                trailing: Button(action: {
-                    dismiss()
-                    onDismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.primary)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        dismiss()
+                        onDismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    }
                 }
-            )
+            }
             .overlay {
                 if showCopiedAlert {
                     VStack {

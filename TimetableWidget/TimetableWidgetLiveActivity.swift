@@ -39,7 +39,7 @@ struct TimetableWidgetLiveActivity: Widget {
             } minimal: {
                 Text("授")
             }
-            .widgetURL(URL(string: "tamaapp://timetable"))
+            .widgetURL(URL(string: "tama://timetable"))
             .keylineTint(Color.blue)
         }
     }

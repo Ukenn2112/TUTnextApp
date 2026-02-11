@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 /// 課題一覧ViewModel
+@MainActor
 final class AssignmentViewModel: ObservableObject {
     @Published var assignments: [Assignment] = []
     @Published var isLoading: Bool = false
@@ -10,14 +11,15 @@ final class AssignmentViewModel: ObservableObject {
     private let assignmentService = AssignmentService.shared
 
     // タイマーを使って残り時間を更新
-    private var timer: Timer?
+    nonisolated(unsafe) private var timer: Timer?
 
     init() {
         setupTimer()
     }
 
     deinit {
-        invalidateTimer()
+        timer?.invalidate()
+        timer = nil
     }
 
     private func setupTimer() {

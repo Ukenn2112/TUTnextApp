@@ -43,7 +43,8 @@ TUTnextApp/
 │   │   │   └── APIError.swift    #   API通信エラーの定義
 │   │   └── Extensions/
 │   │       ├── Data+Extensions.swift      # Data型の拡張メソッド
-│   │       └── Notification+Names.swift   # 通知名の定数定義
+│   │       ├── Notification+Names.swift   # 通知名の定数定義
+│   │       └── String+URLEncoding.swift   # String型のURLエンコード拡張
 │   │
 │   ├── Models/                   # データモデル（構造体・列挙型）
 │   │   ├── AssignmentModel.swift #   課題データモデル

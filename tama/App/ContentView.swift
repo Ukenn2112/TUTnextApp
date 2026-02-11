@@ -63,7 +63,7 @@ struct ContentView: View {
                     .tag(2)
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .edgesIgnoringSafeArea(.bottom)
+            .ignoresSafeArea(.container, edges: .bottom)
 
             TabBarView(selectedTab: $selectedTab)
         }

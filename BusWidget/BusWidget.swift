@@ -103,6 +103,20 @@ struct BusWidgetSchedule {
     }
 }
 
+// フォールバック用ディープリンクURL
+private let busDefaultURL: URL = {
+    // "tama://bus" is a well-formed URL, so this force-unwrap-free
+    // initializer uses a compile-time safe fallback.
+    guard let url = URL(string: "tama://bus") else {
+        // URLComponents guarantees a valid URL here
+        var components = URLComponents()
+        components.scheme = "tama"
+        components.host = "bus"
+        return components.url!
+    }
+    return url
+}()
+
 struct Provider: AppIntentTimelineProvider {
     // 次のバス時刻を取得
     func getNextBusTimes(routeType: RouteTypeEnum, from: Date) -> [BusWidgetSchedule.TimeEntry] {
@@ -241,16 +255,16 @@ struct Provider: AppIntentTimelineProvider {
             // バスがない場合は30分ごとに更新
             for minuteOffset in stride(from: 30, to: 180, by: 30) {
                 refreshDates.append(
-                    Calendar.current.date(byAdding: .minute, value: minuteOffset, to: currentDate)!)
+                    Calendar.current.date(byAdding: .minute, value: minuteOffset, to: currentDate) ?? currentDate.addingTimeInterval(Double(minuteOffset * 60)))
             }
         }
 
         // 深夜0時の更新ポイントを追加（日付変更による運行ダイヤ変更のため）
         let calendar = Calendar.current
         var midnight = calendar.startOfDay(for: currentDate)
-        midnight = calendar.date(byAdding: .day, value: 1, to: midnight)!  // 翌日の深夜0時
+        midnight = calendar.date(byAdding: .day, value: 1, to: midnight) ?? midnight.addingTimeInterval(Double(1 * 86400))  // 翌日の深夜0時
         refreshDates.append(midnight)
-        refreshDates.append(calendar.date(byAdding: .second, value: 10, to: midnight)!)  // 0時10秒後（確実に更新するため）
+        refreshDates.append(calendar.date(byAdding: .second, value: 10, to: midnight) ?? midnight.addingTimeInterval(10))  // 0時10秒後（確実に更新するため）
 
         // 重複を削除して昇順にソート
         refreshDates = Array(Set(refreshDates)).sorted()
@@ -320,7 +334,7 @@ struct Provider: AppIntentTimelineProvider {
 
         // バス時刻が過去の場合は翌日とする
         if busDate < currentDate {
-            busDate = calendar.date(byAdding: .day, value: 1, to: busDate)!
+            busDate = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86400))
         }
 
         return busDate
@@ -346,7 +360,7 @@ struct SimpleEntry: TimelineEntry {
             URLQueryItem(name: "schedule", value: scheduleType),
         ]
 
-        return urlComponents.url ?? URL(string: "tama://bus")!
+        return urlComponents.url ?? busDefaultURL
     }
 
     // バス時刻をDate型に変換するメソッド
@@ -368,7 +382,7 @@ struct SimpleEntry: TimelineEntry {
 
         // バス時刻が過去の場合は翌日とする
         if busDate <= now {
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: busDate)!
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86400))
             return nextDay
         }
 
@@ -415,7 +429,7 @@ struct SimpleEntry: TimelineEntry {
 
                 if !hasLaterBusesToday {
                     // 翌日のこのバスを表示
-                    actualBusDate = calendar.date(byAdding: .day, value: 1, to: busDate)!
+                    actualBusDate = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86400))
                 } else {
                     // 過去のバスなのでスキップ
                     continue
@@ -554,7 +568,7 @@ struct BusWidgetEntryView: View {
             URLQueryItem(name: "schedule", value: entry.scheduleType),
         ]
 
-        return urlComponents.url ?? URL(string: "tama://bus")!
+        return urlComponents.url ?? busDefaultURL
     }
 
     var body: some View {
