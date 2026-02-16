@@ -45,6 +45,9 @@
         }
       }
     },
+    "「システムに従う」を選択すると、デバイスの設定に合わせて自動的に切り替わります。" : {
+
+    },
     "@%@" : {
       "localizations" : {
         "en" : {
@@ -1186,6 +1189,7 @@
       }
     },
     "デバイスの設定に合わせて自動的に切り替えます" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2433,6 +2437,7 @@
       }
     },
     "完了" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2699,6 +2704,7 @@
       }
     },
     "明るい外観を常に使用します" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2810,6 +2816,7 @@
       }
     },
     "暗い外観を常に使用します" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

@@ -29,9 +29,8 @@ struct TamaApp: App {
                 .environmentObject(languageService)
                 .environmentObject(ratingService)
                 .environmentObject(GoogleOAuthService.shared)
-                .preferredColorScheme(appearanceManager.colorSchemeOverride)
                 .onAppear {
-                    appearanceManager.startObservingSystemAppearance()
+                    appearanceManager.applyAppearance()
                     notificationService.checkAuthorizationStatus()
                     ratingService.onAppLaunch()
                 }

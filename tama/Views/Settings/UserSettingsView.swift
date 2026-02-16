@@ -53,11 +53,10 @@ struct UserSettingsView: View {
                 MailComposerView(isShowing: $viewModel.showMailComposer)
             }
             .sheet(isPresented: $viewModel.showingDarkModeSheet) {
-                DarkModeSettingsView(appearanceManager: appearanceManager)
+                DarkModeSettingsView()
+                    .environmentObject(appearanceManager)
             }
-            .preferredColorScheme(appearanceManager.colorSchemeOverride)
         }
-        .preferredColorScheme(appearanceManager.colorSchemeOverride)
     }
 
     // MARK: - セクション

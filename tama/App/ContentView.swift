@@ -6,7 +6,6 @@ struct ContentView: View {
 
     // MARK: - プロパティ
 
-    @EnvironmentObject private var appearanceManager: AppearanceManager
     @State private var selectedTab = 1
     @State private var isLoggedIn = false
     @State private var assignmentCount: Int = 0
@@ -43,7 +42,6 @@ struct ContentView: View {
                 navigateToTab(for: page)
             }
         }
-        .preferredColorScheme(appearanceManager.colorSchemeOverride)
     }
 
     // MARK: - サブビュー

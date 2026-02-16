@@ -1,6 +1,10 @@
 import SwiftUI
+import UIKit
 
 /// アプリの外観（ダークモード等）を管理するクラス
+///
+/// UIWindowの `overrideUserInterfaceStyle` を使用して外観を切り替える。
+/// この方式はSheet・Alert・ActionSheet等すべてのUIに確実に適用される。
 final class AppearanceManager: ObservableObject {
 
     // MARK: - 列挙型
@@ -14,17 +18,7 @@ final class AppearanceManager: ObservableObject {
 
     // MARK: - プロパティ
 
-    @Published var isDarkMode: Bool = false
     @Published var mode: AppearanceMode
-
-    /// SwiftUIの `preferredColorScheme` に渡すための計算プロパティ
-    var colorSchemeOverride: ColorScheme? {
-        switch mode {
-        case .system: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
-    }
 
     // MARK: - UserDefaultsキー
 
@@ -36,17 +30,7 @@ final class AppearanceManager: ObservableObject {
 
     init() {
         let savedRawValue = UserDefaults.standard.integer(forKey: DefaultsKey.darkMode)
-        let savedMode = AppearanceMode(rawValue: savedRawValue) ?? .system
-        self.mode = savedMode
-
-        switch savedMode {
-        case .system:
-            isDarkMode = Self.currentSystemIsDark
-        case .light:
-            isDarkMode = false
-        case .dark:
-            isDarkMode = true
-        }
+        self.mode = AppearanceMode(rawValue: savedRawValue) ?? .system
     }
 
     // MARK: - 公開メソッド
@@ -55,44 +39,23 @@ final class AppearanceManager: ObservableObject {
     func setMode(_ newMode: AppearanceMode) {
         mode = newMode
         UserDefaults.standard.set(newMode.rawValue, forKey: DefaultsKey.darkMode)
+        applyAppearance()
+    }
 
-        switch newMode {
-        case .system:
-            isDarkMode = Self.currentSystemIsDark
-        case .light:
-            isDarkMode = false
-        case .dark:
-            isDarkMode = true
+    /// 現在のモードをすべてのウィンドウに適用する
+    func applyAppearance() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        else { return }
+
+        let style: UIUserInterfaceStyle
+        switch mode {
+        case .system: style = .unspecified
+        case .light: style = .light
+        case .dark: style = .dark
         }
-    }
 
-    /// システムの外観変更の監視を開始する
-    func startObservingSystemAppearance() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleSystemAppearanceChange),
-            name: UIApplication.didBecomeActiveNotification,
-            object: nil
-        )
-    }
-
-    // MARK: - プライベートメソッド
-
-    /// 現在のシステムがダークモードかどうかを取得
-    private static var currentSystemIsDark: Bool {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first
-        else {
-            return false
-        }
-        return window.traitCollection.userInterfaceStyle == .dark
-    }
-
-    @objc private func handleSystemAppearanceChange() {
-        guard mode == .system else { return }
-        let newDarkMode = Self.currentSystemIsDark
-        if isDarkMode != newDarkMode {
-            isDarkMode = newDarkMode
+        for window in windowScene.windows {
+            window.overrideUserInterfaceStyle = style
         }
     }
 }

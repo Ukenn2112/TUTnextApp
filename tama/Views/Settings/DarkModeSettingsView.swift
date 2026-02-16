@@ -5,135 +5,125 @@ struct DarkModeSettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @ObservedObject var appearanceManager: AppearanceManager
+    @EnvironmentObject private var appearanceManager: AppearanceManager
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(UIColor.systemGroupedBackground)
-                    .ignoresSafeArea()
-
-                VStack(spacing: 24) {
-                    // ヘッダーアイコン
-                    HStack(spacing: 20) {
-                        Image(systemName: "sun.max.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(colorScheme == .light ? .orange : .gray)
-                        Image(systemName: "moon.stars.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(colorScheme == .dark ? .blue : .gray)
-                    }
-                    .padding(.top, 20)
-
-                    // オプションカード
-                    VStack(spacing: 16) {
-                        appearanceOptionCard(
-                            title: NSLocalizedString("システムに従う", comment: ""),
-                            icon: "gear",
-                            description: NSLocalizedString("デバイスの設定に合わせて自動的に切り替えます", comment: ""),
-                            isSelected: appearanceManager.mode == .system
-                        ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                appearanceManager.setMode(.system)
-                            }
-                        }
-
-                        appearanceOptionCard(
-                            title: NSLocalizedString("ライトモード", comment: ""),
+            Form {
+                // プレビューセクション
+                Section {
+                    HStack {
+                        Spacer()
+                        appearancePreview(
                             icon: "sun.max.fill",
-                            description: NSLocalizedString("明るい外観を常に使用します", comment: ""),
-                            isSelected: appearanceManager.mode == .light
-                        ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                appearanceManager.setMode(.light)
-                            }
-                        }
-
-                        appearanceOptionCard(
-                            title: NSLocalizedString("ダークモード", comment: ""),
+                            label: NSLocalizedString("ライト", comment: ""),
+                            isActive: colorScheme == .light
+                        )
+                        Spacer()
+                        appearancePreview(
                             icon: "moon.stars.fill",
-                            description: NSLocalizedString("暗い外観を常に使用します", comment: ""),
-                            isSelected: appearanceManager.mode == .dark
-                        ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                appearanceManager.setMode(.dark)
-                            }
-                        }
+                            label: NSLocalizedString("ダーク", comment: ""),
+                            isActive: colorScheme == .dark
+                        )
+                        Spacer()
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .listRowBackground(Color.clear)
+                }
 
-                    Spacer()
+                // 外観モード選択セクション
+                Section {
+                    appearanceRow(
+                        title: NSLocalizedString("システムに従う", comment: ""),
+                        icon: "gear",
+                        color: .gray,
+                        mode: .system
+                    )
+                    appearanceRow(
+                        title: NSLocalizedString("ライトモード", comment: ""),
+                        icon: "sun.max.fill",
+                        color: .orange,
+                        mode: .light
+                    )
+                    appearanceRow(
+                        title: NSLocalizedString("ダークモード", comment: ""),
+                        icon: "moon.stars.fill",
+                        color: .indigo,
+                        mode: .dark
+                    )
+                } footer: {
+                    Text(NSLocalizedString("「システムに従う」を選択すると、デバイスの設定に合わせて自動的に切り替わります。", comment: ""))
                 }
             }
-            .navigationTitle("外観モード")
+            .navigationBarTitle("外観モード", displayMode: .inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
-                        Text("完了")
-                            .fontWeight(.medium)
-                            .foregroundColor(.blue)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 30, height: 30)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
                     }
                 }
             }
-            .preferredColorScheme(appearanceManager.colorSchemeOverride)
         }
     }
 
-    // MARK: - カードコンポーネント
+    // MARK: - コンポーネント
 
-    private func appearanceOptionCard(
+    /// 外観プレビューアイコン
+    private func appearancePreview(
+        icon: String,
+        label: String,
+        isActive: Bool
+    ) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 32))
+                .foregroundStyle(isActive ? (icon.contains("sun") ? .orange : .blue) : .gray)
+                .frame(width: 64, height: 64)
+                .background(
+                    Circle()
+                        .fill(isActive ? (icon.contains("sun") ? Color.orange : Color.blue).opacity(0.15) : Color(UIColor.tertiarySystemFill))
+                )
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(isActive ? .primary : .secondary)
+        }
+    }
+
+    /// iOS設定アプリスタイルの選択行
+    private func appearanceRow(
         title: String,
         icon: String,
-        description: String,
-        isSelected: Bool,
-        action: @escaping () -> Void
+        color: Color,
+        mode: AppearanceManager.AppearanceMode
     ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            isSelected
-                                ? Color.blue.opacity(0.2)
-                                : Color(UIColor.secondarySystemBackground)
-                        )
-                        .frame(width: 50, height: 50)
-                    Image(systemName: icon)
-                        .font(.system(size: 22))
-                        .foregroundColor(isSelected ? .blue : .gray)
-                }
+        Button {
+            withAnimation { appearanceManager.setMode(mode) }
+        } label: {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(color.gradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Text(description)
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+                Text(title)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(.blue)
-                        .transition(.scale.combined(with: .opacity))
+                if appearanceManager.mode == mode {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.blue)
                 }
             }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
-            )
         }
-        .buttonStyle(PlainButtonStyle())
+        .tint(.primary)
     }
 }
