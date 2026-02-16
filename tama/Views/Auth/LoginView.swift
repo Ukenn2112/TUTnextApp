@@ -18,6 +18,9 @@ struct LoginView: View {
         case password
     }
 
+    // NFCボタンのシマーアニメーション
+    @State private var nfcShimmer = false
+
     // MARK: - 計算プロパティ
     private var errorColor: Color {
         colorScheme == .dark ? Color.red.opacity(0.8) : Color.red
@@ -25,34 +28,24 @@ struct LoginView: View {
 
     // MARK: - ボディ
     var body: some View {
-        ZStack {
-            // 背景色
-            Color(UIColor.systemBackground)
-                .edgesIgnoringSafeArea(.all)
+        VStack(spacing: 0) {
+            Spacer()
 
-            // キーボードを閉じるための背景タップハンドラー
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture { focusedField = nil }
+            loginFormContent
 
-            // メインコンテンツ
-            VStack(spacing: 0) {
-                Spacer()
-
-                loginFormContent
-
-                Spacer()
-            }
+            Spacer()
 
             // フッター
-            VStack {
-                Spacer()
-                Text("@Meikennと@Cursorが愛を込めて作った")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-            .ignoresSafeArea(.keyboard, edges: .bottom)
+            Text("@Meikennと@Claudeが愛を込めて作った")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .padding(.bottom, 8)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            Color(UIColor.systemBackground)
+                .onTapGesture { focusedField = nil }
+        )
         .alert("ログイン方法を選択", isPresented: $viewModel.showNFCTip) {
             Button("手入力") {
                 viewModel.showNFCTip = false
@@ -70,7 +63,8 @@ struct LoginView: View {
         .onChange(of: viewModel.nfcReader.studentID) { _, newValue in
             viewModel.handleStudentIDChange(newValue)
             if !newValue.isEmpty {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // NFCセッションのUI消去アニメーション完了を待つ
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     focusedField = .password
                 }
             }
@@ -148,6 +142,7 @@ struct LoginView: View {
                             .stroke(
                                 focusedField == .account ? Color.primary : Color.gray.opacity(0.3),
                                 lineWidth: 1)
+                            .animation(.easeOut(duration: 0.2), value: focusedField)
                     )
                     .textContentType(.username)
                     .keyboardType(.asciiCapable)
@@ -160,16 +155,49 @@ struct LoginView: View {
                         focusedField = .password
                     }
 
-                // NFCスキャンボタン
+                // NFCスキャンボタン（シマーで注目を引く）
                 Button {
                     viewModel.clearErrors()
                     viewModel.nfcReader.startSession()
                 } label: {
-                    Image(systemName: "person.text.rectangle")
-                        .font(.system(size: 20))
-                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.text.rectangle")
+                            .font(.system(size: 13))
+                        Text("学生証スキャン")
+                            .font(.system(size: 12))
+                    }
+                    .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.5))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.06))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        .clear,
+                                        .white.opacity(0.4),
+                                        .clear,
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .offset(x: nfcShimmer ? 80 : -80)
+                            .animation(
+                                .easeInOut(duration: 1.2)
+                                    .delay(0.5)
+                                    .repeatCount(3, autoreverses: false),
+                                value: nfcShimmer
+                            )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
                 }
-                .padding(.trailing, 10)
+                .padding(.trailing, 6)
+                .onAppear { nfcShimmer = true }
             }
 
             // パスワード入力フィールド
@@ -181,6 +209,7 @@ struct LoginView: View {
                         .stroke(
                             focusedField == .password ? Color.primary : Color.gray.opacity(0.3),
                             lineWidth: 1)
+                        .animation(.easeOut(duration: 0.2), value: focusedField)
                 )
                 .textContentType(.password)
                 .font(.system(size: 18))
@@ -280,4 +309,5 @@ struct LoginView: View {
     LoginView(isLoggedIn: .constant(false))
         .environmentObject(AppearanceManager())
         .environmentObject(NotificationService.shared)
+        .environmentObject(RatingService.shared)
 }

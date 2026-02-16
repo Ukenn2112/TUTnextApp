@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftUI
 
@@ -16,6 +17,20 @@ final class LoginViewModel: ObservableObject {
 
     // NFCリーダー
     let nfcReader = NFCReader()
+
+    private var cancellables = Set<AnyCancellable>()
+
+    // MARK: - 初期化
+
+    init() {
+        // nfcReaderの変更をViewModelに伝播させる
+        nfcReader.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+    }
 
     // MARK: - 計算プロパティ
 
@@ -55,13 +70,20 @@ final class LoginViewModel: ObservableObject {
         isLoading = true
         clearErrors()
 
-        let timeoutTask = createTimeoutTask()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeoutTask)
+        // @MainActor上でタイムアウトを管理
+        let timeoutTask = Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if self.isLoading {
+                self.isLoading = false
+                self.loginErrorMessage =
+                    "ログインがタイムアウトしました。\nネットワーク接続を確認してください。\n\nもしネットワーク接続が良好であることが確認できた場合は、遅入りますが、admin@ukenn.top に取り合わせいてください。"
+            }
+        }
 
         AuthService.shared.login(account: account, password: password) { [weak self] result in
             timeoutTask.cancel()
 
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 guard let self = self else { return }
                 self.isLoading = false
 
@@ -76,19 +98,6 @@ final class LoginViewModel: ObservableObject {
     }
 
     // MARK: - プライベートメソッド
-
-    private func createTimeoutTask() -> DispatchWorkItem {
-        return DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-            if self.isLoading {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.loginErrorMessage =
-                        "ログインがタイムアウトしました。\nネットワーク接続を確認してください。\n\nもしネットワーク接続が良好であることが確認できた場合は、遅入りますが、admin@ukenn.top に取り合わせいてください。"
-                }
-            }
-        }
-    }
 
     private func handleLoginResponse(_ json: [String: Any], onSuccess: @escaping () -> Void) {
         guard let statusDto = json["statusDto"] as? [String: Any],

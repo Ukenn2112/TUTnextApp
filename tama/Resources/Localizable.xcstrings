@@ -67,24 +67,24 @@
         }
       }
     },
-    "@Meikennと@Cursorが愛を込めて作った" : {
+    "@Meikennと@Claudeが愛を込めて作った" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Made with love by @Meikenn and @Cursor"
+            "value" : "Made with love by @Meikenn and @Claude"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사랑을 담아 @Meikenn과 @Cursor가 만들었습니다."
+            "value" : "사랑을 담아 @Meikenn과 @Claude가 만들었습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "由 @Meikenn 和 @Cursor 倾情打造"
+            "value" : "由 @Meikenn 和 @Claude 倾情打造"
           }
         }
       }
@@ -2340,6 +2340,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "为大学生用小型巴士（仅限周二、周三和周四）"
+          }
+        }
+      }
+    },
+    "学生証スキャン" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read Student ID"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학생증 읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取学生证"
           }
         }
       }
