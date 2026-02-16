@@ -8,7 +8,6 @@ struct UserSettingsView: View {
     // MARK: - プロパティ
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @Binding var isLoggedIn: Bool
     @EnvironmentObject private var appearanceManager: AppearanceManager
     @EnvironmentObject private var notificationService: NotificationService
@@ -21,28 +20,23 @@ struct UserSettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        userInfoSection
-                            .padding(.bottom, 12)
-
-                        settingsSection
-
-                        appInfoSection
-                            .padding(.top, 40)
-                            .padding(.bottom, 50)
-
-                        Spacer(minLength: 80)
-                    }
-                }
+            Form {
+                userInfoSection
+                accountSettingsSection
+                appSettingsSection
+                otherSection
+                logoutSection
             }
             .navigationBarTitle("設定", displayMode: .inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .foregroundColor(.primary)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 30, height: 30)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
                     }
                 }
             }
@@ -66,159 +60,190 @@ struct UserSettingsView: View {
         .preferredColorScheme(appearanceManager.colorSchemeOverride)
     }
 
-    // MARK: - サブビュー
+    // MARK: - セクション
 
     /// ユーザー情報セクション
     private var userInfoSection: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 16) {
+        Section {
+            HStack(spacing: 14) {
                 Text(viewModel.getInitials())
-                    .font(.system(size: 18))
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(Color.red.opacity(colorScheme == .dark ? 0.8 : 1))
+                    .font(.system(size: 22, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(width: 60, height: 60)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.red, Color.red.opacity(0.75)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .clipShape(Circle())
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(viewModel.user?.fullName ?? "ユーザー名")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .font(.title3.weight(.semibold))
                     Text("@\(viewModel.user?.username ?? "username")")
-                        .font(.system(size: 15))
-                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-
-                Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .padding(.vertical, 4)
         }
     }
 
-    /// 設定セクション
-    private var settingsSection: some View {
-        VStack(spacing: 0) {
-            // アカウント設定
-            SettingsSectionHeader(title: NSLocalizedString("アカウント設定", comment: ""))
-            SettingsRow(
+    /// アカウント設定セクション
+    private var accountSettingsSection: some View {
+        Section(NSLocalizedString("アカウント設定", comment: "")) {
+            settingsButton(
+                NSLocalizedString("パスワード変更", comment: ""),
                 icon: "lock.fill",
-                title: NSLocalizedString("パスワード変更", comment: "")
+                color: .blue
             ) {
                 viewModel.openPasswordChangeURL()
             }
+        }
+    }
 
-            // アプリ設定
-            SettingsSectionHeader(title: NSLocalizedString("アプリ設定", comment: ""))
-            SettingsRow(
+    /// アプリ設定セクション
+    private var appSettingsSection: some View {
+        Section(NSLocalizedString("アプリ設定", comment: "")) {
+            settingsButton(
+                NSLocalizedString("時間割をカレンダーへ", comment: ""),
                 icon: "calendar.badge.plus",
-                title: NSLocalizedString("時間割をカレンダーへ", comment: "")
+                color: .orange
             ) {
                 viewModel.openURL("https://tama.qaq.tw/")
             }
 
-            notificationSettingsRow
-            languageSettingsRow
-            darkModeSettingsRow
+            settingsButton(
+                NSLocalizedString("通知設定", comment: ""),
+                icon: notificationService.isAuthorized ? "bell.fill" : "bell.slash",
+                color: .red,
+                detail: notificationStatusText
+            ) {
+                handleNotificationSettings()
+            }
 
-            // その他
-            SettingsSectionHeader(title: NSLocalizedString("その他", comment: ""))
-            SettingsRow(
+            settingsButton(
+                NSLocalizedString("言語", comment: ""),
+                icon: "globe",
+                color: .teal,
+                detail: languageService.currentLanguage
+            ) {
+                languageService.openLanguageSettings()
+            }
+
+            settingsButton(
+                NSLocalizedString("ダークモード", comment: ""),
+                icon: "moon.fill",
+                color: .indigo,
+                detail: darkModeText
+            ) {
+                viewModel.showingDarkModeSheet = true
+            }
+        }
+    }
+
+    /// その他セクション
+    private var otherSection: some View {
+        Section(NSLocalizedString("その他", comment: "")) {
+            settingsButton(
+                NSLocalizedString("利用規約", comment: ""),
                 icon: "doc.text.fill",
-                title: NSLocalizedString("利用規約", comment: "")
+                color: .gray
             ) {
                 viewModel.openURL("https://tama.qaq.tw/user-agreement")
             }
-            SettingsRow(
+
+            settingsButton(
+                NSLocalizedString("プライバシーポリシー", comment: ""),
                 icon: "hand.raised.fill",
-                title: NSLocalizedString("プライバシーポリシー", comment: "")
+                color: .blue
             ) {
                 viewModel.openURL("https://tama.qaq.tw/policy")
             }
-            SettingsRow(
-                icon: "exclamationmark.bubble.fill",
-                title: NSLocalizedString("フィードバック", comment: "")
+
+            settingsButton(
+                NSLocalizedString("フィードバック", comment: ""),
+                icon: "envelope.fill",
+                color: .mint
             ) {
                 viewModel.sendFeedback()
             }
-            SettingsRow(
+
+            settingsButton(
+                NSLocalizedString("アプリを評価", comment: ""),
                 icon: "star.fill",
-                title: NSLocalizedString("アプリを評価", comment: "")
+                color: .yellow
             ) {
                 ratingService.requestRatingManually()
             }
-
-            logoutButton
         }
     }
 
-    /// 通知設定行
-    private var notificationSettingsRow: some View {
-        Button(action: { handleNotificationSettings() }) {
-            SettingsDetailRow(
-                icon: notificationService.isAuthorized ? "bell.fill" : "bell.slash",
-                title: "通知設定",
-                detail: notificationStatusText
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
+    /// ログアウトセクション
+    private var logoutSection: some View {
+        Section {
+            Button(action: { performLogout() }) {
+                HStack {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Color.red.gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
 
-    /// 言語設定行
-    private var languageSettingsRow: some View {
-        Button(action: { languageService.openLanguageSettings() }) {
-            SettingsDetailRow(
-                icon: "globe",
-                title: "言語",
-                detail: languageService.currentLanguage
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-
-    /// ダークモード設定行
-    private var darkModeSettingsRow: some View {
-        Button(action: { viewModel.showingDarkModeSheet = true }) {
-            SettingsDetailRow(
-                icon: "moon.fill",
-                title: "ダークモード",
-                detail: darkModeText
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-
-    /// ログアウトボタン
-    private var logoutButton: some View {
-        Button(action: { performLogout() }) {
-            HStack {
-                Image(systemName: "arrow.right.square.fill")
-                    .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
-                    .font(.system(size: 20))
-                    .frame(width: 24, height: 24)
-                Text("ログアウト")
-                    .foregroundColor(colorScheme == .dark ? .red.opacity(0.8) : .red)
-                    .font(.system(size: 16))
-                Spacer()
+                    Text(NSLocalizedString("ログアウト", comment: ""))
+                        .foregroundStyle(.red)
+                }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .tint(.red)
+        } footer: {
+            VStack(spacing: 4) {
+                Text("TUTnext")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Text(
+                    "バージョン \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"))"
+                )
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 24)
         }
     }
 
-    /// アプリ情報セクション
-    private var appInfoSection: some View {
-        VStack(spacing: 8) {
-            Text("TUTnext")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.primary)
-            Text(
-                "バージョン \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"))"
-            )
-            .font(.system(size: 12))
-            .foregroundColor(.secondary)
+    // MARK: - コンポーネント
+
+    /// iOS設定アプリスタイルのアイコンバッジ付き設定行
+    private func settingsButton(
+        _ title: String,
+        icon: String,
+        color: Color,
+        detail: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(color.gradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                Text(title)
+                    .foregroundStyle(.primary)
+
+                if let detail {
+                    Spacer()
+                    Text(detail)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
+        .tint(.primary)
     }
 
     // MARK: - 計算プロパティ
@@ -272,275 +297,6 @@ struct UserSettingsView: View {
                     isLoggedIn = false
                 }
             }
-        }
-    }
-}
-
-// MARK: - 詳細付き設定行
-
-/// アイコン、タイトル、詳細テキスト、シェブロンを含む設定行
-private struct SettingsDetailRow: View {
-    let icon: String
-    let title: LocalizedStringKey
-    let detail: String
-
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.primary)
-                .font(.system(size: 20))
-                .frame(width: 24, height: 24)
-            Text(title)
-                .foregroundColor(.primary)
-                .font(.system(size: 16))
-            Spacer()
-            Text(detail)
-                .foregroundColor(.secondary)
-                .font(.system(size: 14))
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-                .font(.system(size: 14))
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-    }
-}
-
-// MARK: - ダークモード設定画面
-
-/// 外観モード（ライト/ダーク/システム）を選択するシート
-struct DarkModeSettingsView: View {
-
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
-    @ObservedObject var appearanceManager: AppearanceManager
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color(UIColor.systemGroupedBackground)
-                    .ignoresSafeArea()
-
-                VStack(spacing: 24) {
-                    // ヘッダーアイコン
-                    HStack(spacing: 20) {
-                        Image(systemName: "sun.max.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(colorScheme == .light ? .orange : .gray)
-                        Image(systemName: "moon.stars.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(colorScheme == .dark ? .blue : .gray)
-                    }
-                    .padding(.top, 20)
-
-                    // オプションカード
-                    VStack(spacing: 16) {
-                        appearanceOptionCard(
-                            title: NSLocalizedString("システムに従う", comment: ""),
-                            icon: "gear",
-                            description: NSLocalizedString("デバイスの設定に合わせて自動的に切り替えます", comment: ""),
-                            isSelected: appearanceManager.mode == .system
-                        ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                appearanceManager.setMode(.system)
-                            }
-                        }
-
-                        appearanceOptionCard(
-                            title: NSLocalizedString("ライトモード", comment: ""),
-                            icon: "sun.max.fill",
-                            description: NSLocalizedString("明るい外観を常に使用します", comment: ""),
-                            isSelected: appearanceManager.mode == .light
-                        ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                appearanceManager.setMode(.light)
-                            }
-                        }
-
-                        appearanceOptionCard(
-                            title: NSLocalizedString("ダークモード", comment: ""),
-                            icon: "moon.stars.fill",
-                            description: NSLocalizedString("暗い外観を常に使用します", comment: ""),
-                            isSelected: appearanceManager.mode == .dark
-                        ) {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                appearanceManager.setMode(.dark)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-
-                    Spacer()
-                }
-            }
-            .navigationTitle("外観モード")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { dismiss() }) {
-                        Text("完了")
-                            .fontWeight(.medium)
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-            .preferredColorScheme(appearanceManager.colorSchemeOverride)
-        }
-    }
-
-    // MARK: - カードコンポーネント
-
-    private func appearanceOptionCard(
-        title: String,
-        icon: String,
-        description: String,
-        isSelected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            isSelected
-                                ? Color.blue.opacity(0.2)
-                                : Color(UIColor.secondarySystemBackground)
-                        )
-                        .frame(width: 50, height: 50)
-                    Image(systemName: icon)
-                        .font(.system(size: 22))
-                        .foregroundColor(isSelected ? .blue : .gray)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Text(description)
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(.blue)
-                        .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// MARK: - サポートビュー
-
-/// 設定セクションのヘッダー
-struct SettingsSectionHeader: View {
-    let title: String
-
-    var body: some View {
-        Text(title)
-            .font(.system(size: 14, weight: .medium))
-            .foregroundColor(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            .background(Color(UIColor.systemGroupedBackground))
-    }
-}
-
-/// 設定行（アイコン、タイトル、シェブロン）
-struct SettingsRow: View {
-    let icon: String
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.primary)
-                    .font(.system(size: 20))
-                    .frame(width: 24, height: 24)
-                Text(title)
-                    .foregroundColor(.primary)
-                    .font(.system(size: 16))
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 14))
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-/// メール作成ビュー
-struct MailComposerView: UIViewControllerRepresentable {
-    @Binding var isShowing: Bool
-
-    func makeUIViewController(context: Context) -> MFMailComposeViewController {
-        let composer = MFMailComposeViewController()
-        composer.mailComposeDelegate = context.coordinator
-        composer.setSubject("TUTnext アプリフィードバック")
-        composer.setToRecipients(["admin@ukenn.top"])
-
-        let appVersion =
-            Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "不明"
-        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "不明"
-        let emailBody = """
-
-            ------------------------------
-            【システム情報】
-            アプリバージョン: \(appVersion) (\(buildNumber))
-            デバイス: \(UIDevice.current.model)
-            OS: iOS \(UIDevice.current.systemVersion)
-            ------------------------------
-            """
-        composer.setMessageBody(emailBody, isHTML: false)
-        return composer
-    }
-
-    func updateUIViewController(
-        _ uiViewController: MFMailComposeViewController,
-        context: Context
-    ) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
-        var parent: MailComposerView
-
-        init(_ parent: MailComposerView) {
-            self.parent = parent
-        }
-
-        func mailComposeController(
-            _ controller: MFMailComposeViewController,
-            didFinishWith result: MFMailComposeResult,
-            error: Error?
-        ) {
-            parent.isShowing = false
         }
     }
 }
