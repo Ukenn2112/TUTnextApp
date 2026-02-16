@@ -239,12 +239,13 @@ struct BusRouteTypeSelector: View {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(
                             selectedRouteType == type
-                                ? Color.blue.opacity(0.9)
+                                ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255)
                                 : Color.gray.opacity(colorScheme == .dark ? 0.25 : 0.15)
                         )
                         .shadow(
                             color: selectedRouteType == type
-                                ? Color.blue.opacity(0.3) : Color.clear,
+                                ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255)
+                                    .opacity(0.3) : Color.clear,
                             radius: 3, x: 0, y: 2)
                 )
                 .foregroundColor(selectedRouteType == type ? .white : .primary)
