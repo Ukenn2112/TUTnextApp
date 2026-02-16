@@ -44,7 +44,7 @@ struct CourseModel: Identifiable, Equatable, Codable {
             NSLocalizedString("木", comment: ""),
             NSLocalizedString("金", comment: ""),
             NSLocalizedString("土", comment: ""),
-            NSLocalizedString("日", comment: ""),
+            NSLocalizedString("日", comment: "")
         ]
         if weekday >= 1 && weekday <= 7 {
             return weekdays[weekday - 1]
@@ -67,84 +67,84 @@ struct CourseModel: Identifiable, Equatable, Codable {
             "1": CourseModel(
                 name: "キャリア・デザインII C", room: "101", teacher: "葛本 幸枝", startTime: "0900",
                 endTime: "1030", colorIndex: 1, weekday: 1, period: 1, jugyoCd: "CD001",
-                academicYear: 2025, courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
             ),
             "2": CourseModel(
                 name: "コンピュータ・サイエンス", room: "242", teacher: "中村 有一", startTime: "1040",
                 endTime: "1210", colorIndex: 2, weekday: 1, period: 2, jugyoCd: "CS001",
-                academicYear: 2025, courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
             ),
             "4": CourseModel(
                 name: "中国ビジネスコミュニケーションII", room: "113", teacher: "田 園", startTime: "1440",
                 endTime: "1610", colorIndex: 3, weekday: 1, period: 4, jugyoCd: "CB001",
-                academicYear: 2025, courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
-            ),
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
+            )
         ],
         "火": [
             "1": CourseModel(
                 name: "経営情報特講", room: "201", teacher: "青木 克彦", startTime: "0900", endTime: "1030",
-                colorIndex: 4, weekday: 2, period: 1, jugyoCd: "KJ001", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 4, weekday: 2, period: 1, jugyoCd: "KJ001", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
             "2": CourseModel(
                 name: "消費心理学", room: "211", teacher: "浜田 正幸", startTime: "1040", endTime: "1210",
-                colorIndex: 5, weekday: 2, period: 2, jugyoCd: "SK001", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 5, weekday: 2, period: 2, jugyoCd: "SK001", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
             "3": CourseModel(
                 name: "データベースII(SQL)", room: "241", teacher: "齋藤 S.裕美", startTime: "1300",
                 endTime: "1430", colorIndex: 6, weekday: 2, period: 3, jugyoCd: "DB001",
-                academicYear: 2025, courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
             ),
             "4": CourseModel(
                 name: "世界の宗教", room: "201", teacher: "高橋 恭寛", startTime: "1440", endTime: "1610",
-                colorIndex: 7, weekday: 2, period: 4, jugyoCd: "SR001", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 7, weekday: 2, period: 4, jugyoCd: "SR001", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
             "5": CourseModel(
                 name: "マーケティング・心理実践II", room: "111", teacher: "菅沼 睦", startTime: "1620",
                 endTime: "1750", colorIndex: 8, weekday: 2, period: 5, jugyoCd: "MP001",
-                academicYear: 2025, courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
-            ),
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
+            )
         ],
         "水": [
             "3": CourseModel(
                 name: "Webプログラミング入門", room: "201", teacher: "出原 至道", startTime: "1300",
                 endTime: "1430", colorIndex: 9, weekday: 3, period: 3, jugyoCd: "WP001",
-                academicYear: 2025, courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1
             ),
             "4": CourseModel(
                 name: "現代メディア論", room: "101", teacher: "中澤 弥", startTime: "1440", endTime: "1610",
-                colorIndex: 10, weekday: 3, period: 4, jugyoCd: "GM001", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 10, weekday: 3, period: 4, jugyoCd: "GM001", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1)
         ],
         "木": [
             "1": CourseModel(
                 name: "経営科学", room: "212", teacher: "新西 誠人", startTime: "0900", endTime: "1030",
-                colorIndex: 2, weekday: 4, period: 1, jugyoCd: "KK001", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 2, weekday: 4, period: 1, jugyoCd: "KK001", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
             "2": CourseModel(
                 name: "図化技術概論", room: "201", teacher: "出原 至道", startTime: "1040", endTime: "1210",
-                colorIndex: 3, weekday: 4, period: 2, jugyoCd: "ZG001", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 3, weekday: 4, period: 2, jugyoCd: "ZG001", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
             "5": CourseModel(
                 name: "ホームゼミII", room: "113", teacher: "小林 英夫", startTime: "1620", endTime: "1750",
-                colorIndex: 4, weekday: 4, period: 5, jugyoCd: "HZ001", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 4, weekday: 4, period: 5, jugyoCd: "HZ001", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1)
         ],
         "金": [
             "3": CourseModel(
                 name: "図化技概論", room: "201", teacher: "出原 至道", startTime: "1300", endTime: "1430",
-                colorIndex: 5, weekday: 5, period: 3, jugyoCd: "ZG002", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 5, weekday: 5, period: 3, jugyoCd: "ZG002", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
             "4": CourseModel(
                 name: "ホームゼII", room: "113", teacher: "小林 英夫", startTime: "1440", endTime: "1610",
-                colorIndex: 6, weekday: 5, period: 4, jugyoCd: "HZ002", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1),
+                colorIndex: 6, weekday: 5, period: 4, jugyoCd: "HZ002", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1)
         ],
         "土": [
             "7": CourseModel(
                 name: "ホームゼミII", room: "113", teacher: "小林 英夫", startTime: "1940", endTime: "2110",
-                colorIndex: 7, weekday: 6, period: 6, jugyoCd: "HZ003", academicYear: 2025,
-                courseYear: 2025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1)
-        ],
+                colorIndex: 7, weekday: 6, period: 6, jugyoCd: "HZ003", academicYear: 2_025,
+                courseYear: 2_025, courseTerm: 1, jugyoKbn: "A", keijiMidokCnt: 1)
+        ]
     ]
 
     // Equatable プロトコルの実装
@@ -216,8 +216,7 @@ class TimetableWidgetDataProvider {
             return nil
         }
 
-        if let fetchTime = userDefaults.object(forKey: TimetableWidgetKeys.lastUpdateTime) as? Date
-        {
+        if let fetchTime = userDefaults.object(forKey: TimetableWidgetKeys.lastUpdateTime) as? Date {
             return fetchTime
         }
 
@@ -251,13 +250,11 @@ class TimetableWidgetDataProvider {
             ("4", 14 * 60 + 40, 16 * 60 + 10),  // 4限：14:40-16:10
             ("5", 16 * 60 + 20, 17 * 60 + 50),  // 5限：16:20-17:50
             ("6", 18 * 60, 19 * 60 + 30),  // 6限：18:00-19:30
-            ("7", 19 * 60 + 40, 21 * 60 + 10),  // 7限：19:40-21:10
+            ("7", 19 * 60 + 40, 21 * 60 + 10)  // 7限：19:40-21:10
         ]
 
-        for (periodNumber, startMinutes, endMinutes) in periods {
-            if currentTime >= startMinutes && currentTime <= endMinutes {
-                return periodNumber
-            }
+        for (periodNumber, startMinutes, endMinutes) in periods where currentTime >= startMinutes && currentTime <= endMinutes {
+            return periodNumber
         }
 
         return nil
@@ -286,7 +283,7 @@ class TimetableWidgetDataProvider {
             NSLocalizedString("木", comment: ""),
             NSLocalizedString("金", comment: ""),
             NSLocalizedString("土", comment: ""),
-            NSLocalizedString("日", comment: ""),
+            NSLocalizedString("日", comment: "")
         ]
         return weekdays[idx - 1]
     }
@@ -300,7 +297,7 @@ class TimetableWidgetDataProvider {
             ("4", "14:40", "16:10"),
             ("5", "16:20", "17:50"),
             ("6", "18:00", "19:30"),
-            ("7", "19:40", "21:10"),
+            ("7", "19:40", "21:10")
         ]
 
         // 時限の存在チェック
@@ -320,10 +317,8 @@ class TimetableWidgetDataProvider {
     private func hasSpecificPeriod(_ period: String) -> Bool {
         guard let timetableData = getTimetableData() else { return false }
 
-        for (_, coursesForDay) in timetableData {
-            if coursesForDay.keys.contains(period) {
-                return true
-            }
+        for (_, coursesForDay) in timetableData where coursesForDay.keys.contains(period) {
+            return true
         }
 
         return false
@@ -366,7 +361,7 @@ struct WidgetColorPalette {
         Color(red: 1.0, green: 0.8, blue: 0.9),  // ピンクパープル
         Color(red: 0.9, green: 0.8, blue: 1.0),  // ライトパープル
         Color(red: 0.8, green: 0.9, blue: 1.0),  // ライトブルー
-        Color(red: 1.0, green: 0.9, blue: 1.0),  // ライトパープル
+        Color(red: 1.0, green: 0.9, blue: 1.0)  // ライトパープル
     ]
 
     // 色インデックスに対応する色を取得

@@ -20,7 +20,7 @@ final class TeacherEmailListService {
                 request: request,
                 logTag: "教員メール一覧",
                 replacingPercentEncoding: false
-            ) { data, response, error in
+            ) { data, _, error in
                 if let error = error {
                     promise(.failure(error))
                     return

@@ -167,7 +167,7 @@ struct BusScheduleTypeSelector: View {
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal)
-            .onChange(of: selectedScheduleType) { oldValue, newValue in
+            .onChange(of: selectedScheduleType) { _, _ in
                 onChanged()
             }
         }
@@ -216,7 +216,7 @@ struct BusRouteTypeSelector: View {
                 .padding(.horizontal)
                 .padding(.vertical, 5)
             }
-            .onChange(of: selectedRouteType) { oldValue, newValue in
+            .onChange(of: selectedRouteType) { _, newValue in
                 withAnimation {
                     scrollProxy.scrollTo(newValue.rawValue, anchor: .center)
                 }
@@ -275,8 +275,7 @@ struct BusTimeCardView: View {
             Spacer()
 
             if let selectedTime = viewModel.selectedTimeEntry,
-                viewModel.isTimeEqual(selectedTime, to: viewModel.currentTime)
-            {
+                viewModel.isTimeEqual(selectedTime, to: viewModel.currentTime) {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("バスの出発時刻です")
                         .font(.subheadline)
@@ -361,7 +360,7 @@ struct BusTimeTableContent: View {
             ScrollView {
                 VStack(alignment: .center, spacing: 16) {
                     scheduleTableView
-                        .onChange(of: viewModel.scrollToHour) { oldValue, newValue in
+                        .onChange(of: viewModel.scrollToHour) { _, newValue in
                             if let hour = newValue {
                                 withAnimation {
                                     scrollProxy.scrollTo(

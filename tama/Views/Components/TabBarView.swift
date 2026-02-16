@@ -171,7 +171,7 @@ struct TabBarView: View {
                         }
                     }
             )
-            .onChange(of: isFocused) { oldValue, newValue in
+            .onChange(of: isFocused) { _, newValue in
                 if !newValue && isExpanded {
                     collapseWithAnimation()
                 }
@@ -202,8 +202,7 @@ struct TabBarView: View {
                 queue: .main
             ) { notification in
                 if let userInfo = notification.userInfo,
-                    let count = userInfo["count"] as? Int
-                {
+                    let count = userInfo["count"] as? Int {
                     self.assignmentCount = count
                 }
             }
@@ -250,7 +249,7 @@ struct TabBarView: View {
             "autoLoginAuthCd": "",
             "encryptedPassword": user?.encryptedPassword ?? "",
             "userId": user?.username ?? "",
-            "parameterMap": "",
+            "parameterMap": ""
         ]
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),

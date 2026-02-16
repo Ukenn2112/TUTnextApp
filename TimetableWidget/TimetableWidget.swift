@@ -87,8 +87,7 @@ struct Provider: TimelineProvider {
                     // 授業開始の5分前にも更新
                     if let fiveMinutesBefore = calendar.date(
                         byAdding: .minute, value: -5, to: startDate),
-                        fiveMinutesBefore > currentDate
-                    {
+                        fiveMinutesBefore > currentDate {
                         updateTimes.append(fiveMinutesBefore)
                     }
 
@@ -100,8 +99,7 @@ struct Provider: TimelineProvider {
                     // 授業開始の3分後にも更新（授業開始直後の状態を反映するため）
                     if let threeMinutesAfter = calendar.date(
                         byAdding: .minute, value: 3, to: startDate),
-                        threeMinutesAfter > currentDate
-                    {
+                        threeMinutesAfter > currentDate {
                         updateTimes.append(threeMinutesAfter)
                     }
                 }
@@ -121,8 +119,7 @@ struct Provider: TimelineProvider {
                     // 授業終了の5分前にも更新
                     if let fiveMinutesBefore = calendar.date(
                         byAdding: .minute, value: -5, to: endDate),
-                        fiveMinutesBefore > currentDate
-                    {
+                        fiveMinutesBefore > currentDate {
                         updateTimes.append(fiveMinutesBefore)
                     }
 
@@ -133,8 +130,7 @@ struct Provider: TimelineProvider {
 
                     // 授業終了1分後に更新
                     if let oneMinuteAfter = calendar.date(byAdding: .minute, value: 1, to: endDate),
-                        oneMinuteAfter > currentDate
-                    {
+                        oneMinuteAfter > currentDate {
                         updateTimes.append(oneMinuteAfter)
                     }
                 }
@@ -152,8 +148,7 @@ struct Provider: TimelineProvider {
 
         if let nextMidnight = calendar.date(from: nextMidnightComponents) {
             // 0時直前にも更新
-            if let fiveMinutesBefore = calendar.date(byAdding: .minute, value: -5, to: nextMidnight)
-            {
+            if let fiveMinutesBefore = calendar.date(byAdding: .minute, value: -5, to: nextMidnight) {
                 updateTimes.append(fiveMinutesBefore)
             }
 
@@ -259,7 +254,7 @@ struct LargeTimetableView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             VStack(spacing: weekdaySpacing) {  // 曜日ヘッダーと時間割グリッドの間隔を調整
                 // 曜日ヘッダー
                 weekdayHeaderView()
@@ -498,8 +493,7 @@ struct SmallTimetableView: View {
 
         // 現在の時限から次の時限を計算
         if self.currentPeriod != nil, let nextPeriod = getNextPeriod(),
-            let nextCourse = courses[nextPeriod]
-        {
+            let nextCourse = courses[nextPeriod] {
             return nextCourse
         }
 

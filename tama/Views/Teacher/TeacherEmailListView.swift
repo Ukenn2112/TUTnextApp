@@ -4,9 +4,9 @@ import SwiftUI
 struct TeacherEmailListView: View {
     @StateObject private var viewModel = TeacherEmailListViewModel()
     @State private var showingCopyConfirmation = false
-    @State private var selectedSection: String? = nil
+    @State private var selectedSection: String?
     @State private var showSearchBar = false
-    @State private var visibleSection: String? = nil
+    @State private var visibleSection: String?
     @State private var isManualSelection = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.presentationMode) var presentationMode
@@ -199,7 +199,7 @@ struct TeacherEmailListView: View {
                                                 .onAppear {
                                                     updateVisibleSection(section: section, geometry: geometry)
                                                 }
-                                                .onChange(of: geometry.frame(in: .global).minY) { _, newY in
+                                                .onChange(of: geometry.frame(in: .global).minY) { _, _ in
                                                     updateVisibleSection(section: section, geometry: geometry)
                                                 }
                                         }
@@ -222,7 +222,7 @@ struct TeacherEmailListView: View {
                 }
                 .padding(.top, 16)
             }
-            .onChange(of: selectedSection) { oldValue, newSection in
+            .onChange(of: selectedSection) { _, newSection in
                 scrollToSection(newSection, proxy: scrollProxy)
             }
         }
@@ -444,7 +444,7 @@ struct StatusView: View {
     let iconColors: [Color]
     let title: String
     let subtitle: String
-    var buttonConfig: StatusButtonConfig? = nil
+    var buttonConfig: StatusButtonConfig?
     
     var body: some View {
         VStack(spacing: 24) {

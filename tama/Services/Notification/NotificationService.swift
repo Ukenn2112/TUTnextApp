@@ -92,7 +92,7 @@ final class NotificationService: NSObject, ObservableObject {
             request: request,
             logTag: "デバイストークン登録",
             replacingPercentEncoding: false
-        ) { data, response, error in
+        ) { data, _, error in
             if let error = error {
                 print("【通知】デバイストークン登録失敗: \(error.localizedDescription)")
                 return
@@ -124,7 +124,7 @@ final class NotificationService: NSObject, ObservableObject {
             request: request,
             logTag: "デバイストークン登録解除",
             replacingPercentEncoding: false
-        ) { data, response, error in
+        ) { data, _, error in
             if let error = error {
                 print("【通知】デバイストークン登録解除失敗: \(error.localizedDescription)")
                 return

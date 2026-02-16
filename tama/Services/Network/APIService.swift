@@ -75,8 +75,7 @@ final class APIService {
         }
 
         if let httpBody = request.httpBody,
-            let jsonStr = String(data: httpBody, encoding: .utf8)
-        {
+            let jsonStr = String(data: httpBody, encoding: .utf8) {
             print("【\(logTag)】リクエストボディ: \(jsonStr)")
         }
 
@@ -150,8 +149,7 @@ final class APIService {
     private func logRequest(endpoint: String, body: [String: Any], logTag: String) {
         print("【\(logTag)】リクエスト: \(endpoint)")
         if let jsonString = try? JSONSerialization.data(withJSONObject: body),
-            let jsonStr = String(data: jsonString, encoding: .utf8)
-        {
+            let jsonStr = String(data: jsonString, encoding: .utf8) {
             print("【\(logTag)】リクエストボディ: \(jsonStr)")
         }
     }
@@ -178,8 +176,7 @@ final class APIService {
 
     /// レスポンスデータ処理（パーセントデコード等）
     private func processResponseData(data: Data, replacingPercentEncoding: Bool, logTag: String)
-        -> Data?
-    {
+        -> Data? {
         guard let responseString = String(data: data, encoding: .utf8) else {
             print("【\(logTag)】デコード失敗: レスポンス文字列の変換エラー")
             return nil

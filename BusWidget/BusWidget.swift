@@ -138,7 +138,7 @@ struct Provider: AppIntentTimelineProvider {
         let nextBusTimes = [
             BusWidgetSchedule.TimeEntry(hour: 10, minute: 0),
             BusWidgetSchedule.TimeEntry(hour: 10, minute: 30),
-            BusWidgetSchedule.TimeEntry(hour: 11, minute: 0),
+            BusWidgetSchedule.TimeEntry(hour: 11, minute: 0)
         ]
         return SimpleEntry(
             date: Date(), configuration: ConfigurationAppIntent(), nextBusTimes: nextBusTimes,
@@ -146,8 +146,7 @@ struct Provider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async
-        -> SimpleEntry
-    {
+        -> SimpleEntry {
         // 現在の日付に基づいてスケジュールタイプを決定
         let currentDate = Date()
         let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(currentDate)
@@ -170,7 +169,7 @@ struct Provider: AppIntentTimelineProvider {
                 BusWidgetSchedule.TimeEntry(
                     hour: 22, minute: 00, isSpecial: false, specialNote: nil),
                 BusWidgetSchedule.TimeEntry(
-                    hour: 23, minute: 59, isSpecial: false, specialNote: nil),
+                    hour: 23, minute: 59, isSpecial: false, specialNote: nil)
             ]
             return SimpleEntry(
                 date: currentDate, configuration: configuration, nextBusTimes: previewTimes,
@@ -212,8 +211,7 @@ struct Provider: AppIntentTimelineProvider {
             for i in 0..<maxBusesToProcess {
                 let bus = busTimes[i]
                 if let busDate = calculateBusDate(
-                    from: currentDate, hour: bus.hour, minute: bus.minute)
-                {
+                    from: currentDate, hour: bus.hour, minute: bus.minute) {
                     busDates.append(busDate)
 
                     // バスの時刻に関連する更新タイミングを追加
@@ -231,15 +229,15 @@ struct Provider: AppIntentTimelineProvider {
                             for second in stride(from: 0, to: min(900, timeToNextBus), by: 30) {
                                 refreshDates.append(currentDate.addingTimeInterval(second))
                             }
-                        } else if timeToNextBus <= 1800 {  // 30分以内
+                        } else if timeToNextBus <= 1_800 {  // 30分以内
                             // 1分ごとに更新
-                            for second in stride(from: 0, to: min(1800, timeToNextBus), by: 60) {
+                            for second in stride(from: 0, to: min(1_800, timeToNextBus), by: 60) {
                                 refreshDates.append(currentDate.addingTimeInterval(second))
                             }
                         }
 
                         // バス出発の直前と直後に更新
-                        if timeToNextBus <= 1800 {  // 30分以内のバスのみ詳細更新
+                        if timeToNextBus <= 1_800 {  // 30分以内のバスのみ詳細更新
                             refreshDates.append(busDate.addingTimeInterval(-30))  // 30秒前
                             refreshDates.append(busDate.addingTimeInterval(-5))  // 5秒前
                         }
@@ -262,7 +260,7 @@ struct Provider: AppIntentTimelineProvider {
         // 深夜0時の更新ポイントを追加（日付変更による運行ダイヤ変更のため）
         let calendar = Calendar.current
         var midnight = calendar.startOfDay(for: currentDate)
-        midnight = calendar.date(byAdding: .day, value: 1, to: midnight) ?? midnight.addingTimeInterval(Double(1 * 86400))  // 翌日の深夜0時
+        midnight = calendar.date(byAdding: .day, value: 1, to: midnight) ?? midnight.addingTimeInterval(Double(1 * 86_400))  // 翌日の深夜0時
         refreshDates.append(midnight)
         refreshDates.append(calendar.date(byAdding: .second, value: 10, to: midnight) ?? midnight.addingTimeInterval(10))  // 0時10秒後（確実に更新するため）
 
@@ -291,8 +289,7 @@ struct Provider: AppIntentTimelineProvider {
 
         if let firstBus = busTimes.first,
             let firstBusDate = calculateBusDate(
-                from: currentDate, hour: firstBus.hour, minute: firstBus.minute)
-        {
+                from: currentDate, hour: firstBus.hour, minute: firstBus.minute) {
             let timeToFirstBus = firstBusDate.timeIntervalSince(currentDate)
 
             if timeToFirstBus <= 0 {
@@ -307,7 +304,7 @@ struct Provider: AppIntentTimelineProvider {
             } else if timeToFirstBus <= 900 {  // 15分以内
                 // 1分ごとに更新
                 reloadPolicy = .after(currentDate.addingTimeInterval(60))
-            } else if timeToFirstBus <= 1800 {  // 30分以内
+            } else if timeToFirstBus <= 1_800 {  // 30分以内
                 // 3分ごとに更新
                 reloadPolicy = .after(currentDate.addingTimeInterval(180))
             } else {
@@ -316,7 +313,7 @@ struct Provider: AppIntentTimelineProvider {
             }
         } else {
             // バスがない場合は30分後に更新
-            reloadPolicy = .after(currentDate.addingTimeInterval(1800))
+            reloadPolicy = .after(currentDate.addingTimeInterval(1_800))
         }
 
         return Timeline(entries: entries, policy: reloadPolicy)
@@ -334,7 +331,7 @@ struct Provider: AppIntentTimelineProvider {
 
         // バス時刻が過去の場合は翌日とする
         if busDate < currentDate {
-            busDate = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86400))
+            busDate = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86_400))
         }
 
         return busDate
@@ -357,7 +354,7 @@ struct SimpleEntry: TimelineEntry {
         // 路線タイプをクエリパラメータとして追加
         urlComponents.queryItems = [
             URLQueryItem(name: "route", value: configuration.routeType.rawValue),
-            URLQueryItem(name: "schedule", value: scheduleType),
+            URLQueryItem(name: "schedule", value: scheduleType)
         ]
 
         return urlComponents.url ?? busDefaultURL
@@ -382,7 +379,7 @@ struct SimpleEntry: TimelineEntry {
 
         // バス時刻が過去の場合は翌日とする
         if busDate <= now {
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86400))
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86_400))
             return nextDay
         }
 
@@ -429,7 +426,7 @@ struct SimpleEntry: TimelineEntry {
 
                 if !hasLaterBusesToday {
                     // 翌日のこのバスを表示
-                    actualBusDate = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86400))
+                    actualBusDate = calendar.date(byAdding: .day, value: 1, to: busDate) ?? busDate.addingTimeInterval(Double(1 * 86_400))
                 } else {
                     // 過去のバスなのでスキップ
                     continue
@@ -476,7 +473,7 @@ struct SimpleEntry: TimelineEntry {
         if busDay != todayDay {
             let timeInterval = busDate.timeIntervalSince(now)
             // 6時間（21600秒）以上先のバスは翌日のバスとみなす
-            return timeInterval >= 21600
+            return timeInterval >= 21_600
         }
 
         return false
@@ -565,7 +562,7 @@ struct BusWidgetEntryView: View {
         // 路線タイプをクエリパラメータとして追加
         urlComponents.queryItems = [
             URLQueryItem(name: "route", value: entry.configuration.routeType.rawValue),
-            URLQueryItem(name: "schedule", value: entry.scheduleType),
+            URLQueryItem(name: "schedule", value: entry.scheduleType)
         ]
 
         return urlComponents.url ?? busDefaultURL
@@ -651,7 +648,7 @@ struct BusWidgetEntryView: View {
         }
 
         // 最大表示時間（30分 = 1800秒）
-        let maxInterval: TimeInterval = 1800
+        let maxInterval: TimeInterval = 1_800
         // 進捗バーの幅（0.0〜1.0）
         let progressWidth = min(1.0, max(0.0, timeInterval / maxInterval))
 
@@ -766,8 +763,7 @@ struct BusWidgetEntryView: View {
                 // バス時刻情報を2列レイアウトで表示
                 HStack(alignment: .top, spacing: 16) {
                     // 左列 - 現在の次のバス
-                    if let currentBus = entry.currentBus, let currentBusDate = entry.currentBusDate
-                    {
+                    if let currentBus = entry.currentBus, let currentBusDate = entry.currentBusDate {
                         // バス時刻が現在時刻より未来かどうか確認
                         let timeToNextBus = currentBusDate.timeIntervalSince(entry.date)
                         let isBusDeparted = timeToNextBus <= 0
@@ -881,8 +877,7 @@ struct BusWidgetEntryView: View {
 
                 // 相対時間形式の残り時間
                 if let busIndex = entry.nextBusTimes.firstIndex(where: { $0.id == bus.id }),
-                    let busDate = entry.getBusTimeAsDate(index: busIndex)
-                {
+                    let busDate = entry.getBusTimeAsDate(index: busIndex) {
                     HStack(spacing: 2) {
                         Text(busDate, style: .relative)
                             .font(.caption2)
@@ -950,11 +945,11 @@ struct WidgetBackgroundView: View {
                 colors: colorScheme == .dark
                     ? [
                         Color(uiColor: UIColor(red: 0.1, green: 0.1, blue: 0.15, alpha: 1.0)),
-                        Color(uiColor: UIColor(red: 0.15, green: 0.15, blue: 0.2, alpha: 1.0)),
+                        Color(uiColor: UIColor(red: 0.15, green: 0.15, blue: 0.2, alpha: 1.0))
                     ]
                     : [
                         Color(uiColor: UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)),
-                        Color(uiColor: UIColor(red: 0.98, green: 0.98, blue: 1.0, alpha: 1.0)),
+                        Color(uiColor: UIColor(red: 0.98, green: 0.98, blue: 1.0, alpha: 1.0))
                     ]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -991,12 +986,12 @@ extension ConfigurationAppIntent {
     let times1 = [
         BusWidgetSchedule.TimeEntry(hour: 10, minute: 0),
         BusWidgetSchedule.TimeEntry(hour: 10, minute: 30),
-        BusWidgetSchedule.TimeEntry(hour: 11, minute: 0),
+        BusWidgetSchedule.TimeEntry(hour: 11, minute: 0)
     ]
     let times2 = [
         BusWidgetSchedule.TimeEntry(hour: 9, minute: 45),
         BusWidgetSchedule.TimeEntry(hour: 10, minute: 15),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 45),
+        BusWidgetSchedule.TimeEntry(hour: 10, minute: 45)
     ]
     SimpleEntry(date: .now, configuration: .seiseki, nextBusTimes: times1, scheduleType: "weekday")
     SimpleEntry(date: .now, configuration: .nagayama, nextBusTimes: times2, scheduleType: "weekday")
@@ -1008,12 +1003,12 @@ extension ConfigurationAppIntent {
     let times1 = [
         BusWidgetSchedule.TimeEntry(hour: 10, minute: 0),
         BusWidgetSchedule.TimeEntry(hour: 10, minute: 30),
-        BusWidgetSchedule.TimeEntry(hour: 11, minute: 0),
+        BusWidgetSchedule.TimeEntry(hour: 11, minute: 0)
     ]
     let times2 = [
         BusWidgetSchedule.TimeEntry(hour: 9, minute: 45),
         BusWidgetSchedule.TimeEntry(hour: 10, minute: 15),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 45),
+        BusWidgetSchedule.TimeEntry(hour: 10, minute: 45)
     ]
     let emptyTimes: [BusWidgetSchedule.TimeEntry] = []
 

@@ -67,7 +67,7 @@ struct LoginView: View {
             Text("学生証をスキャンして自動入力するか、手動でアカウントを入力することができます。")
         }
         .onAppear(perform: viewModel.checkAndShowNFCTip)
-        .onChange(of: viewModel.nfcReader.studentID) { oldValue, newValue in
+        .onChange(of: viewModel.nfcReader.studentID) { _, newValue in
             viewModel.handleStudentIDChange(newValue)
             if !newValue.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -75,17 +75,17 @@ struct LoginView: View {
                 }
             }
         }
-        .onChange(of: viewModel.nfcReader.userName) { oldValue, newValue in
+        .onChange(of: viewModel.nfcReader.userName) { _, newValue in
             withAnimation(.easeInOut) {
                 viewModel.userName = newValue
             }
         }
-        .onChange(of: viewModel.nfcReader.errorMessage) { oldValue, newValue in
+        .onChange(of: viewModel.nfcReader.errorMessage) { _, newValue in
             if newValue != nil {
                 viewModel.loginErrorMessage = nil
             }
         }
-        .onChange(of: viewModel.loginErrorMessage) { oldValue, newValue in
+        .onChange(of: viewModel.loginErrorMessage) { _, newValue in
             if newValue != nil {
                 focusedField = .account
             }

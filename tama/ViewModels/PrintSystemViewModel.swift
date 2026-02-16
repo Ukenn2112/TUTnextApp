@@ -124,8 +124,7 @@ final class PrintSystemViewModel: ObservableObject {
     // 最近のアップロード履歴をUserDefaultsから読み込み
     func loadRecentUploads() {
         if let data = UserDefaults.standard.data(forKey: "recentUploads"),
-            let decoded = try? JSONDecoder().decode([PrintResult].self, from: data)
-        {
+            let decoded = try? JSONDecoder().decode([PrintResult].self, from: data) {
             recentUploads = decoded
         }
     }

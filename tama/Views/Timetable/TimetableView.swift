@@ -7,9 +7,9 @@ struct TimetableView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
     // フォアグラウンド復帰通知オブザーバー
-    @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
+    @State private var willEnterForegroundObserver: NSObjectProtocol?
     // 掲示リストSafariView閉じる通知オブザーバー
-    @State private var announcementSafariDismissObserver: NSObjectProtocol? = nil
+    @State private var announcementSafariDismissObserver: NSObjectProtocol?
 
     // 曜日インデックスを表示用文字列に変換するヘルパー
     private func weekdayString(from index: String) -> String {
@@ -21,7 +21,7 @@ struct TimetableView: View {
             NSLocalizedString("木", comment: ""),
             NSLocalizedString("金", comment: ""),
             NSLocalizedString("土", comment: ""),
-            NSLocalizedString("日", comment: ""),
+            NSLocalizedString("日", comment: "")
         ]
         return weekdays[idx - 1]
     }
@@ -37,7 +37,7 @@ struct TimetableView: View {
         Color(red: 1.0, green: 0.8, blue: 0.9),  // ピンクパープル
         Color(red: 0.9, green: 0.8, blue: 1.0),  // ライトパープル
         Color(red: 0.8, green: 0.9, blue: 1.0),  // ライトブルー
-        Color(red: 1.0, green: 0.9, blue: 1.0),  // ライトパープル
+        Color(red: 1.0, green: 0.9, blue: 1.0)  // ライトパープル
     ]
 
     // MARK: - ボディ

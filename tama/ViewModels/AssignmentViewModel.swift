@@ -6,7 +6,7 @@ import SwiftUI
 final class AssignmentViewModel: ObservableObject {
     @Published var assignments: [Assignment] = []
     @Published var isLoading: Bool = false
-    @Published var errorMessage: String? = nil
+    @Published var errorMessage: String?
 
     private let assignmentService = AssignmentService.shared
 

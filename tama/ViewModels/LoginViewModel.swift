@@ -10,7 +10,7 @@ final class LoginViewModel: ObservableObject {
     @Published var account = ""
     @Published var password = ""
     @Published var isLoading = false
-    @Published var loginErrorMessage: String? = nil
+    @Published var loginErrorMessage: String?
     @Published var userName: String = ""
     @Published var showNFCTip = false
 

@@ -8,7 +8,7 @@ struct AssignmentView: View {
     @EnvironmentObject private var ratingService: RatingService
     @EnvironmentObject private var oauthService: GoogleOAuthService
     // フォアグラウンド復帰通知オブザーバー
-    @State private var willEnterForegroundObserver: NSObjectProtocol? = nil
+    @State private var willEnterForegroundObserver: NSObjectProtocol?
 
     enum AssignmentFilter {
         case all, today, thisWeek, thisMonth, overdue

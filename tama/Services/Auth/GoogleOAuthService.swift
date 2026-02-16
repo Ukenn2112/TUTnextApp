@@ -302,7 +302,7 @@ final class GoogleOAuthService: ObservableObject {
         APIService.shared.request(
             request: request,
             logTag: "GoogleOAuth-Status"
-        ) { data, response, error in
+        ) { data, _, error in
             if let error = error {
                 completion(.failure(error))
                 return
@@ -361,7 +361,7 @@ final class GoogleOAuthService: ObservableObject {
         APIService.shared.request(
             request: request,
             logTag: "GoogleOAuth-Tokens"
-        ) { data, response, error in
+        ) { data, _, error in
             if let error = error {
                 completion(.failure(error))
                 return
@@ -421,7 +421,7 @@ final class GoogleOAuthService: ObservableObject {
         APIService.shared.request(
             request: request,
             logTag: "GoogleOAuth-Revoke"
-        ) { data, response, error in
+        ) { data, _, error in
             if let error = error {
                 completion(.failure(error))
                 return

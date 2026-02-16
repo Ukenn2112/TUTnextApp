@@ -7,7 +7,7 @@ struct SafariWebView: UIViewControllerRepresentable {
     let url: URL
 
     // オプションの通知タイプを追加
-    var dismissNotification: Notification.Name? = nil
+    var dismissNotification: Notification.Name?
 
     func makeUIViewController(context: Context) -> SFSafariViewController {
         let safariViewController = SFSafariViewController(url: url)

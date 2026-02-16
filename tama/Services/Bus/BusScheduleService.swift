@@ -15,7 +15,7 @@ final class BusScheduleService {
     private var cachedSchedule: BusSchedule?
 
     /// キャッシュの有効期限（秒）
-    private let cacheExpirationTime: TimeInterval = 3600  // 1時間
+    private let cacheExpirationTime: TimeInterval = 3_600  // 1時間
 
     /// 最後にデータを取得した時間
     private var lastFetchTime: Date?
@@ -43,8 +43,7 @@ final class BusScheduleService {
         // キャッシュが有効な場合はキャッシュを返す
         if let cachedSchedule = cachedSchedule,
             let lastFetchTime = lastFetchTime,
-            Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime
-        {
+            Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime {
             print("BusScheduleService: キャッシュされたデータを使用します（取得時間: \(formatDate(lastFetchTime))）")
             completion(cachedSchedule, nil)
             return
@@ -64,7 +63,7 @@ final class BusScheduleService {
             return
         }
 
-        let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        let task = URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
 
             // データ取得完了後、進行中フラグをリセット
@@ -129,8 +128,7 @@ final class BusScheduleService {
         // キャッシュが有効な場合はキャッシュを返す
         if let cachedSchedule = cachedSchedule,
             let lastFetchTime = lastFetchTime,
-            Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime
-        {
+            Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime {
             print(
                 "BusScheduleService: 同期取得 - キャッシュされたデータを使用します（取得時間: \(formatDate(lastFetchTime))）")
             return cachedSchedule
@@ -266,7 +264,7 @@ final class BusScheduleService {
             BusSchedule.SpecialNote(
                 symbol: "K", description: NSLocalizedString("高校生乗車限定", comment: "")),
             BusSchedule.SpecialNote(
-                symbol: "M", description: NSLocalizedString("大学生用マイクロバス（火・水・木のみ）", comment: "")),
+                symbol: "M", description: NSLocalizedString("大学生用マイクロバス（火・水・木のみ）", comment: ""))
         ]
     }
 
@@ -283,7 +281,7 @@ final class BusScheduleService {
                         BusSchedule.TimeEntry(
                             hour: 8, minute: 0, isSpecial: false, specialNote: nil),
                         BusSchedule.TimeEntry(
-                            hour: 8, minute: 35, isSpecial: false, specialNote: nil),
+                            hour: 8, minute: 35, isSpecial: false, specialNote: nil)
                     ])
             ]
         )
@@ -342,8 +340,7 @@ final class BusScheduleService {
             let userDefaults = UserDefaults(suiteName: self.appGroupID)
 
             if let busData = userDefaults?.data(forKey: "cachedBusSchedule"),
-                let fetchTime = userDefaults?.object(forKey: "lastBusScheduleFetchTime") as? Date
-            {
+                let fetchTime = userDefaults?.object(forKey: "lastBusScheduleFetchTime") as? Date {
                 do {
                     let decoder = JSONDecoder()
                     let busSchedule = try decoder.decode(BusSchedule.self, from: busData)

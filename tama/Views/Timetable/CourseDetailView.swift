@@ -57,7 +57,7 @@ struct CourseDetailView: View {
         let webApiLoginInfo: [String: Any] = [
             "paramaterMap": [
                 "nendo": courseYear,
-                "jugyoCd": jugyoCd,
+                "jugyoCd": jugyoCd
             ],
             "parameterMap": "",
             "autoLoginAuthCd": "",
@@ -65,7 +65,7 @@ struct CourseDetailView: View {
             "formId": "Pkx52301",
             "password": "",
             "funcId": "Pkx523",
-            "encryptedPassword": encryptedPassword,
+            "encryptedPassword": encryptedPassword
         ]
         print("【シラバスURL】encryptedPassword: \(encryptedPassword)")
 
@@ -102,7 +102,7 @@ struct CourseDetailView: View {
             "formId": "Bsd50702",
             "userId": user.username,
             "funcId": "Bsd507",
-            "password": "",
+            "password": ""
         ]
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
@@ -200,8 +200,7 @@ struct CourseDetailView: View {
                                         announcement in
                                         Button(action: {
                                             if let url = createAnnouncementURL(
-                                                announcementId: announcement.id)
-                                            {
+                                                announcementId: announcement.id) {
                                                 // 掲示リスト用のフラグをtrueに設定
                                                 isAnnouncementSafari = true
                                                 showSafariView = true
@@ -350,10 +349,10 @@ struct CourseDetailView: View {
                                     .foregroundColor(.primary)
                                     .frame(minHeight: 30)
                                     .focused($isMemoFocused)
-                                    .onChange(of: viewModel.memo) { oldValue, newValue in
+                                    .onChange(of: viewModel.memo) { _, _ in
                                         viewModel.isMemoChanged = true
                                     }
-                                    .onChange(of: isMemoFocused) { oldValue, newValue in
+                                    .onChange(of: isMemoFocused) { _, newValue in
                                         // フォーカスが外れた時、かつメモが変更されていた場合に保存
                                         if !newValue && viewModel.isMemoChanged {
                                             viewModel.saveMemo()
@@ -488,8 +487,8 @@ struct CourseDetailView: View {
         weekday: 1,
         period: 2,
         jugyoCd: "CS001",
-        academicYear: 2025,
-        courseYear: 2025,
+        academicYear: 2_025,
+        courseYear: 2_025,
         courseTerm: 1,
         jugyoKbn: "1",
         keijiMidokCnt: 1
@@ -506,7 +505,7 @@ struct CourseDetailView: View {
         Color(red: 1.0, green: 0.8, blue: 0.9),  // ピンクパープル
         Color(red: 0.9, green: 0.8, blue: 1.0),  // ライトパープル
         Color(red: 0.8, green: 0.9, blue: 1.0),  // ライトブルー
-        Color(red: 1.0, green: 0.9, blue: 1.0),  // ライトパープル
+        Color(red: 1.0, green: 0.9, blue: 1.0)  // ライトパープル
     ]
 
     CourseDetailView(

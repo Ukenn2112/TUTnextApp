@@ -21,7 +21,7 @@ struct BusWidgetLiveActivity: Widget {
             // ロック画面/通知センターでのLive Activity表示
             ZStack {
                 // 背景グラデーション - ダークモード対応
-                GeometryReader { geo in
+                GeometryReader { _ in
                     // ColorSchemeを@Environmentから取得
                     ColorSchemeAwareBackground()
                 }
@@ -224,11 +224,11 @@ struct ColorSchemeAwareBackground: View {
                 colors: colorScheme == .dark
                     ? [
                         Color(uiColor: UIColor(red: 0.1, green: 0.1, blue: 0.15, alpha: 1.0)),
-                        Color(uiColor: UIColor(red: 0.15, green: 0.15, blue: 0.2, alpha: 1.0)),
+                        Color(uiColor: UIColor(red: 0.15, green: 0.15, blue: 0.2, alpha: 1.0))
                     ]
                     : [
                         Color(uiColor: UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)),
-                        Color(uiColor: UIColor(red: 0.98, green: 0.98, blue: 1.0, alpha: 1.0)),
+                        Color(uiColor: UIColor(red: 0.98, green: 0.98, blue: 1.0, alpha: 1.0))
                     ]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing

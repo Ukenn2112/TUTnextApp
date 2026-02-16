@@ -37,7 +37,7 @@ final class NFCReader: NSObject, ObservableObject, NFCTagReaderSessionDelegate {
 
     @Published var studentID: String = ""
     @Published var userName: String = ""
-    @Published var errorMessage: String? = nil
+    @Published var errorMessage: String?
 
     private var session: NFCTagReaderSession?
 
@@ -77,7 +77,7 @@ final class NFCReader: NSObject, ObservableObject, NFCTagReaderSessionDelegate {
         // セッション無効化の処理 (ユーザーキャンセル、タイムアウト、システムエラーなど)
         print("NFCセッションが無効化されました: \(error.localizedDescription)")
 
-        var displayMessage: String? = nil
+        var displayMessage: String?
         let nsError = error as NSError
 
         // NFCErrorDomainグローバル定数を使用してドメインを確認し、
@@ -246,8 +246,7 @@ final class NFCReader: NSObject, ObservableObject, NFCTagReaderSessionDelegate {
         // --- 有効期限 ---
         // 0x100B[03] -> studentInfo[1]
         if let validityString = studentInfo[1].string(encoding: .ascii)?.trimmingCharacters(
-            in: .whitespacesAndNewlines)
-        {
+            in: .whitespacesAndNewlines) {
             let startDate = String(validityString.prefix(8))  // YYYYMMDD
             let endDate = String(validityString.suffix(8))  // YYYYMMDD
             print("有効期限: \(startDate) から \(endDate) まで")

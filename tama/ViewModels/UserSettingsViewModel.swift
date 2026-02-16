@@ -8,9 +8,9 @@ final class UserSettingsViewModel: ObservableObject {
 
     // MARK: - 公開プロパティ
 
-    @Published var user: User? = nil
+    @Published var user: User?
     @Published var showSafari = false
-    @Published var urlToOpen: URL? = nil
+    @Published var urlToOpen: URL?
     @Published var showMailComposer = false
     @Published var showingDarkModeSheet = false
 

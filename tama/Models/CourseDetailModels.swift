@@ -25,7 +25,7 @@ struct AnnouncementModel: Identifiable {
         dateFormatter.dateStyle = .medium
         dateFormatter.timeStyle = .none
         dateFormatter.locale = Locale(identifier: "ja_JP")
-        let date = Date(timeIntervalSince1970: TimeInterval(self.date / 1000))
+        let date = Date(timeIntervalSince1970: TimeInterval(self.date / 1_000))
         return dateFormatter.string(from: date)
     }
 }

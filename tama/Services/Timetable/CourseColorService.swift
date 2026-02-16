@@ -29,8 +29,7 @@ final class CourseColorService {
 
         // App Group共有ストレージのデータも更新する
         if let sharedDefaults = sharedDefaults,
-            let timetableData = sharedDefaults.data(forKey: "cachedTimetableData")
-        {
+            let timetableData = sharedDefaults.data(forKey: "cachedTimetableData") {
             do {
                 var timetableDataDecoded = try JSONDecoder().decode(
                     [String: [String: CourseModel]].self, from: timetableData)

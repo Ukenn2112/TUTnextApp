@@ -25,7 +25,7 @@ enum RouteTypeEnum: String, AppEnum {
         .fromSeisekiToSchool: DisplayRepresentation(title: "聖蹟桜ヶ丘駅発 → 学校行"),
         .fromNagayamaToSchool: DisplayRepresentation(title: "永山駅発 → 学校行"),
         .fromSchoolToSeiseki: DisplayRepresentation(title: "学校発 → 聖蹟桜ヶ丘駅行"),
-        .fromSchoolToNagayama: DisplayRepresentation(title: "学校発 → 永山駅行"),
+        .fromSchoolToNagayama: DisplayRepresentation(title: "学校発 → 永山駅行")
     ]
 }
 

@@ -65,20 +65,19 @@ final class TimetableService {
             "plainLoginPassword": "",
             "data": [
                 "kaikoNendo": year,
-                "gakkiNo": termNo,
+                "gakkiNo": termNo
             ],
             "langCd": "",
             "encryptedLoginPassword": encryptedPassword,
             "loginUserId": user.username,
             "productCd": "ap",
-            "subProductCd": "apa",
+            "subProductCd": "apa"
         ]
 
         // リクエストデータをログに出力
         print("【時間割】リクエスト: \(url.absoluteString)")
         if let jsonString = try? JSONSerialization.data(withJSONObject: requestBody),
-            let jsonStr = String(data: jsonString, encoding: .utf8)
-        {
+            let jsonStr = String(data: jsonString, encoding: .utf8) {
             print("【時間割】リクエストボディ: \(jsonStr)")
         }
 
@@ -148,15 +147,13 @@ final class TimetableService {
             do {
                 if let json = try JSONSerialization.jsonObject(with: decodedData) as? [String: Any],
                     let statusDto = json["statusDto"] as? [String: Any],
-                    let success = statusDto["success"] as? Bool
-                {
+                    let success = statusDto["success"] as? Bool {
 
                     print("【時間割】ステータス: success=\(success)")
 
                     if success {
                         if let data = json["data"] as? [String: Any],
-                            let courseList = data["jgkmDtoList"] as? [[String: Any]]
-                        {
+                            let courseList = data["jgkmDtoList"] as? [[String: Any]] {
                             print("【時間割】全未読掲示数: \(data["keijiCnt"] as? Int ?? 0)")
 
                             // 授業年度と学期
@@ -198,8 +195,7 @@ final class TimetableService {
                         }
                     } else {
                         if let messageList = statusDto["messageList"] as? [String],
-                            !messageList.isEmpty
-                        {
+                            !messageList.isEmpty {
                             let errorMessage = messageList.first ?? "Unknown error"
                             print("【時間割】APIエラー: \(errorMessage)")
                             completion(.failure(TimetableError.apiError(errorMessage)))
@@ -221,8 +217,7 @@ final class TimetableService {
 
     // APIレスポンスを時間割データに変換
     private func convertToTimetableData(_ courseList: [[String: Any]]) -> [String: [String:
-        CourseModel]]
-    {
+        CourseModel]] {
         var timetableData: [String: [String: CourseModel]] = [:]
 
         for courseData in courseList {
@@ -315,8 +310,7 @@ final class TimetableService {
             let userDefaults = UserDefaults(suiteName: self.appGroupID)
 
             if let timetableData = userDefaults?.data(forKey: "cachedTimetableData"),
-                let fetchTime = userDefaults?.object(forKey: "lastTimetableFetchTime") as? Date
-            {
+                let fetchTime = userDefaults?.object(forKey: "lastTimetableFetchTime") as? Date {
                 do {
                     let decoder = JSONDecoder()
                     let timetableDataDecoded = try decoder.decode(

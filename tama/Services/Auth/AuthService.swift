@@ -23,7 +23,7 @@ final class AuthService {
         let requestBody: [String: Any] = [
             "data": [
                 "loginUserId": account,
-                "plainLoginPassword": password,
+                "plainLoginPassword": password
             ]
         ]
 
@@ -79,7 +79,7 @@ final class AuthService {
             "loginUserId": userId,
             "langCd": "",
             "productCd": "ap",
-            "encryptedLoginPassword": encryptedPassword,
+            "encryptedLoginPassword": encryptedPassword
         ]
 
         guard let request = APIService.shared.createRequest(url: url, body: requestBody) else {
@@ -97,8 +97,7 @@ final class AuthService {
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                     let statusDto = json["statusDto"] as? [String: Any],
-                    let success = statusDto["success"] as? Bool
-                {
+                    let success = statusDto["success"] as? Bool {
 
                     // 常にCookieとユーザー情報をクリア（成功・失敗に関わらず）
                     CookieService.shared.clearCookies()

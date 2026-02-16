@@ -44,15 +44,14 @@ final class CourseDetailService {
                 "gakkiNo": course.courseTerm ?? 0,
                 "jugyoKbn": course.jugyoKbn ?? "",
                 "kaikoYobi": course.weekday ?? 0,
-                "jigenNo": course.period ?? 0,
-            ],
+                "jigenNo": course.period ?? 0
+            ]
         ]
 
         // リクエストデータをログに出力
         print("【課程詳細】リクエスト: \(url.absoluteString)")
         if let jsonString = try? JSONSerialization.data(withJSONObject: requestBody),
-            let jsonStr = String(data: jsonString, encoding: .utf8)
-        {
+            let jsonStr = String(data: jsonString, encoding: .utf8) {
             print("【課程詳細】リクエストボディ: \(jsonStr)")
         }
 
@@ -119,8 +118,7 @@ final class CourseDetailService {
             do {
                 if let json = try JSONSerialization.jsonObject(with: decodedData) as? [String: Any],
                     let statusDto = json["statusDto"] as? [String: Any],
-                    let success = statusDto["success"] as? Bool
-                {
+                    let success = statusDto["success"] as? Bool {
 
                     print("【課程詳細】ステータス: success=\(success)")
 
@@ -135,8 +133,7 @@ final class CourseDetailService {
                         }
                     } else {
                         if let messageList = statusDto["messageList"] as? [String],
-                            !messageList.isEmpty
-                        {
+                            !messageList.isEmpty {
                             let errorMessage = messageList.first ?? "Unknown error"
                             print("【課程詳細】APIエラー: \(errorMessage)")
                             completion(.failure(CourseDetailError.apiError(errorMessage)))
@@ -164,8 +161,7 @@ final class CourseDetailService {
             for keijiInfo in keijiInfoDtoList {
                 if let subject = keijiInfo["subject"] as? String,
                     let keijiAppendDate = keijiInfo["keijiAppendDate"] as? Int,
-                    let keijiNo = keijiInfo["keijiNo"] as? Int
-                {
+                    let keijiNo = keijiInfo["keijiNo"] as? Int {
                     let announcement = AnnouncementModel(
                         id: keijiNo,
                         title: subject,
@@ -179,8 +175,7 @@ final class CourseDetailService {
         // 出欠情報の解析
         var attendance = AttendanceModel(present: 0, absent: 0, late: 0, early: 0, sick: 0)
         if let attInfoDtoList = data["attInfoDtoList"] as? [[String: Any]],
-            let attInfo = attInfoDtoList.first
-        {
+            let attInfo = attInfoDtoList.first {
             attendance = AttendanceModel(
                 present: attInfo["shusekiKaisu"] as? Int ?? 0,
                 absent: attInfo["kessekiKaisu"] as? Int ?? 0,
@@ -244,15 +239,14 @@ final class CourseDetailService {
             "data": [
                 "jugyoCd": course.jugyoCd ?? "",
                 "nendo": course.academicYear ?? 0,
-                "jugyoMemo": encodedMemo,
-            ],
+                "jugyoMemo": encodedMemo
+            ]
         ]
 
         // リクエストデータをログに出力
         print("【メモ保存】リクエスト: \(url.absoluteString)")
         if let jsonString = try? JSONSerialization.data(withJSONObject: requestBody),
-            let jsonStr = String(data: jsonString, encoding: .utf8)
-        {
+            let jsonStr = String(data: jsonString, encoding: .utf8) {
             print("【メモ保存】リクエストボディ: \(jsonStr)")
         }
 
@@ -319,8 +313,7 @@ final class CourseDetailService {
             do {
                 if let json = try JSONSerialization.jsonObject(with: decodedData) as? [String: Any],
                     let statusDto = json["statusDto"] as? [String: Any],
-                    let success = statusDto["success"] as? Bool
-                {
+                    let success = statusDto["success"] as? Bool {
 
                     print("【メモ保存】ステータス: success=\(success)")
 
@@ -328,8 +321,7 @@ final class CourseDetailService {
                         completion(.success(()))
                     } else {
                         if let messageList = statusDto["messageList"] as? [String],
-                            !messageList.isEmpty
-                        {
+                            !messageList.isEmpty {
                             let errorMessage = messageList.first ?? "Unknown error"
                             print("【メモ保存】APIエラー: \(errorMessage)")
                             completion(.failure(CourseDetailError.apiError(errorMessage)))

@@ -49,8 +49,7 @@ class ShareViewController: UIViewController {
 
     // ファイルURLの処理
     private func processFileURL(attachment: NSItemProvider) {
-        attachment.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) {
-            [weak self] item, error in
+        attachment.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { [weak self] item, error in
             guard let url = item as? URL else {
                 self?.completeRequest(error: "ファイルURLの取得に失敗しました")
                 return
@@ -83,8 +82,7 @@ class ShareViewController: UIViewController {
 
     // 画像の処理
     private func processImage(attachment: NSItemProvider) {
-        attachment.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) {
-            [weak self] item, error in
+        attachment.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { [weak self] item, error in
             // UIImageデータの場合
             if let image = item as? UIImage {
                 // JPEGに変換
@@ -159,7 +157,7 @@ class ShareViewController: UIViewController {
                 "tempFileURL": tempFileURL.path,
                 "fileName": fileName,
                 "fileSize": fileData.count,
-                "timestamp": Date().timeIntervalSince1970,
+                "timestamp": Date().timeIntervalSince1970
             ]
 
             sharedUserDefaults?.set(fileInfo, forKey: "SharedPrintFile")

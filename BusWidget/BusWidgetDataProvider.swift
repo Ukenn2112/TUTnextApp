@@ -86,8 +86,7 @@ struct BusWidgetDataProvider {
 
     // 次のバス時刻を取得（現在時刻以降の最大3件）
     static func getNextBusTimes(routeType: String, scheduleType: String, from date: Date)
-        -> [BusWidgetSchedule.TimeEntry]
-    {
+        -> [BusWidgetSchedule.TimeEntry] {
         guard let busTimesData = getBusTimes(routeType: routeType, scheduleType: scheduleType)
         else {
             // データが取得できない場合は空の配列を返す
@@ -102,8 +101,7 @@ struct BusWidgetDataProvider {
         var times: [BusWidgetSchedule.TimeEntry] = []
         for busTimeData in busTimesData {
             if let hour = busTimeData["hour"] as? Int,
-                let minute = busTimeData["minute"] as? Int
-            {
+                let minute = busTimeData["minute"] as? Int {
                 let isSpecial = busTimeData["isSpecial"] as? Bool ?? false
                 let specialNote = busTimeData["specialNote"] as? String
                 times.append(
@@ -139,7 +137,7 @@ struct BusWidgetDataProvider {
                         "hour": time.hour,
                         "minute": time.minute,
                         "isSpecial": time.isSpecial,
-                        "specialNote": time.specialNote as Any,
+                        "specialNote": time.specialNote as Any
                     ])
                 }
             }
@@ -161,7 +159,7 @@ struct BusWidgetDataProvider {
                         "hour": time.hour,
                         "minute": time.minute,
                         "isSpecial": time.isSpecial,
-                        "specialNote": time.specialNote as Any,
+                        "specialNote": time.specialNote as Any
                     ])
                 }
             }
@@ -183,7 +181,7 @@ struct BusWidgetDataProvider {
                         "hour": time.hour,
                         "minute": time.minute,
                         "isSpecial": time.isSpecial,
-                        "specialNote": time.specialNote as Any,
+                        "specialNote": time.specialNote as Any
                     ])
                 }
             }

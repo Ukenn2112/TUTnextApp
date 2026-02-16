@@ -246,7 +246,7 @@ struct PrintSystemView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         SecureField("暗証番号を入力", text: $viewModel.pinCode)
                             .keyboardType(.numberPad)
-                            .onChange(of: viewModel.pinCode) { oldValue, newValue in
+                            .onChange(of: viewModel.pinCode) { _, newValue in
                                 // 数字以外の文字を削除
                                 let filtered = newValue.filter { $0.isNumber }
                                 // 4桁を超える場合は切り捨て
@@ -273,8 +273,7 @@ struct PrintSystemView: View {
 
     // 設定行の共通レイアウト
     private func settingRow<Content: View>(title: String, @ViewBuilder content: () -> Content)
-        -> some View
-    {
+        -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 15, weight: .medium))

@@ -164,7 +164,7 @@ struct HeaderView: View {
             "formId": "Bsd50701",
             "encryptedPassword": encryptedPassword,
             "userId": user.username,
-            "parameterMap": "",
+            "parameterMap": ""
         ]
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
@@ -184,8 +184,7 @@ struct HeaderView: View {
     private func loadUserData() {
         // UserDefaultsから直接データを取得して最新の状態を確保
         if let userData = UserDefaults.standard.data(forKey: "currentUser"),
-            let updatedUser = try? JSONDecoder().decode(User.self, from: userData)
-        {
+            let updatedUser = try? JSONDecoder().decode(User.self, from: userData) {
             // 前回と異なる場合のみ更新（特に未読通知数が変わった場合）
             if user?.allKeijiMidokCnt != updatedUser.allKeijiMidokCnt {
                 print("未読通知数が更新されました: \(updatedUser.allKeijiMidokCnt ?? 0)")

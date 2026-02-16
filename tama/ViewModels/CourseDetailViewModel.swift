@@ -5,8 +5,8 @@ import SwiftUI
 @MainActor
 final class CourseDetailViewModel: ObservableObject {
     @Published var isLoading = false
-    @Published var errorMessage: String? = nil
-    @Published var courseDetail: CourseDetailResponse? = nil
+    @Published var errorMessage: String?
+    @Published var courseDetail: CourseDetailResponse?
     @Published var memo: String = ""
     @Published var isMemoChanged = false
 
@@ -68,7 +68,7 @@ final class CourseDetailViewModel: ObservableObject {
                 AttendanceData(type: NSLocalizedString("出席", comment: ""), count: 0, color: .green),
                 AttendanceData(type: NSLocalizedString("欠席", comment: ""), count: 0, color: .red),
                 AttendanceData(
-                    type: NSLocalizedString("遅早", comment: ""), count: 0, color: .yellow),
+                    type: NSLocalizedString("遅早", comment: ""), count: 0, color: .yellow)
             ]
         }
 
@@ -81,7 +81,7 @@ final class CourseDetailViewModel: ObservableObject {
                 color: .red),
             AttendanceData(
                 type: NSLocalizedString("遅早", comment: ""),
-                count: detail.attendance.late + detail.attendance.early, color: .yellow),
+                count: detail.attendance.late + detail.attendance.early, color: .yellow)
         ]
     }
 

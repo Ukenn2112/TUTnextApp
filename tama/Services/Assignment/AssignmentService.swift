@@ -43,7 +43,7 @@ final class AssignmentService {
         // APIリクエストの設定
         let body: [String: Any] = [
             "username": currentUser.username,
-            "encryptedPassword": encryptedPassword,
+            "encryptedPassword": encryptedPassword
         ]
         let logTag = "AssignmentAPI"
 

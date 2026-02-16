@@ -7,7 +7,7 @@ final class TimetableViewModel: ObservableObject {
     // MARK: - 公開プロパティ
     @Published var courses: [String: [String: CourseModel]] = [:]
     @Published var isLoading = false
-    @Published var errorMessage: String? = nil
+    @Published var errorMessage: String?
     @Published var currentSemester: Semester = .current
 
     // MARK: - プライベートプロパティ
@@ -102,7 +102,7 @@ final class TimetableViewModel: ObservableObject {
             ("4", "14:40", "16:10"),
             ("5", "16:20", "17:50"),
             ("6", "18:00", "19:30"),
-            ("7", "19:40", "21:10"),
+            ("7", "19:40", "21:10")
         ]
 
         // 時限の存在チェック
@@ -144,7 +144,7 @@ final class TimetableViewModel: ObservableObject {
             ("4", 14 * 60 + 40, 16 * 60 + 10),  // 14:40-16:10
             ("5", 16 * 60 + 20, 17 * 60 + 50),  // 16:20-17:50
             ("6", 18 * 60, 19 * 60 + 30),  // 18:00-19:30
-            ("7", 19 * 60 + 40, 21 * 60 + 10),  // 19:40-21:10
+            ("7", 19 * 60 + 40, 21 * 60 + 10)  // 19:40-21:10
         ]
 
         // 現在時刻が含まれる時限を探す

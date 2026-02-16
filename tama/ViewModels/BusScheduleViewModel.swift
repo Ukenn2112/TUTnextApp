@@ -11,17 +11,17 @@ final class BusScheduleViewModel: ObservableObject {
     @Published var selectedScheduleType: BusSchedule.ScheduleType = .weekday
     @Published var selectedRouteType: BusSchedule.RouteType = .fromSeisekiToSchool
     @Published var currentTime = Date()
-    @Published var scrollToHour: Int? = nil
-    @Published var selectedTimeEntry: BusSchedule.TimeEntry? = nil
+    @Published var scrollToHour: Int?
+    @Published var selectedTimeEntry: BusSchedule.TimeEntry?
     @Published var cardInfoAppeared: Bool = false
-    @Published var busSchedule: BusSchedule? = nil
-    @Published var errorMessage: String? = nil
+    @Published var busSchedule: BusSchedule?
+    @Published var errorMessage: String?
     @Published var userInSchoolArea: Bool = false
 
     // MARK: - プライベートプロパティ
 
-    private var timer: Timer? = nil
-    private var secondsTimer: Timer? = nil
+    private var timer: Timer?
+    private var secondsTimer: Timer?
     private let busScheduleService = BusScheduleService.shared
 
     // 位置情報関連
@@ -32,7 +32,7 @@ final class BusScheduleViewModel: ObservableObject {
     private let geofenceRadius: CLLocationDistance = 400
 
     // 通知オブザーバー
-    private var willEnterForegroundObserver: NSObjectProtocol? = nil
+    private var willEnterForegroundObserver: NSObjectProtocol?
     private var busParametersObserver: NSObjectProtocol?
 
     // MARK: - 日付フォーマッター
@@ -220,8 +220,7 @@ final class BusScheduleViewModel: ObservableObject {
                     $0.hour == currentHour + 1
                 }),
                 let firstTimeInNextHour = nextHourSchedule.times.first,
-                time.minute == firstTimeInNextHour.minute
-            {
+                time.minute == firstTimeInNextHour.minute {
                 return true
             }
         }
@@ -239,16 +238,14 @@ final class BusScheduleViewModel: ObservableObject {
         let schedule = getFilteredSchedule()
 
         if let currentHourSchedule = schedule.hourSchedules.first(where: { $0.hour == currentHour }),
-            let nextBus = currentHourSchedule.times.first(where: { $0.minute > currentMinute })
-        {
+            let nextBus = currentHourSchedule.times.first(where: { $0.minute > currentMinute }) {
             return nextBus
         }
 
         if currentHour < 23 {
             for hour in (currentHour + 1)...23 {
                 if let hourSchedule = schedule.hourSchedules.first(where: { $0.hour == hour }),
-                    let firstBus = hourSchedule.times.first
-                {
+                    let firstBus = hourSchedule.times.first {
                     return firstBus
                 }
             }
@@ -272,8 +269,7 @@ final class BusScheduleViewModel: ObservableObject {
 
         let currentComponents = calendar.dateComponents([.hour, .minute], from: currentTime)
         if let currentHour = currentComponents.hour, let currentMinute = currentComponents.minute,
-            currentHour == nextBus.hour && currentMinute == nextBus.minute
-        {
+            currentHour == nextBus.hour && currentMinute == nextBus.minute {
             return "0分0秒"
         }
 
@@ -292,8 +288,7 @@ final class BusScheduleViewModel: ObservableObject {
         let components = calendar.dateComponents([.hour, .minute, .second], from: from, to: to)
 
         if let hour = components.hour, let minute = components.minute,
-            let second = components.second
-        {
+            let second = components.second {
             if hour > 0 {
                 return "\(hour)時間\(minute)分\(second)秒"
             } else {
@@ -315,8 +310,7 @@ final class BusScheduleViewModel: ObservableObject {
         }
 
         if (selectedTime.hour < currentHour)
-            || (selectedTime.hour == currentHour && selectedTime.minute <= currentMinute)
-        {
+            || (selectedTime.hour == currentHour && selectedTime.minute <= currentMinute) {
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedTimeEntry = nil
                 cardInfoAppeared = false

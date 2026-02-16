@@ -37,7 +37,7 @@ final class CookieService {
                         separator: "="),
                     .domain: url.host ?? "",
                     .path: "/",
-                    .version: "0",
+                    .version: "0"
                 ]) {
                     DispatchQueue.main.async {
                         self.cookieStorage.setCookie(cookie)
@@ -57,8 +57,7 @@ final class CookieService {
         var mutableRequest = request
 
         if let url = request.url,
-            let cookies = cookieStorage.cookies(for: url)
-        {
+            let cookies = cookieStorage.cookies(for: url) {
             let cookieHeaders = HTTPCookie.requestHeaderFields(with: cookies)
             for (headerField, headerValue) in cookieHeaders {
                 mutableRequest.setValue(headerValue, forHTTPHeaderField: headerField)

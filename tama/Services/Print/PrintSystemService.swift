@@ -65,7 +65,7 @@ final class PrintSystemService {
         let parameters = [
             "id": fixedId,
             "password": fixedPassword,
-            "lang": "ja",
+            "lang": "ja"
         ]
 
         // URLエンコードされたフォームデータを作成
@@ -77,7 +77,7 @@ final class PrintSystemService {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
         // リクエストを実行
-        APIService.shared.request(request: request, logTag: "印刷システムログイン") { data, response, error in
+        APIService.shared.request(request: request, logTag: "印刷システムログイン") { _, response, error in
             if let error = error {
                 print("印刷システムログインエラー: \(error.localizedDescription)")
                 completion(false, error)
@@ -180,7 +180,7 @@ final class PrintSystemService {
 
         // リクエストを実行
         APIService.shared.request(request: request, logTag: "印刷ファイルアップロード") {
-            data, response, error in
+            data, _, error in
             if let error = error {
                 print("印刷ファイルアップロードエラー: \(error.localizedDescription)")
                 completion(nil, error)
@@ -199,8 +199,7 @@ final class PrintSystemService {
             do {
                 // JSONレスポンスをパース
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                    let id = json["id"] as? String
-                {
+                    let id = json["id"] as? String {
                     // アップロード成功後、詳細情報を取得
                     self.fetchPrintDetails(id: id) { printResult, error in
                         if let error = error {
@@ -241,7 +240,7 @@ final class PrintSystemService {
         request.httpMethod = "GET"
 
         APIService.shared.request(request: request, logTag: "印刷詳細情報取得") {
-            [weak self] data, response, error in
+            [weak self] data, _, error in
             guard let self = self else { return }
 
             if let error = error {
@@ -270,8 +269,7 @@ final class PrintSystemService {
 
                         // 有効期限をUTCからローカル時間に変換
                         if let expiresAt = json["expiresAt"] as? String,
-                            let utcDate = dateFormatter.date(from: expiresAt)
-                        {
+                            let utcDate = dateFormatter.date(from: expiresAt) {
                             // ローカル時間用のフォーマッター
                             let localFormatter = DateFormatter()
                             localFormatter.dateStyle = .long
