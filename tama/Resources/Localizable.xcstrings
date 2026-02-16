@@ -3412,6 +3412,28 @@
         }
       }
     },
+    "詳細" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상세"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详情"
+          }
+        }
+      }
+    },
     "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。" : {
       "extractionState" : "manual",
       "localizations" : {

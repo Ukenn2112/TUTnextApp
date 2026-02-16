@@ -31,7 +31,9 @@ struct BusScheduleView: View {
 
                 // 時刻表コンテンツ（浮動時間カードを含む）
                 ZStack(alignment: .top) {
-                    let topPadding: CGFloat = viewModel.selectedTimeEntry == nil ? 90 : 110
+                    let basePadding: CGFloat = viewModel.selectedTimeEntry == nil ? 90 : 110
+                    let pinExtraPadding: CGFloat = viewModel.busSchedule?.pin != nil ? 56 : 0
+                    let topPadding: CGFloat = basePadding + pinExtraPadding
                     BusTimeTableContent(viewModel: viewModel, colorScheme: colorScheme)
                         .padding(.top, topPadding)
 
@@ -262,78 +264,84 @@ struct BusTimeCardView: View {
     let colorScheme: ColorScheme
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("現在時刻")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Text(viewModel.timeFormatter.string(from: viewModel.currentTime))
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.primary)
-            }
-
-            Spacer()
-
-            if let selectedTime = viewModel.selectedTimeEntry,
-                viewModel.isTimeEqual(selectedTime, to: viewModel.currentTime) {
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("バスの出発時刻です")
-                        .font(.subheadline)
-                        .foregroundColor(.orange)
-                        .transition(.opacity)
-
-                    Text("0分0秒")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.orange)
-                        .transition(.opacity)
-                }
-            } else if let nextBus = viewModel.selectedTimeEntry ?? viewModel.getNextBus() {
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(viewModel.selectedTimeEntry != nil ? "選択したバスまで" : "次のバスまで")
+        VStack(spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("現在時刻")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .transition(.opacity)
 
-                    HStack(spacing: 4) {
-                        Text(viewModel.getCountdownText(to: nextBus))
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(
-                                viewModel.selectedTimeEntry != nil ? .orange : .green)
+                    Text(viewModel.timeFormatter.string(from: viewModel.currentTime))
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+
+                Spacer()
+
+                if let selectedTime = viewModel.selectedTimeEntry,
+                    viewModel.isTimeEqual(selectedTime, to: viewModel.currentTime) {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("バスの出発時刻です")
+                            .font(.subheadline)
+                            .foregroundColor(.orange)
                             .transition(.opacity)
 
-                        if let note = nextBus.specialNote {
-                            Text(note)
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(4)
-                                .transition(.opacity)
-                        }
-                    }
-
-                    if viewModel.selectedTimeEntry != nil {
-                        HStack {
-                            Text("バス時刻")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.secondary)
-                            Text(
-                                "\(String(format: "%02d:%02d", nextBus.hour, nextBus.minute))"
-                            )
-                            .font(.system(size: 13, weight: .medium))
+                        Text("0分0秒")
+                            .font(.system(size: 22, weight: .bold))
                             .foregroundColor(.orange)
-                        }
-                        .opacity(viewModel.cardInfoAppeared ? 1 : 0)
-                        .offset(y: viewModel.cardInfoAppeared ? 0 : 5)
-                        .transition(.opacity)
+                            .transition(.opacity)
                     }
+                } else if let nextBus = viewModel.selectedTimeEntry ?? viewModel.getNextBus() {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(viewModel.selectedTimeEntry != nil ? "選択したバスまで" : "次のバスまで")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .transition(.opacity)
+
+                        HStack(spacing: 4) {
+                            Text(viewModel.getCountdownText(to: nextBus))
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(
+                                    viewModel.selectedTimeEntry != nil ? .orange : .green)
+                                .transition(.opacity)
+
+                            if let note = nextBus.specialNote {
+                                Text(note)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(4)
+                                    .transition(.opacity)
+                            }
+                        }
+
+                        if viewModel.selectedTimeEntry != nil {
+                            HStack {
+                                Text("バス時刻")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                Text(
+                                    "\(String(format: "%02d:%02d", nextBus.hour, nextBus.minute))"
+                                )
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.orange)
+                            }
+                            .opacity(viewModel.cardInfoAppeared ? 1 : 0)
+                            .offset(y: viewModel.cardInfoAppeared ? 0 : 5)
+                            .transition(.opacity)
+                        }
+                    }
+                } else {
+                    Text("本日の運行は終了しました")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-            } else {
-                Text("本日の運行は終了しました")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+            }
+
+            if let pinMessage = viewModel.busSchedule?.pin {
+                pinMessageRow(pinMessage)
             }
         }
         .padding()
@@ -347,6 +355,58 @@ struct BusTimeCardView: View {
         .contentShape(Rectangle())
         .onTapGesture {}
         .animation(.easeInOut(duration: 0.2), value: viewModel.selectedTimeEntry)
+    }
+
+    private func pinMessageRow(_ pinMessage: BusSchedule.PinMessage) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "pin.fill")
+                .foregroundColor(.orange)
+
+            Text(pinMessage.title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .minimumScaleFactor(0.8)
+
+            Spacer()
+
+            if let url = URL(string: pinMessage.url) {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Text("詳細")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.orange)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
+                    .background(Color.orange.opacity(0.2))
+                    .cornerRadius(8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.08)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.6), lineWidth: 1)
+        )
     }
 }
 
@@ -396,9 +456,7 @@ struct BusTimeTableContent: View {
             Divider()
                 .background(Color.gray.opacity(0.3))
 
-            if let pinMessage = viewModel.busSchedule?.pin {
-                pinMessageView(pinMessage)
-            } else if viewModel.selectedScheduleType == .wednesday {
+            if viewModel.selectedScheduleType == .wednesday {
                 wednesdaySpecialMessage
             }
 
@@ -458,32 +516,6 @@ struct BusTimeTableContent: View {
         .background(Color.blue.opacity(0.1))
     }
 
-    private func pinMessageView(_ pinMessage: BusSchedule.PinMessage) -> some View {
-        Button(action: {
-            if let url = URL(string: pinMessage.url) {
-                UIApplication.shared.open(url)
-            }
-        }) {
-            HStack {
-                Image(systemName: "pin.fill")
-                    .foregroundColor(.orange)
-
-                Text(pinMessage.title)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.leading)
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
-            }
-            .padding()
-            .background(Color.orange.opacity(0.1))
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
 
     private func hourScheduleRow(_ hourSchedule: BusSchedule.HourSchedule) -> some View {
         VStack(spacing: 0) {
