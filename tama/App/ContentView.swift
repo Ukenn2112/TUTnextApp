@@ -6,11 +6,10 @@ struct ContentView: View {
 
     // MARK: - プロパティ
 
+    @EnvironmentObject private var appearanceManager: AppearanceManager
     @State private var selectedTab = 1
     @State private var isLoggedIn = false
-    @EnvironmentObject private var appearanceManager: AppearanceManager
-    @EnvironmentObject private var notificationService: NotificationService
-    @EnvironmentObject private var ratingService: RatingService
+    @State private var assignmentCount: Int = 0
 
     // MARK: - ボディ
 
@@ -30,7 +29,7 @@ struct ContentView: View {
             processInitialURL()
         }
         .onReceive(
-            NotificationCenter.default.publisher(for: AppDelegate.handleURLSchemeNotification)
+            NotificationCenter.default.publisher(for: .handleURLScheme)
         ) { notification in
             if let url = notification.object as? URL {
                 handleDeepLink(url: url)
@@ -56,17 +55,67 @@ struct ContentView: View {
 
             TabView(selection: $selectedTab) {
                 BusScheduleView()
+                    .tabItem {
+                        Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
+                    }
                     .tag(0)
-                TimetableView(isLoggedIn: $isLoggedIn)
-                    .tag(1)
-                AssignmentView(isLoggedIn: $isLoggedIn)
-                    .tag(2)
-            }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .ignoresSafeArea(.container, edges: .bottom)
 
-            TabBarView(selectedTab: $selectedTab)
+                TimetableView(isLoggedIn: $isLoggedIn)
+                    .tabItem {
+                        Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
+                    }
+                    .tag(1)
+
+                AssignmentView(isLoggedIn: $isLoggedIn)
+                    .tabItem {
+                        Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
+                    }
+                    .badge(assignmentCount)
+                    .tag(2)
+
+                Color.clear
+                    .tabItem {
+                        Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis.circle")
+                    }
+                    .tag(3)
+            }
+            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+            .onChange(of: selectedTab) { oldValue, newValue in
+                if newValue == 3 {
+                    selectedTab = oldValue
+                }
+            }
         }
+        .overlay(alignment: .bottom) {
+            moreMenuOverlay
+        }
+        .onAppear {
+            fetchAssignmentCount()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .assignmentsUpdated)
+        ) { notification in
+            if let count = notification.userInfo?["count"] as? Int {
+                assignmentCount = count
+            }
+        }
+    }
+
+    /// タブバー上の「その他」メニューオーバーレイ
+    private var moreMenuOverlay: some View {
+        HStack(spacing: 0) {
+            ForEach(0..<3, id: \.self) { _ in
+                Color.clear
+                    .allowsHitTesting(false)
+                    .frame(maxWidth: .infinity)
+            }
+            MoreMenuButton {
+                Color.clear
+                    .contentShape(Rectangle())
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(height: 50)
     }
 
     // MARK: - プライベートメソッド
@@ -75,6 +124,18 @@ struct ContentView: View {
     private func checkLoginStatus() {
         let user = UserService.shared.getCurrentUser()
         isLoggedIn = user != nil
+    }
+
+    /// 課題数を取得する
+    private func fetchAssignmentCount() {
+        AssignmentService.shared.getAssignments { result in
+            switch result {
+            case .success(let assignments):
+                self.assignmentCount = assignments.count
+            case .failure:
+                self.assignmentCount = 0
+            }
+        }
     }
 
     /// アプリ起動時に初期URLを処理する
