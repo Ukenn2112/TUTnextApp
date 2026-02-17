@@ -578,7 +578,7 @@ struct BusTimeTableContent: View {
                             viewModel.selectedTimeEntry == time
                                 ? Color.orange.opacity(0.9)
                                 : (viewModel.isCurrentOrNextBus(time)
-                                    ? Color.blue.opacity(0.9) : Color.clear)
+                                    ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255) : Color.clear)
                         )
                 )
 

@@ -496,16 +496,16 @@ struct CourseDetailView: View {
 
     let presetColors: [Color] = [
         .white,
-        Color(red: 1.0, green: 0.8, blue: 0.8),  // ライトピンク
-        Color(red: 1.0, green: 0.9, blue: 0.8),  // ライトオレンジ
-        Color(red: 1.0, green: 1.0, blue: 0.8),  // ライトイエロー
-        Color(red: 0.9, green: 1.0, blue: 0.8),  // ライトグリーン
-        Color(red: 0.8, green: 1.0, blue: 0.8),  // グリーン
-        Color(red: 0.8, green: 1.0, blue: 1.0),  // シアン
-        Color(red: 1.0, green: 0.8, blue: 0.9),  // ピンクパープル
-        Color(red: 0.9, green: 0.8, blue: 1.0),  // ライトパープル
-        Color(red: 0.8, green: 0.9, blue: 1.0),  // ライトブルー
-        Color(red: 1.0, green: 0.9, blue: 1.0)  // ライトパープル
+        Color(red: 0.98, green: 0.86, blue: 0.86),  // ピンク
+        Color(red: 0.98, green: 0.92, blue: 0.86),  // オレンジ
+        Color(red: 0.98, green: 0.98, blue: 0.86),  // イエロー
+        Color(red: 0.92, green: 0.98, blue: 0.86),  // ライトグリーン
+        Color(red: 0.86, green: 0.98, blue: 0.86),  // グリーン
+        Color(red: 0.86, green: 0.98, blue: 0.98),  // シアン
+        Color(red: 0.98, green: 0.86, blue: 0.92),  // ピンクパープル
+        Color(red: 0.92, green: 0.86, blue: 0.98),  // パープル
+        Color(red: 0.86, green: 0.92, blue: 0.98),  // ブルー
+        Color(red: 0.98, green: 0.86, blue: 0.98)   // マゼンタ
     ]
 
     CourseDetailView(
