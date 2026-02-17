@@ -398,6 +398,7 @@ struct BusWidgetEntryView: View {
 
 // MARK: - ウィジェット設定
 
+@main
 struct BusWidget: Widget {
     let kind: String = "BusWidget"
 
