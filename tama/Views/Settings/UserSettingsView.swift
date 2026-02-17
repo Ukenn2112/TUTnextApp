@@ -289,6 +289,8 @@ struct UserSettingsView: View {
     private func performLogout() {
         viewModel.logout {
             UserService.shared.clearCurrentUser()
+            UserService.shared.clearDeviceToken()
+            CookieService.shared.clearCookies()
             dismiss()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 withAnimation(.easeInOut(duration: 0.5)) {

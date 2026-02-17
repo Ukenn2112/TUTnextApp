@@ -4,13 +4,15 @@ import Foundation
 final class UserService {
     static let shared = UserService()
 
+    private let keychain = KeychainService.shared
+
     private init() {}
 
     // ユーザーデータを保存
     func saveUser(_ user: User, completion: (() -> Void)? = nil) {
         DispatchQueue.main.async {
             if let encodedData = try? JSONEncoder().encode(user) {
-                UserDefaults.standard.set(encodedData, forKey: "currentUser")
+                self.keychain.save(encodedData, forKey: "currentUser")
                 // 保存完了後にコールバックを実行
                 completion?()
             }
@@ -20,25 +22,25 @@ final class UserService {
     // デバイストークンを保存
     func saveDeviceToken(_ token: String) {
         DispatchQueue.main.async {
-            UserDefaults.standard.set(token, forKey: "deviceToken")
+            self.keychain.save(token, forKey: "deviceToken")
         }
     }
 
     // デバイストークンを取得
     func getDeviceToken() -> String? {
-        return UserDefaults.standard.string(forKey: "deviceToken")
+        return keychain.loadString(forKey: "deviceToken")
     }
 
     // デバイストークンを削除
     func clearDeviceToken() {
         DispatchQueue.main.async {
-            UserDefaults.standard.removeObject(forKey: "deviceToken")
+            self.keychain.delete(forKey: "deviceToken")
         }
     }
 
     // ユーザーデータを取得
     func getCurrentUser() -> User? {
-        if let userData = UserDefaults.standard.data(forKey: "currentUser") {
+        if let userData = keychain.loadData(forKey: "currentUser") {
             return try? JSONDecoder().decode(User.self, from: userData)
         }
         return nil
@@ -47,7 +49,7 @@ final class UserService {
     // ユーザーデータを削除（ログアウト時）
     func clearCurrentUser() {
         DispatchQueue.main.async {
-            UserDefaults.standard.removeObject(forKey: "currentUser")
+            self.keychain.delete(forKey: "currentUser")
         }
     }
 

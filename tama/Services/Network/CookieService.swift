@@ -5,7 +5,7 @@ final class CookieService {
     static let shared = CookieService()
 
     private let cookieStorage = HTTPCookieStorage.shared
-    private let defaults = UserDefaults.standard
+    private let keychain = KeychainService.shared
     private let cookieKey = "savedCookies"
 
     private init() {
@@ -77,7 +77,7 @@ final class CookieService {
             }
         }
         DispatchQueue.main.async {
-            self.defaults.removeObject(forKey: self.cookieKey)
+            self.keychain.delete(forKey: self.cookieKey)
         }
     }
 
@@ -115,16 +115,18 @@ final class CookieService {
             return serializedProperties
         }
 
-        DispatchQueue.main.async {
-            self.defaults.set(cookieData, forKey: self.cookieKey)
+        if let data = try? JSONSerialization.data(withJSONObject: cookieData) {
+            keychain.save(data, forKey: cookieKey)
         }
     }
 
     /// 保存されたCookieを復元する
     private func restoreCookies() {
-        guard let cookieData = defaults.array(forKey: cookieKey) as? [[String: Any]] else { return }
+        guard let data = keychain.loadData(forKey: cookieKey),
+              let cookieArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+        else { return }
 
-        for properties in cookieData {
+        for properties in cookieArray {
             var cookieProperties: [HTTPCookiePropertyKey: Any] = [:]
 
             for (key, value) in properties {

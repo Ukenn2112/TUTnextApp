@@ -25,6 +25,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // UserDefaultsの敏感データをKeychainに移行
+        KeychainService.shared.migrateFromUserDefaults()
+
         if let url = launchOptions?[.url] as? URL {
             _ = handleURL(url)
         }

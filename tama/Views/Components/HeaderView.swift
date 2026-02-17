@@ -182,9 +182,7 @@ struct HeaderView: View {
 
     // ユーザーデータを読み込む
     private func loadUserData() {
-        // UserDefaultsから直接データを取得して最新の状態を確保
-        if let userData = UserDefaults.standard.data(forKey: "currentUser"),
-            let updatedUser = try? JSONDecoder().decode(User.self, from: userData) {
+        if let updatedUser = UserService.shared.getCurrentUser() {
             // 前回と異なる場合のみ更新（特に未読通知数が変わった場合）
             if user?.allKeijiMidokCnt != updatedUser.allKeijiMidokCnt {
                 print("未読通知数が更新されました: \(updatedUser.allKeijiMidokCnt ?? 0)")
@@ -192,9 +190,6 @@ struct HeaderView: View {
             } else if user == nil {
                 user = updatedUser
             }
-        } else {
-            // UserServiceからも取得を試みる
-            user = UserService.shared.getCurrentUser()
         }
     }
 

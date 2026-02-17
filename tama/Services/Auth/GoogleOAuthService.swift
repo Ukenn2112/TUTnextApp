@@ -118,7 +118,6 @@ final class GoogleOAuthService: ObservableObject {
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")
 
         let state = UUID().uuidString
-        UserDefaults.standard.set(state, forKey: "oauth_state")
 
         components?.queryItems = [
             URLQueryItem(name: "client_id", value: clientId),
