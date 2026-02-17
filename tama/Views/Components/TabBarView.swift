@@ -1,5 +1,22 @@
 import SwiftUI
 
+// MARK: - シート種別
+
+/// メニューから開くシートの種類
+private enum MenuSheet: Identifiable {
+    case webView(URL)
+    case teacherEmail
+    case printSystem
+
+    var id: String {
+        switch self {
+        case .webView(let url): return "web_\(url.absoluteString)"
+        case .teacherEmail: return "teacherEmail"
+        case .printSystem: return "printSystem"
+        }
+    }
+}
+
 // MARK: - その他メニューボタン
 
 /// タブバー横に配置されるコンテキストメニュー表示ボタン
@@ -8,11 +25,8 @@ struct MoreMenuButton: View {
     // MARK: - プロパティ
 
     private let menuLabel: AnyView
-    @State private var showWebView = false
-    @State private var webViewURL: URL?
+    @State private var activeSheet: MenuSheet?
     @State private var user: User?
-    @State private var showSheet = false
-    @State private var sheetContent: AnyView?
 
     // MARK: - イニシャライザ
 
@@ -37,24 +51,21 @@ struct MoreMenuButton: View {
             // Web系アクション
             Section {
                 Button(action: {
-                    webViewURL = URL(string: "https://tamauniv.jp/campuslife/calendar")
-                    showWebView = true
+                    activeSheet = .webView(URL(string: "https://tamauniv.jp/campuslife/calendar")!)
                 }) {
                     Label(NSLocalizedString("年間予定", comment: ""), systemImage: "calendar.badge.clock")
                 }
 
                 Button(action: {
                     if let tnextURL = createTnextURL() {
-                        webViewURL = tnextURL
-                        showWebView = true
+                        activeSheet = .webView(tnextURL)
                     }
                 }) {
                     Label(NSLocalizedString("スマホサイト", comment: ""), systemImage: "smartphone")
                 }
 
                 Button(action: {
-                    webViewURL = URL(string: "https://tamauniv.jp")
-                    showWebView = true
+                    activeSheet = .webView(URL(string: "https://tamauniv.jp")!)
                 }) {
                     Label(NSLocalizedString("たまゆに", comment: ""), systemImage: "globe")
                 }
@@ -63,15 +74,13 @@ struct MoreMenuButton: View {
             // アプリ内機能
             Section {
                 Button(action: {
-                    showSheet = true
-                    sheetContent = AnyView(TeacherEmailListView())
+                    activeSheet = .teacherEmail
                 }) {
                     Label(NSLocalizedString("教師メール", comment: ""), systemImage: "envelope")
                 }
 
                 Button(action: {
-                    showSheet = true
-                    sheetContent = AnyView(PrintSystemView())
+                    activeSheet = .printSystem
                 }) {
                     Label(NSLocalizedString("印刷システム", comment: ""), systemImage: "printer")
                 }
@@ -79,13 +88,15 @@ struct MoreMenuButton: View {
         } label: {
             menuLabel
         }
-        .sheet(isPresented: $showWebView) {
-            if let url = webViewURL {
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .webView(let url):
                 SafariWebView(url: url)
+            case .teacherEmail:
+                TeacherEmailListView()
+            case .printSystem:
+                PrintSystemView()
             }
-        }
-        .sheet(isPresented: $showSheet) {
-            sheetContent
         }
         .onAppear {
             user = UserService.shared.getCurrentUser()

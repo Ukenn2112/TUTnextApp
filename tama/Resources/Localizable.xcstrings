@@ -46,7 +46,26 @@
       }
     },
     "「システムに従う」を選択すると、デバイスの設定に合わせて自動的に切り替わります。" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After selecting \"Follow System,\" it will automatically switch based on the device's settings."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"시스템 따르기\"를 선택하면 장치의 설정에 따라 자동으로 전환됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择“跟随系统”后，将根据设备的设置自动切换。"
+          }
+        }
+      }
     },
     "@%@" : {
       "localizations" : {
@@ -1184,29 +1203,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "多摩油尼"
-          }
-        }
-      }
-    },
-    "デバイスの設定に合わせて自動的に切り替えます" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatically switch based on system settings"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "시스템 설정에 따라 자동으로 전환"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "根据系统设置自动切换"
           }
         }
       }
@@ -2436,29 +2432,6 @@
         }
       }
     },
-    "完了" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "완료"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完成"
-          }
-        }
-      }
-    },
     "平日（水曜日を除く）" : {
       "localizations" : {
         "en" : {
@@ -2703,29 +2676,6 @@
         }
       }
     },
-    "明るい外観を常に使用します" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Always use light appearance"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "항상 밝은 화면 사용"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "始终使用明亮的外观"
-          }
-        }
-      }
-    },
     "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。" : {
       "localizations" : {
         "en" : {
@@ -2811,29 +2761,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将课程表添加至日历"
-          }
-        }
-      }
-    },
-    "暗い外観を常に使用します" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Always use dark appearance"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "항상 어두운 화면 사용"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "始终使用深色外观"
           }
         }
       }
