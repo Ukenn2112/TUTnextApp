@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import SwiftUI
 import WidgetKit
 
@@ -6,76 +7,112 @@ import WidgetKit
 final class CourseColorService {
     static let shared = CourseColorService()
 
-    private let appGroupID = "group.com.meikenn.tama"
-    private let courseColorsKey = "courseColors"
+    /// SwiftData ModelContext
+    private var modelContext: ModelContext?
 
-    private let userDefaults = UserDefaults.standard
-    private var sharedDefaults: UserDefaults? {
-        return UserDefaults(suiteName: appGroupID)
+    private init() {
+        setupModelContext()
     }
 
-    private init() {}
+    /// ModelContext を初期化
+    private func setupModelContext() {
+        do {
+            let container = try SharedModelContainer.create()
+            modelContext = ModelContext(container)
+        } catch {
+            print("【CourseColorService】ModelContainer の作成に失敗: \(error.localizedDescription)")
+        }
+    }
 
     // MARK: - パブリックメソッド
 
     /// 授業の色を保存する
     func saveCourseColor(jugyoCd: String, colorIndex: Int) {
-        var courseColors = getCourseColors()
-        courseColors[jugyoCd] = colorIndex
+        guard let context = modelContext else { return }
 
-        if let encoded = try? JSONEncoder().encode(courseColors) {
-            userDefaults.set(encoded, forKey: courseColorsKey)
-        }
+        do {
+            // CourseColorRecord を upsert
+            let searchCd = jugyoCd
+            let descriptor = FetchDescriptor<CourseColorRecord>(
+                predicate: #Predicate { $0.jugyoCd == searchCd }
+            )
+            if let existing = try context.fetch(descriptor).first {
+                existing.colorIndex = colorIndex
+            } else {
+                let record = CourseColorRecord(jugyoCd: jugyoCd, colorIndex: colorIndex)
+                context.insert(record)
+            }
 
-        // App Group共有ストレージのデータも更新する
-        if let sharedDefaults = sharedDefaults,
-            let timetableData = sharedDefaults.data(forKey: "cachedTimetableData") {
-            do {
-                var timetableDataDecoded = try JSONDecoder().decode(
-                    [String: [String: CourseModel]].self, from: timetableData)
+            // CachedTimetable の blob 内カラーも更新
+            let timetableDescriptor = FetchDescriptor<CachedTimetable>(
+                predicate: #Predicate { $0.key == "timetable" }
+            )
+            if let cached = try context.fetch(timetableDescriptor).first {
+                var timetableData = try JSONDecoder().decode(
+                    [String: [String: CourseModel]].self, from: cached.data)
 
-                // 全ての授業を検索して該当する授業IDの色を更新
-                for (dayKey, dayData) in timetableDataDecoded {
+                for (dayKey, dayData) in timetableData {
                     for (periodKey, courseData) in dayData {
                         if courseData.jugyoCd == jugyoCd {
                             var updatedCourse = courseData
                             updatedCourse.colorIndex = colorIndex
-                            timetableDataDecoded[dayKey]?[periodKey] = updatedCourse
+                            timetableData[dayKey]?[periodKey] = updatedCourse
                         }
                     }
                 }
 
-                if let encodedData = try? JSONEncoder().encode(timetableDataDecoded) {
-                    sharedDefaults.set(encodedData, forKey: "cachedTimetableData")
-                }
-            } catch {
-                print("【CourseColorService】App Group共有ストレージの更新失敗: \(error.localizedDescription)")
+                cached.data = try JSONEncoder().encode(timetableData)
             }
+
+            try context.save()
+        } catch {
+            print("【CourseColorService】色の保存に失敗: \(error.localizedDescription)")
         }
 
         WidgetCenter.shared.reloadTimelines(ofKind: "TimetableWidget")
     }
 
-    /// 授業の色を取得する
+    /// 授業の色を取得する（スレッドセーフ）
     func getCourseColor(jugyoCd: String) -> Int? {
-        let courseColors = getCourseColors()
-        return courseColors[jugyoCd]
+        var colorIndex: Int?
+        
+        // ModelContext はメインスレッドで作成されたため、メインスレッドで同期的に実行
+        if Thread.isMainThread {
+            colorIndex = fetchColorFromContext(jugyoCd: jugyoCd)
+        } else {
+            DispatchQueue.main.sync {
+                colorIndex = self.fetchColorFromContext(jugyoCd: jugyoCd)
+            }
+        }
+        
+        return colorIndex
+    }
+    
+    /// ModelContext から色を取得（内部メソッド）
+    private func fetchColorFromContext(jugyoCd: String) -> Int? {
+        guard let context = modelContext else { return nil }
+
+        do {
+            let searchCd = jugyoCd
+            let descriptor = FetchDescriptor<CourseColorRecord>(
+                predicate: #Predicate { $0.jugyoCd == searchCd }
+            )
+            return try context.fetch(descriptor).first?.colorIndex
+        } catch {
+            print("【CourseColorService】色の取得に失敗: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     /// 全ての授業色をクリアする
     func clearAllCourseColors() {
-        userDefaults.removeObject(forKey: courseColorsKey)
-    }
+        guard let context = modelContext else { return }
 
-    // MARK: - プライベートメソッド
-
-    /// 保存されている全ての授業色を取得する
-    private func getCourseColors() -> [String: Int] {
-        guard let data = userDefaults.data(forKey: courseColorsKey),
-            let courseColors = try? JSONDecoder().decode([String: Int].self, from: data)
-        else {
-            return [:]
+        do {
+            try context.delete(model: CourseColorRecord.self)
+            try context.save()
+        } catch {
+            print("【CourseColorService】色のクリアに失敗: \(error.localizedDescription)")
         }
-        return courseColors
     }
 }

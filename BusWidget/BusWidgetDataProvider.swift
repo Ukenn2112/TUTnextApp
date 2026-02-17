@@ -1,7 +1,6 @@
 import Foundation
+import SwiftData
 import WidgetKit
-
-let APP_GROUP_ID = "group.com.meikenn.tama"
 
 // デコード専用モデル（メインアプリの BusScheduleModel と互換）
 private struct BusSchedule: Codable {
@@ -53,12 +52,18 @@ private struct BusSchedule: Codable {
     }
 }
 
-private enum BusWidgetKeys {
-    static let cachedBusSchedule = "cachedBusSchedule"
-}
-
 struct BusWidgetDataProvider {
-    private static let sharedDefaults = UserDefaults(suiteName: APP_GROUP_ID)
+    private static var modelContext: ModelContext? = {
+        do {
+            let container = try SharedModelContainer.create()
+            return ModelContext(container)
+        } catch {
+            #if DEBUG
+            print("BusWidgetDataProvider: ModelContainer の作成に失敗: \(error.localizedDescription)")
+            #endif
+            return nil
+        }
+    }()
 
     static func getScheduleTypeForDate(_ date: Date) -> String {
         let weekday = Calendar.current.component(.weekday, from: date)
@@ -103,15 +108,37 @@ struct BusWidgetDataProvider {
     // MARK: - Private
 
     private static func decodeBusSchedule() -> BusSchedule? {
-        guard let data = sharedDefaults?.data(forKey: BusWidgetKeys.cachedBusSchedule) else {
+        // ModelContext はメインスレッドで作成されたため、メインスレッドで同期的に実行
+        var schedule: BusSchedule?
+        if Thread.isMainThread {
+            schedule = fetchBusScheduleFromContext()
+        } else {
+            DispatchQueue.main.sync {
+                schedule = fetchBusScheduleFromContext()
+            }
+        }
+        return schedule
+    }
+    
+    private static func fetchBusScheduleFromContext() -> BusSchedule? {
+        guard let context = modelContext else {
             #if DEBUG
-            print("BusWidgetDataProvider: App Groupsからデータが見つかりませんでした")
+            print("BusWidgetDataProvider: ModelContext が利用できません")
             #endif
             return nil
         }
 
         do {
-            return try JSONDecoder().decode(BusSchedule.self, from: data)
+            let descriptor = FetchDescriptor<CachedBusSchedule>(
+                predicate: #Predicate { $0.key == "busSchedule" }
+            )
+            guard let cached = try context.fetch(descriptor).first else {
+                #if DEBUG
+                print("BusWidgetDataProvider: SwiftData からデータが見つかりませんでした")
+                #endif
+                return nil
+            }
+            return try JSONDecoder().decode(BusSchedule.self, from: cached.data)
         } catch {
             #if DEBUG
             print("BusWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)")

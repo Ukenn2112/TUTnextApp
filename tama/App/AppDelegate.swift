@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 import UIKit
 
@@ -25,8 +26,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // UserDefaultsの敏感データをKeychainに移行
-        KeychainService.shared.migrateFromUserDefaults()
+        // 旧データが存在する場合、すべてのデータをクリアする
+        KeychainService.shared.clearLegacyDataIfNeeded()
+        clearLegacyUserDefaultsIfNeeded()
 
         if let url = launchOptions?[.url] as? URL {
             _ = handleURL(url)
@@ -127,6 +129,68 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     // MARK: - プライベートメソッド
+
+    /// UserDefaults に旧キャッシュデータが存在する場合、すべてクリアする
+    private func clearLegacyUserDefaultsIfNeeded() {
+        let clearKey = "legacyUserDefaultsCleared"
+        guard !UserDefaults.standard.bool(forKey: clearKey) else { return }
+        
+        let defaults = UserDefaults.standard
+        let appGroupDefaults = UserDefaults(suiteName: "group.com.meikenn.tama")
+        
+        // 旧データの存在をチェック
+        let hasLegacyStandardDefaults = 
+            defaults.data(forKey: "roomChanges") != nil ||
+            defaults.data(forKey: "courseColors") != nil ||
+            defaults.data(forKey: "recentUploads") != nil
+        
+        let hasLegacyAppGroupDefaults = 
+            appGroupDefaults?.data(forKey: "cachedTimetableData") != nil ||
+            appGroupDefaults?.data(forKey: "cachedBusSchedule") != nil
+        
+        if hasLegacyStandardDefaults || hasLegacyAppGroupDefaults {
+            print("【AppDelegate】旧キャッシュデータ検出 - クリアします")
+            
+            // UserDefaults のキャッシュデータをクリア
+            defaults.removeObject(forKey: "roomChanges")
+            defaults.removeObject(forKey: "courseColors")
+            defaults.removeObject(forKey: "recentUploads")
+            
+            // App Group のキャッシュデータをクリア
+            appGroupDefaults?.removeObject(forKey: "cachedTimetableData")
+            appGroupDefaults?.removeObject(forKey: "lastTimetableFetchTime")
+            appGroupDefaults?.removeObject(forKey: "cachedBusSchedule")
+            appGroupDefaults?.removeObject(forKey: "lastBusScheduleFetchTime")
+            
+            // SwiftData も念のためクリア
+            clearSwiftDataIfNeeded()
+            
+            print("【AppDelegate】旧キャッシュデータをクリアしました")
+        }
+        
+        // クリア完了フラグを設定
+        defaults.set(true, forKey: clearKey)
+    }
+    
+    /// SwiftData のすべてのデータをクリアする
+    private func clearSwiftDataIfNeeded() {
+        do {
+            let container = try SharedModelContainer.create()
+            let context = ModelContext(container)
+            
+            // すべてのモデルを削除
+            try context.delete(model: CachedTimetable.self)
+            try context.delete(model: CachedBusSchedule.self)
+            try context.delete(model: RoomChangeRecord.self)
+            try context.delete(model: CourseColorRecord.self)
+            try context.delete(model: PrintUploadRecord.self)
+            
+            try context.save()
+            print("【AppDelegate】SwiftData をクリアしました")
+        } catch {
+            print("【AppDelegate】SwiftData クリア失敗: \(error.localizedDescription)")
+        }
+    }
 
     /// Google OAuthコールバックを処理する
     private func handleGoogleOAuthCallback(_ url: URL) -> Bool {

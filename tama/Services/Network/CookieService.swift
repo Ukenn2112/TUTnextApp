@@ -109,7 +109,12 @@ final class CookieService {
             var serializedProperties: [String: Any] = [:]
 
             for (key, value) in properties {
-                serializedProperties[key.rawValue] = value
+                // Date オブジェクトを timestamp に変換して JSON 化可能にする
+                if let date = value as? Date {
+                    serializedProperties[key.rawValue] = date.timeIntervalSince1970
+                } else {
+                    serializedProperties[key.rawValue] = value
+                }
             }
 
             return serializedProperties
@@ -130,7 +135,14 @@ final class CookieService {
             var cookieProperties: [HTTPCookiePropertyKey: Any] = [:]
 
             for (key, value) in properties {
-                cookieProperties[HTTPCookiePropertyKey(key)] = value
+                let propertyKey = HTTPCookiePropertyKey(key)
+                
+                // timestamp を Date に復元する
+                if propertyKey == .expires, let timestamp = value as? TimeInterval {
+                    cookieProperties[propertyKey] = Date(timeIntervalSince1970: timestamp)
+                } else {
+                    cookieProperties[propertyKey] = value
+                }
             }
 
             if let cookie = HTTPCookie(properties: cookieProperties) {

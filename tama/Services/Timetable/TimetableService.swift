@@ -1,13 +1,11 @@
 import Foundation
+import SwiftData
 import SwiftUI
 import WidgetKit
 
 /// 時間割データ管理サービス
 final class TimetableService {
     static let shared = TimetableService()
-
-    /// App Group ID
-    private let appGroupID = "group.com.meikenn.tama"
 
     /// キャッシュされた時間割データ
     private var cachedTimetableData: [String: [String: CourseModel]]?
@@ -21,11 +19,23 @@ final class TimetableService {
     // 部屋変更情報を格納するディクショナリ（コース名をキーとする）
     private var roomChanges: [String: RoomChange] = [:]
 
+    /// SwiftData ModelContext
+    private var modelContext: ModelContext?
+
     private init() {
-        // 起動時にApp Groupsからデータを読み込む
-        loadTimetableDataFromAppGroup()
-        // 部屋変更情報を読み込む
+        setupModelContext()
+        loadTimetableDataFromSwiftData()
         loadRoomChanges()
+    }
+
+    /// ModelContext を初期化
+    private func setupModelContext() {
+        do {
+            let container = try SharedModelContainer.create()
+            modelContext = ModelContext(container)
+        } catch {
+            print("【時間割】ModelContainer の作成に失敗: \(error.localizedDescription)")
+        }
     }
 
     // 時間割データを取得する関数
@@ -173,12 +183,14 @@ final class TimetableService {
                             // 時間割データの変換
                             let timetableData = self.convertToTimetableData(courseList)
 
-                            // データをApp Groupsに保存
-                            self.saveTimetableDataToAppGroup(timetableData)
-                            self.lastFetchTime = Date()
-
                             // メモリ内のキャッシュも更新
                             self.cachedTimetableData = timetableData
+                            self.lastFetchTime = Date()
+                            
+                            // SwiftData 操作はメインスレッドで実行
+                            DispatchQueue.main.async {
+                                self.saveTimetableData(timetableData)
+                            }
 
                             // 未読件数を更新してから時間割データを返す
                             UserService.shared.updateAllKeijiMidokCnt(
@@ -282,48 +294,55 @@ final class TimetableService {
         return timetableData
     }
 
-    /// App Groupsに時間割データを保存
-    private func saveTimetableDataToAppGroup(_ timetableData: [String: [String: CourseModel]]) {
+    // MARK: - SwiftData 保存・読み込み
+
+    /// SwiftData に時間割データを保存
+    private func saveTimetableData(_ timetableData: [String: [String: CourseModel]]) {
+        guard let context = modelContext else { return }
+
         do {
-            // 時間割データをJSONデータに変換
-            let encoder = JSONEncoder()
-            let timetableDataEncoded = try encoder.encode(timetableData)
+            let encodedData = try JSONEncoder().encode(timetableData)
+            let now = Date()
 
-            // App Groupのユーザーデフォルトに保存
-            DispatchQueue.main.async {
-                let userDefaults = UserDefaults(suiteName: self.appGroupID)
-                userDefaults?.set(timetableDataEncoded, forKey: "cachedTimetableData")
-                userDefaults?.set(Date(), forKey: "lastTimetableFetchTime")
-
-                print("【時間割】App Groupsにデータを保存しました")
-                // ウィジェットを更新
-                WidgetCenter.shared.reloadTimelines(ofKind: "TimetableWidget")
+            // 既存レコードを検索
+            let descriptor = FetchDescriptor<CachedTimetable>(
+                predicate: #Predicate { $0.key == "timetable" }
+            )
+            if let existing = try context.fetch(descriptor).first {
+                existing.data = encodedData
+                existing.lastFetchTime = now
+            } else {
+                let record = CachedTimetable(data: encodedData, lastFetchTime: now)
+                context.insert(record)
             }
+
+            try context.save()
+            print("【時間割】SwiftData にデータを保存しました")
+
+            // ウィジェットを更新
+            WidgetCenter.shared.reloadTimelines(ofKind: "TimetableWidget")
         } catch {
-            print("【時間割】App Groupsへのデータ保存に失敗しました - \(error.localizedDescription)")
+            print("【時間割】SwiftData への保存に失敗: \(error.localizedDescription)")
         }
     }
 
-    /// App Groupsから時間割データを読み込む
-    private func loadTimetableDataFromAppGroup() {
-        DispatchQueue.main.async {
-            let userDefaults = UserDefaults(suiteName: self.appGroupID)
+    /// SwiftData から時間割データを読み込む
+    private func loadTimetableDataFromSwiftData() {
+        guard let context = modelContext else { return }
 
-            if let timetableData = userDefaults?.data(forKey: "cachedTimetableData"),
-                let fetchTime = userDefaults?.object(forKey: "lastTimetableFetchTime") as? Date {
-                do {
-                    let decoder = JSONDecoder()
-                    let timetableDataDecoded = try decoder.decode(
-                        [String: [String: CourseModel]].self, from: timetableData)
-
-                    self.cachedTimetableData = timetableDataDecoded
-                    self.lastFetchTime = fetchTime
-
-                    print("【時間割】App Groupsからデータを読み込みました（取得時間: \(self.formatDate(fetchTime))）")
-                } catch {
-                    print("【時間割】App Groupsからのデータ読み込みに失敗しました - \(error.localizedDescription)")
-                }
+        do {
+            let descriptor = FetchDescriptor<CachedTimetable>(
+                predicate: #Predicate { $0.key == "timetable" }
+            )
+            if let cached = try context.fetch(descriptor).first {
+                let decoded = try JSONDecoder().decode(
+                    [String: [String: CourseModel]].self, from: cached.data)
+                self.cachedTimetableData = decoded
+                self.lastFetchTime = cached.lastFetchTime
+                print("【時間割】SwiftData からデータを読み込みました（取得時間: \(formatDate(cached.lastFetchTime))）")
             }
+        } catch {
+            print("【時間割】SwiftData からの読み込みに失敗: \(error.localizedDescription)")
         }
     }
 
@@ -366,44 +385,52 @@ final class TimetableService {
             updateCachedTimetableWithRoomChanges(&timetableData)
 
             // 更新したデータを保存
-            saveTimetableDataToAppGroup(timetableData)
+            saveTimetableData(timetableData)
 
             // ウィジェットを更新
             WidgetCenter.shared.reloadTimelines(ofKind: "TimetableWidget")
         }
     }
 
-    /// 保存されている部屋変更情報を読み込む
+    /// SwiftData から部屋変更情報を読み込む
     private func loadRoomChanges() {
-        let userDefaults = UserDefaults.standard
-        if let data = userDefaults.data(forKey: "roomChanges") {
-            do {
-                let decoder = JSONDecoder()
-                let loadedChanges = try decoder.decode([String: RoomChange].self, from: data)
+        guard let context = modelContext else { return }
 
-                // 期限切れの部屋変更を除外
-                let now = Date()
-                roomChanges = loadedChanges.filter { $0.value.expiryDate > now }
-
-                print("【時間割】部屋変更情報を読み込みました（\(roomChanges.count)件）")
-
-                // 期限切れのエントリが削除された場合は保存し直す
-                if roomChanges.count != loadedChanges.count {
-                    saveRoomChanges()
-                }
-            } catch {
-                print("【時間割】部屋変更情報の読み込みに失敗: \(error.localizedDescription)")
-                roomChanges = [:]
-            }
+        do {
+            let now = Date()
+            let descriptor = FetchDescriptor<RoomChangeRecord>(
+                predicate: #Predicate { $0.expiryDate > now }
+            )
+            let records = try context.fetch(descriptor)
+            roomChanges = Dictionary(uniqueKeysWithValues: records.map {
+                ($0.courseName, RoomChange(courseName: $0.courseName, newRoom: $0.newRoom, expiryDate: $0.expiryDate))
+            })
+            print("【時間割】部屋変更情報を読み込みました（\(roomChanges.count)件）")
+        } catch {
+            print("【時間割】部屋変更情報の読み込みに失敗: \(error.localizedDescription)")
+            roomChanges = [:]
         }
     }
 
-    /// 部屋変更情報を保存する
+    /// 部屋変更情報を SwiftData に保存する
     private func saveRoomChanges() {
+        guard let context = modelContext else { return }
+
         do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(roomChanges)
-            UserDefaults.standard.set(data, forKey: "roomChanges")
+            // 既存レコードを全削除
+            try context.delete(model: RoomChangeRecord.self)
+
+            // 現在の変更を保存
+            for (_, change) in roomChanges {
+                let record = RoomChangeRecord(
+                    courseName: change.courseName,
+                    newRoom: change.newRoom,
+                    expiryDate: change.expiryDate
+                )
+                context.insert(record)
+            }
+
+            try context.save()
             print("【時間割】部屋変更情報を保存しました（\(roomChanges.count)件）")
         } catch {
             print("【時間割】部屋変更情報の保存に失敗: \(error.localizedDescription)")
@@ -462,7 +489,7 @@ final class TimetableService {
             // キャッシュされた時間割データを更新
             if var timetableData = cachedTimetableData {
                 updateCachedTimetableWithRoomChanges(&timetableData)
-                saveTimetableDataToAppGroup(timetableData)
+                saveTimetableData(timetableData)
             }
         }
     }

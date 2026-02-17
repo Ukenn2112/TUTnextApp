@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import SwiftUI
 
 // MARK: - バス時刻表データ提供サービス
@@ -23,13 +24,24 @@ final class BusScheduleService {
     /// APIリクエストが現在進行中かどうか
     private var isRequestInProgress = false
 
-    /// App Group ID
-    private let appGroupID = "group.com.meikenn.tama"
+    /// SwiftData ModelContext
+    private var modelContext: ModelContext?
 
     /// プライベートイニシャライザ（シングルトンパターン）
     private init() {
+        setupModelContext()
         // 保存されたデータがあれば読み込む
-        loadCachedDataFromAppGroup()
+        loadCachedDataFromSwiftData()
+    }
+
+    /// ModelContext を初期化
+    private func setupModelContext() {
+        do {
+            let container = try SharedModelContainer.create()
+            modelContext = ModelContext(container)
+        } catch {
+            print("BusScheduleService: ModelContainer の作成に失敗: \(error.localizedDescription)")
+        }
     }
 
     /// バス時刻表データを取得（非同期）
@@ -101,9 +113,12 @@ final class BusScheduleService {
                 self.cachedSchedule = busSchedule
                 self.lastFetchTime = Date()
 
-                // App Groupsにデータを保存
-                self.saveBusDataToAppGroup(
-                    busSchedule: busSchedule, lastFetchTime: self.lastFetchTime!)
+                // SwiftData 操作はメインスレッドで実行
+                let fetchTime = self.lastFetchTime!
+                DispatchQueue.main.async {
+                    self.saveBusDataToSwiftData(
+                        busSchedule: busSchedule, lastFetchTime: fetchTime)
+                }
 
                 print(
                     "BusScheduleService: 新しいデータの取得に成功しました（取得時間: \(self.formatDate(self.lastFetchTime!))）"
@@ -313,50 +328,52 @@ final class BusScheduleService {
         )
     }
 
-    /// App Groupsにバスデータを保存
-    private func saveBusDataToAppGroup(busSchedule: BusSchedule, lastFetchTime: Date) {
+    /// SwiftData にバスデータを保存
+    private func saveBusDataToSwiftData(busSchedule: BusSchedule, lastFetchTime: Date) {
+        guard let context = modelContext else { return }
+
         do {
-            // バススケジュールをJSONデータに変換
-            let encoder = JSONEncoder()
-            let busData = try encoder.encode(busSchedule)
+            let busData = try JSONEncoder().encode(busSchedule)
 
-            // UserDefaultsにデータを保存（App Group共有）- メインスレッドで実行
-            DispatchQueue.main.async {
-                let userDefaults = UserDefaults(suiteName: self.appGroupID)
-                userDefaults?.set(busData, forKey: "cachedBusSchedule")
-                userDefaults?.set(lastFetchTime, forKey: "lastBusScheduleFetchTime")
-
-                print("BusScheduleService: App Groupsにデータを保存しました")
+            // 既存レコードを検索
+            let descriptor = FetchDescriptor<CachedBusSchedule>(
+                predicate: #Predicate { $0.key == "busSchedule" }
+            )
+            if let existing = try context.fetch(descriptor).first {
+                existing.data = busData
+                existing.lastFetchTime = lastFetchTime
+            } else {
+                let record = CachedBusSchedule(data: busData, lastFetchTime: lastFetchTime)
+                context.insert(record)
             }
+
+            try context.save()
+            print("BusScheduleService: SwiftData にデータを保存しました")
         } catch {
-            print("BusScheduleService: App Groupsへのデータ保存に失敗しました - \(error.localizedDescription)")
+            print("BusScheduleService: SwiftData への保存に失敗しました - \(error.localizedDescription)")
         }
     }
 
-    /// App Groupsからキャッシュされたデータを読み込む
-    private func loadCachedDataFromAppGroup() {
-        // メインスレッドで実行
-        DispatchQueue.main.async {
-            let userDefaults = UserDefaults(suiteName: self.appGroupID)
+    /// SwiftData からキャッシュされたデータを読み込む
+    private func loadCachedDataFromSwiftData() {
+        guard let context = modelContext else { return }
 
-            if let busData = userDefaults?.data(forKey: "cachedBusSchedule"),
-                let fetchTime = userDefaults?.object(forKey: "lastBusScheduleFetchTime") as? Date {
-                do {
-                    let decoder = JSONDecoder()
-                    let busSchedule = try decoder.decode(BusSchedule.self, from: busData)
-
-                    self.cachedSchedule = busSchedule
-                    self.lastFetchTime = fetchTime
-
-                    print(
-                        "BusScheduleService: App Groupsからデータを読み込みました（取得時間: \(self.formatDate(fetchTime))）"
-                    )
-                } catch {
-                    print(
-                        "BusScheduleService: App Groupsからのデータ読み込みに失敗しました - \(error.localizedDescription)"
-                    )
-                }
+        do {
+            let descriptor = FetchDescriptor<CachedBusSchedule>(
+                predicate: #Predicate { $0.key == "busSchedule" }
+            )
+            if let cached = try context.fetch(descriptor).first {
+                let busSchedule = try JSONDecoder().decode(BusSchedule.self, from: cached.data)
+                self.cachedSchedule = busSchedule
+                self.lastFetchTime = cached.lastFetchTime
+                print(
+                    "BusScheduleService: SwiftData からデータを読み込みました（取得時間: \(self.formatDate(cached.lastFetchTime))）"
+                )
             }
+        } catch {
+            print(
+                "BusScheduleService: SwiftData からの読み込みに失敗しました - \(error.localizedDescription)"
+            )
         }
     }
 }

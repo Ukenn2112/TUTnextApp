@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import SwiftUI
 import WidgetKit
 
@@ -145,26 +146,30 @@ struct CourseModel: Identifiable, Equatable, Codable {
     ]
 }
 
-// MARK: - 定数
-
-let APP_GROUP_ID = "group.com.meikenn.tama"
-
-private struct TimetableWidgetKeys {
-    static let cachedTimetableData = "cachedTimetableData"
-    static let lastUpdateTime = "lastTimetableFetchTime"
-}
-
 // MARK: - データプロバイダー
 
 class TimetableWidgetDataProvider {
     static let shared = TimetableWidgetDataProvider()
 
-    private let sharedDefaults = UserDefaults(suiteName: APP_GROUP_ID)
+    private var modelContext: ModelContext?
     private var cachedData: [String: [String: CourseModel]]?
     private var lastCacheTime: Date?
     private let cacheValidity: TimeInterval = 60
 
-    private init() {}
+    private init() {
+        setupModelContext()
+    }
+
+    private func setupModelContext() {
+        do {
+            let container = try SharedModelContainer.create()
+            modelContext = ModelContext(container)
+        } catch {
+            #if DEBUG
+            print("TimetableWidgetDataProvider: ModelContainer の作成に失敗: \(error.localizedDescription)")
+            #endif
+        }
+    }
 
     // MARK: データ取得
 
@@ -176,41 +181,75 @@ class TimetableWidgetDataProvider {
             return cached
         }
 
-        do {
-            guard let userDefaults = sharedDefaults else {
-                #if DEBUG
-                    print("TimetableWidgetDataProvider: App Groupsにアクセスできません")
-                #endif
-                return CourseModel.sampleCourses
+        // ModelContext はメインスレッドで作成されたため、メインスレッドで同期的に実行
+        var result: [String: [String: CourseModel]]?
+        if Thread.isMainThread {
+            result = fetchTimetableFromContext()
+        } else {
+            DispatchQueue.main.sync {
+                result = self.fetchTimetableFromContext()
             }
+        }
+        return result
+    }
+    
+    private func fetchTimetableFromContext() -> [String: [String: CourseModel]]? {
+        guard let context = modelContext else {
+            #if DEBUG
+            print("TimetableWidgetDataProvider: ModelContext が利用できません")
+            #endif
+            return CourseModel.sampleCourses
+        }
 
-            guard
-                let timetableData = userDefaults.data(
-                    forKey: TimetableWidgetKeys.cachedTimetableData)
-            else {
+        do {
+            let descriptor = FetchDescriptor<CachedTimetable>(
+                predicate: #Predicate { $0.key == "timetable" }
+            )
+            guard let cached = try context.fetch(descriptor).first else {
                 #if DEBUG
-                    print("TimetableWidgetDataProvider: App Groupsからデータが見つかりませんでした")
+                print("TimetableWidgetDataProvider: SwiftData からデータが見つかりませんでした")
                 #endif
                 return CourseModel.sampleCourses
             }
 
             let decoded = try JSONDecoder().decode(
-                [String: [String: CourseModel]].self, from: timetableData)
+                [String: [String: CourseModel]].self, from: cached.data)
             cachedData = decoded
             lastCacheTime = Date()
             return decoded
         } catch {
             #if DEBUG
-                print(
-                    "TimetableWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)"
-                )
+            print(
+                "TimetableWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)"
+            )
             #endif
             return CourseModel.sampleCourses
         }
     }
 
     func getLastFetchTime() -> Date? {
-        sharedDefaults?.object(forKey: TimetableWidgetKeys.lastUpdateTime) as? Date
+        // ModelContext はメインスレッドで作成されたため、メインスレッドで同期的に実行
+        var fetchTime: Date?
+        if Thread.isMainThread {
+            fetchTime = fetchLastFetchTimeFromContext()
+        } else {
+            DispatchQueue.main.sync {
+                fetchTime = self.fetchLastFetchTimeFromContext()
+            }
+        }
+        return fetchTime
+    }
+    
+    private func fetchLastFetchTimeFromContext() -> Date? {
+        guard let context = modelContext else { return nil }
+        do {
+            let descriptor = FetchDescriptor<CachedTimetable>(
+                predicate: #Predicate { $0.key == "timetable" }
+            )
+            return try context.fetch(descriptor).first?.lastFetchTime
+        } catch {
+            return nil
+        }
     }
 
     // MARK: 時間情報

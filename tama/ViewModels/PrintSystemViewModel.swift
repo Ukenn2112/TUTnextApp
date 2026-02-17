@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -17,9 +18,23 @@ final class PrintSystemViewModel: ObservableObject {
     // PIN番号
     @Published var pinCode: String = ""
 
+    /// SwiftData ModelContext
+    private var modelContext: ModelContext?
+
     init() {
+        setupModelContext()
         // 初期化時に共有されたファイルを確認
         checkForSharedFile()
+    }
+
+    /// ModelContext を初期化
+    private func setupModelContext() {
+        do {
+            let container = try SharedModelContainer.create()
+            modelContext = ModelContext(container)
+        } catch {
+            print("【印刷】ModelContainer の作成に失敗: \(error.localizedDescription)")
+        }
     }
 
     // 共有拡張機能から共有されたファイルを確認
@@ -110,22 +125,64 @@ final class PrintSystemViewModel: ObservableObject {
         if recentUploads.count > 10 {
             recentUploads.removeLast()
         }
-        // UserDefaultsに保存
-        saveRecentUploads()
+        // SwiftDataに保存
+        saveRecentUploadToSwiftData(result)
     }
 
-    // 最近のアップロード履歴をUserDefaultsに保存
-    private func saveRecentUploads() {
-        if let encoded = try? JSONEncoder().encode(recentUploads) {
-            UserDefaults.standard.set(encoded, forKey: "recentUploads")
+    // SwiftDataに印刷履歴を保存
+    private func saveRecentUploadToSwiftData(_ result: PrintResult) {
+        guard let context = modelContext else { return }
+
+        do {
+            let record = PrintUploadRecord(
+                printNumber: result.printNumber,
+                fileName: result.fileName,
+                expiryDate: result.expiryDate,
+                pageCount: result.pageCount,
+                duplex: result.duplex,
+                fileSize: result.fileSize,
+                nUp: result.nUp
+            )
+            context.insert(record)
+
+            // 最大10件を超えた古いレコードを削除
+            var descriptor = FetchDescriptor<PrintUploadRecord>(
+                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            )
+            descriptor.fetchOffset = 10
+            let oldRecords = try context.fetch(descriptor)
+            for old in oldRecords {
+                context.delete(old)
+            }
+
+            try context.save()
+        } catch {
+            print("【印刷】SwiftData への保存に失敗: \(error.localizedDescription)")
         }
     }
 
-    // 最近のアップロード履歴をUserDefaultsから読み込み
+    // SwiftDataから最近のアップロード履歴を読み込み
     func loadRecentUploads() {
-        if let data = UserDefaults.standard.data(forKey: "recentUploads"),
-            let decoded = try? JSONDecoder().decode([PrintResult].self, from: data) {
-            recentUploads = decoded
+        guard let context = modelContext else { return }
+
+        do {
+            let descriptor = FetchDescriptor<PrintUploadRecord>(
+                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            )
+            let records = try context.fetch(descriptor)
+            recentUploads = records.map { record in
+                PrintResult(
+                    printNumber: record.printNumber,
+                    fileName: record.fileName,
+                    expiryDate: record.expiryDate,
+                    pageCount: record.pageCount,
+                    duplex: record.duplex,
+                    fileSize: record.fileSize,
+                    nUp: record.nUp
+                )
+            }
+        } catch {
+            print("【印刷】SwiftData からの読み込みに失敗: \(error.localizedDescription)")
         }
     }
 

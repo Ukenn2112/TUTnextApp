@@ -74,39 +74,63 @@ final class KeychainService {
         return status == errSecSuccess || status == errSecItemNotFound
     }
 
-    // MARK: - UserDefaults からの移行
+    // MARK: - 旧データクリーンアップ
 
-    /// UserDefaults の敏感データを Keychain に移行する
-    func migrateFromUserDefaults() {
+    /// UserDefaults に旧データが存在する場合、すべてのデータをクリアする
+    func clearLegacyDataIfNeeded() {
+        let clearKey = "legacyDataCleared"
+        guard !UserDefaults.standard.bool(forKey: clearKey) else { return }
+
         let defaults = UserDefaults.standard
-
-        // currentUser の移行
-        if let userData = defaults.data(forKey: "currentUser") {
-            if loadData(forKey: "currentUser") == nil {
-                save(userData, forKey: "currentUser")
-            }
-            defaults.removeObject(forKey: "currentUser")
+        
+        // 旧データの存在をチェック
+        let hasLegacyData = defaults.data(forKey: "currentUser") != nil ||
+                           defaults.string(forKey: "deviceToken") != nil ||
+                           defaults.array(forKey: "savedCookies") != nil
+        
+        if hasLegacyData {
+            print("【KeychainService】旧データ検出 - すべてのデータをクリアします")
+            clearAllData()
         }
-
-        // deviceToken の移行
-        if let token = defaults.string(forKey: "deviceToken") {
-            if loadString(forKey: "deviceToken") == nil {
-                save(token, forKey: "deviceToken")
-            }
-            defaults.removeObject(forKey: "deviceToken")
+        
+        // クリア完了フラグを設定
+        defaults.set(true, forKey: clearKey)
+    }
+    
+    /// すべての Keychain データをクリアする
+    func clearAllKeychainData() {
+        let keysToDelete = [
+            "currentUser",
+            "deviceToken",
+            "savedCookies"
+        ]
+        
+        for key in keysToDelete {
+            delete(forKey: key)
         }
-
-        // savedCookies の移行
-        if let cookieArray = defaults.array(forKey: "savedCookies") {
-            if loadData(forKey: "savedCookies") == nil {
-                if let data = try? JSONSerialization.data(withJSONObject: cookieArray) {
-                    save(data, forKey: "savedCookies")
-                }
-            }
-            defaults.removeObject(forKey: "savedCookies")
-        }
-
-        // 不要な oauth_state を削除
+        
+        print("【KeychainService】Keychain データをクリアしました")
+    }
+    
+    /// すべてのアプリデータをクリアする（Keychain + UserDefaults + Cookies）
+    private func clearAllData() {
+        // Keychain をクリア
+        clearAllKeychainData()
+        
+        // UserDefaults をクリア
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "currentUser")
+        defaults.removeObject(forKey: "deviceToken")
+        defaults.removeObject(forKey: "savedCookies")
         defaults.removeObject(forKey: "oauth_state")
+        
+        // Cookies をクリア
+        if let cookies = HTTPCookieStorage.shared.cookies {
+            for cookie in cookies {
+                HTTPCookieStorage.shared.deleteCookie(cookie)
+            }
+        }
+        
+        print("【KeychainService】すべてのユーザーデータをクリアしました")
     }
 }
