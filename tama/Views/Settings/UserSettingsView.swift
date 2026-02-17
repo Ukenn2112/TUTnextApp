@@ -35,7 +35,6 @@ struct UserSettingsView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.secondary)
                             .frame(width: 30, height: 30)
-                            .background(.ultraThinMaterial)
                             .clipShape(Circle())
                     }
                 }
