@@ -50,11 +50,32 @@ final class TimetableService {
         year: Int = 0, termNo: Int = 0,
         completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
     ) {
+        // キャッシュがあればまず返す
+        if let cachedData = cachedTimetableData {
+            print("【時間割】キャッシュデータを返します")
+            completion(.success(cachedData))
+        }
+        
+        // バックグラウンドで新しいデータを取得（最大3回リトライ）
+        fetchTimetableDataFromAPI(year: year, termNo: termNo, retryCount: 0, maxRetries: 3, completion: completion)
+    }
+    
+    // API から時間割データを取得する内部関数（リトライ機能付き）
+    private func fetchTimetableDataFromAPI(
+        year: Int,
+        termNo: Int,
+        retryCount: Int,
+        maxRetries: Int,
+        completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
+    ) {
         guard let user = UserService.shared.getCurrentUser(),
             let encryptedPassword = user.encryptedPassword
         else {
             print("【時間割】ユーザー認証情報なし")
-            completion(.failure(TimetableError.userNotAuthenticated))
+            // キャッシュの有効性を確認（12時間以内）
+            if cachedTimetableData == nil || !isCacheValid() {
+                completion(.failure(TimetableError.userNotAuthenticated))
+            }
             return
         }
 
@@ -66,7 +87,10 @@ final class TimetableService {
             )
         else {
             print("【時間割】無効なエンドポイント")
-            completion(.failure(TimetableError.invalidEndpoint))
+            // キャッシュの有効性を確認（12時間以内）
+            if cachedTimetableData == nil || !isCacheValid() {
+                completion(.failure(TimetableError.invalidEndpoint))
+            }
             return
         }
 
@@ -93,7 +117,10 @@ final class TimetableService {
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             print("【時間割】リクエスト作成失敗")
-            completion(.failure(TimetableError.requestCreationFailed))
+            // キャッシュの有効性を確認（12時間以内）
+            if cachedTimetableData == nil || !isCacheValid() {
+                completion(.failure(TimetableError.requestCreationFailed))
+            }
             return
         }
 
@@ -110,7 +137,29 @@ final class TimetableService {
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("【時間割】エラー: \(error.localizedDescription)")
-                completion(.failure(error))
+                
+                // リトライ処理
+                if retryCount < maxRetries {
+                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                        self.fetchTimetableDataFromAPI(
+                            year: year,
+                            termNo: termNo,
+                            retryCount: retryCount + 1,
+                            maxRetries: maxRetries,
+                            completion: completion
+                        )
+                    }
+                } else {
+                    print("【時間割】最大リトライ回数に達しました")
+                    // キャッシュの有効性を確認（12時間以内）
+                    if self.cachedTimetableData == nil || !self.isCacheValid() {
+                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                        completion(.failure(error))
+                    } else {
+                        print("【時間割】キャッシュを使用します（有効期限内）")
+                    }
+                }
                 return
             }
 
@@ -127,7 +176,29 @@ final class TimetableService {
 
             guard let data = data else {
                 print("【時間割】データなし")
-                completion(.failure(TimetableError.noDataReceived))
+                
+                // リトライ処理
+                if retryCount < maxRetries {
+                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                        self.fetchTimetableDataFromAPI(
+                            year: year,
+                            termNo: termNo,
+                            retryCount: retryCount + 1,
+                            maxRetries: maxRetries,
+                            completion: completion
+                        )
+                    }
+                } else {
+                    print("【時間割】最大リトライ回数に達しました")
+                    // キャッシュの有効性を確認（12時間以内）
+                    if self.cachedTimetableData == nil || !self.isCacheValid() {
+                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                        completion(.failure(TimetableError.noDataReceived))
+                    } else {
+                        print("【時間割】キャッシュを使用します（有効期限内）")
+                    }
+                }
                 return
             }
 
@@ -144,7 +215,29 @@ final class TimetableService {
                     .data(using: .utf8)
             else {
                 print("【時間割】デコード失敗")
-                completion(.failure(TimetableError.decodingFailed))
+                
+                // リトライ処理
+                if retryCount < maxRetries {
+                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                        self.fetchTimetableDataFromAPI(
+                            year: year,
+                            termNo: termNo,
+                            retryCount: retryCount + 1,
+                            maxRetries: maxRetries,
+                            completion: completion
+                        )
+                    }
+                } else {
+                    print("【時間割】最大リトライ回数に達しました")
+                    // キャッシュの有効性を確認（12時間以内）
+                    if self.cachedTimetableData == nil || !self.isCacheValid() {
+                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                        completion(.failure(TimetableError.decodingFailed))
+                    } else {
+                        print("【時間割】キャッシュを使用します（有効期限内）")
+                    }
+                }
                 return
             }
 
@@ -203,26 +296,136 @@ final class TimetableService {
                             }
                         } else {
                             print("【時間割】データ解析失敗")
-                            completion(.failure(TimetableError.dataParsingFailed))
+                            
+                            // リトライ処理
+                            if retryCount < maxRetries {
+                                print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                                    self.fetchTimetableDataFromAPI(
+                                        year: year,
+                                        termNo: termNo,
+                                        retryCount: retryCount + 1,
+                                        maxRetries: maxRetries,
+                                        completion: completion
+                                    )
+                                }
+                            } else {
+                                print("【時間割】最大リトライ回数に達しました")
+                                // キャッシュの有効性を確認（12時間以内）
+                                if self.cachedTimetableData == nil || !self.isCacheValid() {
+                                    print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                                    completion(.failure(TimetableError.dataParsingFailed))
+                                } else {
+                                    print("【時間割】キャッシュを使用します（有効期限内）")
+                                }
+                            }
                         }
                     } else {
                         if let messageList = statusDto["messageList"] as? [String],
                             !messageList.isEmpty {
                             let errorMessage = messageList.first ?? "Unknown error"
                             print("【時間割】APIエラー: \(errorMessage)")
-                            completion(.failure(TimetableError.apiError(errorMessage)))
+                            
+                            // リトライ処理
+                            if retryCount < maxRetries {
+                                print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                                    self.fetchTimetableDataFromAPI(
+                                        year: year,
+                                        termNo: termNo,
+                                        retryCount: retryCount + 1,
+                                        maxRetries: maxRetries,
+                                        completion: completion
+                                    )
+                                }
+                            } else {
+                                print("【時間割】最大リトライ回数に達しました")
+                                // キャッシュの有効性を確認（12時間以内）
+                                if self.cachedTimetableData == nil || !self.isCacheValid() {
+                                    print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                                    completion(.failure(TimetableError.apiError(errorMessage)))
+                                } else {
+                                    print("【時間割】キャッシュを使用します（有効期限内）")
+                                }
+                            }
                         } else {
                             print("【時間割】不明なAPIエラー")
-                            completion(.failure(TimetableError.apiError("Unknown error")))
+                            
+                            // リトライ処理
+                            if retryCount < maxRetries {
+                                print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                                    self.fetchTimetableDataFromAPI(
+                                        year: year,
+                                        termNo: termNo,
+                                        retryCount: retryCount + 1,
+                                        maxRetries: maxRetries,
+                                        completion: completion
+                                    )
+                                }
+                            } else {
+                                print("【時間割】最大リトライ回数に達しました")
+                                // キャッシュの有効性を確認（12時間以内）
+                                if self.cachedTimetableData == nil || !self.isCacheValid() {
+                                    print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                                    completion(.failure(TimetableError.apiError("Unknown error")))
+                                } else {
+                                    print("【時間割】キャッシュを使用します（有効期限内）")
+                                }
+                            }
                         }
                     }
                 } else {
                     print("【時間割】レスポンス解析失敗")
-                    completion(.failure(TimetableError.invalidResponse))
+                    
+                    // リトライ処理
+                    if retryCount < maxRetries {
+                        print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                        DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                            self.fetchTimetableDataFromAPI(
+                                year: year,
+                                termNo: termNo,
+                                retryCount: retryCount + 1,
+                                maxRetries: maxRetries,
+                                completion: completion
+                            )
+                        }
+                    } else {
+                        print("【時間割】最大リトライ回数に達しました")
+                        // キャッシュの有効性を確認（12時間以内）
+                        if self.cachedTimetableData == nil || !self.isCacheValid() {
+                            print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                            completion(.failure(TimetableError.invalidResponse))
+                        } else {
+                            print("【時間割】キャッシュを使用します（有効期限内）")
+                        }
+                    }
                 }
             } catch {
                 print("【時間割】JSON解析エラー: \(error.localizedDescription)")
-                completion(.failure(error))
+                
+                // リトライ処理
+                if retryCount < maxRetries {
+                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                        self.fetchTimetableDataFromAPI(
+                            year: year,
+                            termNo: termNo,
+                            retryCount: retryCount + 1,
+                            maxRetries: maxRetries,
+                            completion: completion
+                        )
+                    }
+                } else {
+                    print("【時間割】最大リトライ回数に達しました")
+                    // キャッシュの有効性を確認（12時間以内）
+                    if self.cachedTimetableData == nil || !self.isCacheValid() {
+                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
+                        completion(.failure(error))
+                    } else {
+                        print("【時間割】キャッシュを使用します（有効期限内）")
+                    }
+                }
             }
         }.resume()
     }
@@ -349,6 +552,22 @@ final class TimetableService {
     /// キャッシュされた時間割データを取得
     func getCachedTimetableData() -> [String: [String: CourseModel]]? {
         return cachedTimetableData
+    }
+    
+    /// キャッシュの有効性を確認（12時間以内かどうか）
+    private func isCacheValid() -> Bool {
+        guard let lastFetch = lastFetchTime else {
+            return false
+        }
+        
+        let cacheAgeHours = Date().timeIntervalSince(lastFetch) / 3600
+        let isValid = cacheAgeHours < 12
+        
+        if !isValid {
+            print("【時間割】キャッシュが期限切れです（\(String(format: "%.1f", cacheAgeHours))時間経過）")
+        }
+        
+        return isValid
     }
 
     /// 日付をフォーマット

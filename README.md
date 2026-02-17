@@ -67,6 +67,7 @@ TUTnextApp/
 │   │   │   ├── AuthService.swift #     T-NEXTログイン認証
 │   │   │   ├── AuthError.swift   #     認証エラー定義
 │   │   │   ├── GoogleOAuthService.swift # Google OAuth連携
+│   │   │   ├── KeychainService.swift # Keychain管理
 │   │   │   └── UserService.swift #     ユーザー情報管理
 │   │   ├── Timetable/            #   時間割関連
 │   │   │   ├── TimetableService.swift   # 時間割データ取得
@@ -105,6 +106,7 @@ TUTnextApp/
 │   │   ├── Components/           #   再利用可能なUI部品
 │   │   │   ├── AssignmentCardView.swift  # 課題カードコンポーネント
 │   │   │   ├── HeaderView.swift         # ヘッダーコンポーネント
+│   │   │   ├── MailComposerView.swift   # メール作成コンポーネント
 │   │   │   ├── SafariWebView.swift      # アプリ内ブラウザ
 │   │   │   └── TabBarView.swift         # タブバーコンポーネント
 │   │   ├── Timetable/            #   時間割関連画面
@@ -139,18 +141,16 @@ TUTnextApp/
 │   └── Preview Content/          # Xcodeプレビュー用アセット
 │
 ├── BusWidget/                    # バス時刻表ウィジェット（ホーム画面用）
-│   ├── BusWidgetBundle.swift     #   ウィジェットバンドル定義
+│   ├── AppIntent.swift           #   ウィジェットインテント定義
 │   ├── BusWidget.swift           #   ウィジェットUI・タイムライン
 │   ├── BusWidgetDataProvider.swift #  データプロバイダー
-│   ├── BusWidgetLiveActivity.swift # ライブアクティビティ対応
-│   ├── AppIntent.swift           #   ウィジェットインテント定義
+│   ├── Info.plist                #   ウィジェット設定
 │   └── Assets.xcassets/          #   ウィジェット用アセット
 │
 ├── TimetableWidget/              # 時間割ウィジェット（ホーム画面用）
-│   ├── TimetableWidgetBundle.swift    # ウィジェットバンドル定義
+│   ├── Info.plist                     # ウィジェット設定
 │   ├── TimetableWidget.swift          # ウィジェットUI・タイムライン
 │   ├── TimetableWidgetDataProvider.swift # データプロバイダー
-│   ├── TimetableWidgetLiveActivity.swift # ライブアクティビティ対応
 │   └── Assets.xcassets/               # ウィジェット用アセット
 │
 ├── PrintShareExtension/          # 印刷共有エクステンション（共有シートから印刷）
