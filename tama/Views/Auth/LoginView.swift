@@ -174,25 +174,26 @@ struct LoginView: View {
                             .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.06))
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        .clear,
-                                        .white.opacity(0.4),
-                                        .clear,
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+                        GeometryReader { geo in
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0),
+                                    .init(color: .white.opacity(0.15), location: 0.4),
+                                    .init(color: .white.opacity(0.55), location: 0.5),
+                                    .init(color: .white.opacity(0.15), location: 0.6),
+                                    .init(color: .clear, location: 1),
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                            .offset(x: nfcShimmer ? 80 : -80)
+                            .frame(width: geo.size.width * 2)
+                            .offset(x: nfcShimmer ? geo.size.width : -geo.size.width * 2)
                             .animation(
-                                .easeInOut(duration: 1.2)
-                                    .delay(0.5)
-                                    .repeatCount(3, autoreverses: false),
+                                .linear(duration: 1.8)
+                                    .repeatForever(autoreverses: false),
                                 value: nfcShimmer
                             )
+                        }
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                 }
@@ -227,35 +228,69 @@ struct LoginView: View {
 
     // MARK: - ログインボタン
     private var loginButton: some View {
-        Button(action: performLogin) {
-            ZStack {
-                Rectangle()
-                    .fill(colorScheme == .dark ? Color.white : Color.black)
-                    .cornerRadius(25)
-                    .frame(height: 50)
-                    .shadow(
-                        color: (colorScheme == .dark ? Color.white : Color.black)
-                            .opacity(colorScheme == .dark ? 0.1 : 0.15),
-                        radius: 5,
-                        x: 0,
-                        y: colorScheme == .dark ? -2 : 2
-                    )
-
-                if viewModel.isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .tint(colorScheme == .dark ? .black : .white)
-                } else {
-                    Text("多摩大アカウントでサインイン")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(colorScheme == .dark ? .black : .white)
+        Group {
+            if #available(iOS 26.0, *) {
+                Button(action: performLogin) {
+                    Group {
+                        if viewModel.isLoading {
+                            ProgressView()
+                        } else {
+                            Text("多摩大アカウントでサインイン")
+                                .frame(maxWidth: .infinity)
+                                .foregroundColor(colorScheme == .dark ? .black : .white)
+                        }
+                    }
                 }
+                .controlSize(.extraLarge)
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 30)
+                .padding(.top, 20)
+                .disabled(viewModel.isLoginButtonDisabled)
+                .tint(colorScheme == .dark ? Color.white : Color.black)
+            } else {
+                Button(action: performLogin) {
+                    ZStack {
+                        Rectangle()
+                            .fill(colorScheme == .dark ? Color.white : Color.black)
+                            .cornerRadius(25)
+                            .frame(height: 50)
+                            .shadow(
+                                color: (colorScheme == .dark ? Color.white : Color.black)
+                                    .opacity(colorScheme == .dark ? 0.1 : 0.15),
+                                radius: 5,
+                                x: 0,
+                                y: colorScheme == .dark ? -2 : 2
+                            )
+
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .tint(colorScheme == .dark ? .black : .white)
+                        } else {
+                            Text("多摩大アカウントでサインイン")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(colorScheme == .dark ? .black : .white)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 30)
+                .padding(.top, 20)
+                .disabled(viewModel.isLoginButtonDisabled)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 30)
-        .padding(.top, 20)
-        .disabled(viewModel.isLoginButtonDisabled)
+    }
+
+    @available(iOS 26.0, *)
+    private struct NoScaleGlassButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .glassEffect(.regular.interactive(), in: .capsule)
+                .scaleEffect(1.0)
+                .animation(nil, value: configuration.isPressed)
+        }
     }
 
     // MARK: - 利用規約

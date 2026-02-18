@@ -114,7 +114,7 @@ struct TeacherEmailListView: View {
             HStack(spacing: 12) {
                 CircleActionButton(
                     iconName: "magnifyingglass",
-                    colors: [.blue, .blue.opacity(0.8)],
+                    colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.8)],
                     action: { showSearchWithAnimation() }
                 )
                 
@@ -487,12 +487,12 @@ struct StatusView: View {
                         Capsule()
                             .fill(
                                 LinearGradient(
-                                    colors: [.blue, .blue.opacity(0.8)],
+                                    colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.8)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            .shadow(color: Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.3), radius: 8, x: 0, y: 4)
                     )
                     .foregroundColor(.white)
                 }
@@ -557,7 +557,7 @@ struct TeacherSearchBar: View {
                 onClose()
             }) {
                 Text("キャンセル")
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
                     .font(.system(size: 16, weight: .medium))
             }
         }
@@ -597,12 +597,12 @@ struct TeacherSelectionBar: View {
                             Capsule()
                                 .fill(
                                     LinearGradient(
-                                        colors: [.blue, .blue.opacity(0.8)],
+                                        colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.8)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
+                                .shadow(color: Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.3), radius: 6, x: 0, y: 3)
                         )
                         .foregroundColor(.white)
                 }
@@ -663,7 +663,7 @@ struct TeacherIndexView: View {
                                 .fill(
                                     isCurrentSection(index) ?
                                     LinearGradient(
-                                        colors: [.blue, .blue.opacity(0.8)],
+                                        colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.8)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ) :
@@ -684,7 +684,7 @@ struct TeacherIndexView: View {
                                 )
                                 .shadow(
                                     color: isCurrentSection(index) ? 
-                                    Color.blue.opacity(0.3) : 
+                                    Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.3) : 
                                     Color.clear, 
                                     radius: isCurrentSection(index) ? 4 : 0, 
                                     x: 0, 
@@ -818,13 +818,13 @@ struct TeacherRow: View {
             Button(action: onToggle) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? .blue : .clear)
+                        .fill(isSelected ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255) : .clear)
                         .frame(width: 24, height: 24)
                         .overlay(
                             Circle()
                                 .stroke(isSelected ? .clear : Color.primary.opacity(0.3), lineWidth: 2)
                         )
-                        .shadow(color: isSelected ? .blue.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
+                        .shadow(color: isSelected ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
                     
                     if isSelected {
                         Image(systemName: "checkmark")
@@ -853,18 +853,18 @@ struct TeacherRow: View {
                 HStack(alignment: .center, spacing: 10) {
                     Text(teacher.email)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
                         .lineLimit(1)
                     
                     Button(action: onCopy) {
                         Image(systemName: "square.on.square")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
                             .frame(width: 28, height: 28)
                             .background(
                                 Circle()
-                                    .fill(.blue.opacity(0.1))
-                                    .stroke(.blue.opacity(0.2), lineWidth: 1)
+                                    .fill(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.1))
+                                    .stroke(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.2), lineWidth: 1)
                             )
                     }
                     .buttonStyle(BorderlessButtonStyle())
@@ -883,16 +883,16 @@ struct TeacherRow: View {
                 .fill(
                     isSelected ? 
                     (colorScheme == .dark ? 
-                     LinearGradient(colors: [.blue.opacity(0.2), .blue.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing) : 
-                     LinearGradient(colors: [.blue.opacity(0.08), .blue.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)) : 
+                     LinearGradient(colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.2), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing) : 
+                     LinearGradient(colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.08), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)) : 
                     LinearGradient(colors: [Color.clear, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .stroke(
-                    isSelected ? .blue.opacity(0.3) : Color.clear, 
+                    isSelected ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.3) : Color.clear, 
                     lineWidth: isSelected ? 1 : 0
                 )
                 .shadow(
-                    color: isSelected ? .blue.opacity(0.15) : .clear, 
+                    color: isSelected ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.15) : .clear, 
                     radius: isSelected ? 6 : 0, 
                     x: 0, 
                     y: isSelected ? 3 : 0
@@ -925,7 +925,7 @@ struct TeacherSectionHeader: View {
             Rectangle()
                 .fill(
                     LinearGradient(
-                        colors: [.blue.opacity(0.6), .blue.opacity(0.2)],
+                        colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.6), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.2)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -957,7 +957,7 @@ struct TeacherLoadingView: View {
                     .trim(from: 0, to: 0.3)
                     .stroke(
                         LinearGradient(
-                            colors: [.blue, .blue.opacity(0.3)],
+                            colors: [Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255).opacity(0.3)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),

@@ -84,7 +84,7 @@ struct PrintSystemView: View {
                 HStack {
                     Image(systemName: "doc.fill")
                         .font(.title2)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(selectedFile.name)
@@ -102,6 +102,7 @@ struct PrintSystemView: View {
                         viewModel.selectFile()
                     }
                     .font(.subheadline.weight(.medium))
+                    .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
                 }
                 .padding()
                 .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
@@ -123,6 +124,7 @@ struct PrintSystemView: View {
                     .padding(.vertical, 12)
             }
             .buttonStyle(.glassProminent)
+            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
         } else {
             Button {
                 viewModel.selectFile()
@@ -133,7 +135,7 @@ struct PrintSystemView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
             }
-            .background(.blue, in: RoundedRectangle(cornerRadius: 12))
+            .background(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 
@@ -226,7 +228,7 @@ struct PrintSystemView: View {
             ForEach(viewModel.recentUploads, id: \.printNumber) { result in
                 HStack {
                     Image(systemName: "doc.fill")
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(result.fileName)
@@ -267,6 +269,7 @@ struct PrintSystemView: View {
             }
             .buttonStyle(.glassProminent)
             .padding(.top, 10)
+            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
         } else {
             Button {
                 viewModel.uploadFile()
@@ -276,7 +279,7 @@ struct PrintSystemView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(.blue, in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), in: RoundedRectangle(cornerRadius: 12))
                     .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
             }
             .padding(.top, 10)
@@ -330,7 +333,7 @@ struct PrintResultView: View {
                             } label: {
                                 Image(systemName: "doc.on.doc")
                                     .font(.subheadline)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
                             }
                         }
                     }
@@ -414,6 +417,7 @@ struct PrintResultView: View {
                     .padding(.vertical, 12)
             }
             .buttonStyle(.glassProminent)
+            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
         } else {
             Button {
                 dismiss()
@@ -424,7 +428,7 @@ struct PrintResultView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(.blue, in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), in: RoundedRectangle(cornerRadius: 12))
             }
         }
     }
