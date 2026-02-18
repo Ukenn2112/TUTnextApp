@@ -18,18 +18,18 @@ final class PrintSystemViewModel: ObservableObject {
     // PIN番号
     @Published var pinCode: String = ""
 
-    /// SwiftData ModelContext
-    private var modelContext: ModelContext?
+    /// SwiftData ModelContext（全インスタンスで共有、autosave無効で明示的にsave）
+    private static let sharedContext: ModelContext = {
+        let ctx = ModelContext(SharedModelContainer.shared)
+        ctx.autosaveEnabled = false
+        return ctx
+    }()
+
+    private var modelContext: ModelContext { Self.sharedContext }
 
     init() {
-        setupModelContext()
         // 初期化時に共有されたファイルを確認
         checkForSharedFile()
-    }
-
-    /// ModelContext を初期化
-    private func setupModelContext() {
-        modelContext = ModelContext(SharedModelContainer.shared)
     }
 
     // 共有拡張機能から共有されたファイルを確認
@@ -126,7 +126,7 @@ final class PrintSystemViewModel: ObservableObject {
 
     // SwiftDataに印刷履歴を保存
     private func saveRecentUploadToSwiftData(_ result: PrintResult) {
-        guard let context = modelContext else { return }
+        let context = modelContext
 
         do {
             let record = PrintUploadRecord(
@@ -140,44 +140,65 @@ final class PrintSystemViewModel: ObservableObject {
             )
             context.insert(record)
 
-            // 最大10件を超えた古いレコードを削除
-            var descriptor = FetchDescriptor<PrintUploadRecord>(
-                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-            )
-            descriptor.fetchOffset = 10
-            let oldRecords = try context.fetch(descriptor)
-            for old in oldRecords {
-                context.delete(old)
-            }
+            // insert直後、save前の確認
+            let beforeSave = try context.fetchCount(FetchDescriptor<PrintUploadRecord>())
+            print("【印刷システム】insert後save前: \(beforeSave)件")
 
             try context.save()
+
+            // save直後の確認
+            let afterSave = try context.fetchCount(FetchDescriptor<PrintUploadRecord>())
+            print("【印刷システム】save後: \(afterSave)件, context: \(ObjectIdentifier(context))")
         } catch {
-            print("【印刷】SwiftData への保存に失敗: \(error.localizedDescription)")
+            print("【印刷システム】SwiftData への保存に失敗: \(error.localizedDescription)")
         }
     }
 
-    // SwiftDataから最近のアップロード履歴を読み込み
+    // SwiftDataから最近のアップロード履歴を読み込み（期限切れを除外）
     func loadRecentUploads() {
-        guard let context = modelContext else { return }
+        let context = modelContext
 
         do {
             let descriptor = FetchDescriptor<PrintUploadRecord>(
                 sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
             )
             let records = try context.fetch(descriptor)
-            recentUploads = records.map { record in
-                PrintResult(
-                    printNumber: record.printNumber,
-                    fileName: record.fileName,
-                    expiryDate: record.expiryDate,
-                    pageCount: record.pageCount,
-                    duplex: record.duplex,
-                    fileSize: record.fileSize,
-                    nUp: record.nUp
-                )
+            let now = Date.now
+            print("【印刷システム】loadRecentUploads context: \(ObjectIdentifier(context))")
+
+            // 先に有効なレコードからデータを読み取る（削除前にプロパティを取得）
+            var validResults: [PrintResult] = []
+            var expiredRecords: [PrintUploadRecord] = []
+
+            for record in records {
+                print("【印刷システム】レコード: \(record.fileName), expiryDate: \(record.expiryDate), now: \(now), expired: \(record.expiryDate < now)")
+                if record.expiryDate >= now {
+                    validResults.append(PrintResult(
+                        printNumber: record.printNumber,
+                        fileName: record.fileName,
+                        expiryDate: record.expiryDate,
+                        pageCount: record.pageCount,
+                        duplex: record.duplex,
+                        fileSize: record.fileSize,
+                        nUp: record.nUp
+                    ))
+                } else {
+                    expiredRecords.append(record)
+                }
+            }
+            print("【印刷システム】合計: \(records.count)件, 有効: \(validResults.count)件, 期限切れ: \(expiredRecords.count)件")
+
+            recentUploads = validResults
+
+            // 期限切れレコードをSwiftDataから削除
+            if !expiredRecords.isEmpty {
+                for record in expiredRecords {
+                    context.delete(record)
+                }
+                try context.save()
             }
         } catch {
-            print("【印刷】SwiftData からの読み込みに失敗: \(error.localizedDescription)")
+            print("【印刷システム】SwiftData からの読み込みに失敗: \(error.localizedDescription)")
         }
     }
 

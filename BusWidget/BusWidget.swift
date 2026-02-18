@@ -104,18 +104,20 @@ struct Provider: AppIntentTimelineProvider {
             guard let busDate = bus.date(relativeTo: now),
                   busDate > now else { continue }
 
-            // 緊急度の色の境界線
+            // 緊急度の色の境界線（各時点のバスリストを再取得して、出発済みのバスを除外する）
             let fiveMinBefore = busDate.addingTimeInterval(-5 * 60)
             if fiveMinBefore > now {
-                entries.append(SimpleEntry(date: fiveMinBefore, configuration: configuration, nextBusTimes: busTimes, scheduleType: scheduleType))
+                let timesAtDate = fetchNextBusTimes(for: configuration.routeType, from: fiveMinBefore)
+                entries.append(SimpleEntry(date: fiveMinBefore, configuration: configuration, nextBusTimes: timesAtDate, scheduleType: scheduleType))
             }
             let oneMinBefore = busDate.addingTimeInterval(-60)
             if oneMinBefore > now {
-                entries.append(SimpleEntry(date: oneMinBefore, configuration: configuration, nextBusTimes: busTimes, scheduleType: scheduleType))
+                let timesAtDate = fetchNextBusTimes(for: configuration.routeType, from: oneMinBefore)
+                entries.append(SimpleEntry(date: oneMinBefore, configuration: configuration, nextBusTimes: timesAtDate, scheduleType: scheduleType))
             }
 
-            // 出発直後 — バスリストを更新
-            let shiftDate = busDate.addingTimeInterval(1)
+            // 出発直後 — バスリストを更新（+60秒で分レベルフィルターが正しく除外する）
+            let shiftDate = busDate.addingTimeInterval(60)
             let updatedType = BusWidgetDataProvider.getScheduleTypeForDate(shiftDate)
             let updatedTimes = fetchNextBusTimes(for: configuration.routeType, from: shiftDate)
             entries.append(SimpleEntry(date: shiftDate, configuration: configuration, nextBusTimes: updatedTimes, scheduleType: updatedType))

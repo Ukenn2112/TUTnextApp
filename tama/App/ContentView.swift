@@ -188,16 +188,22 @@ struct ContentView: View {
 
     /// 印刷システム画面をモーダルで表示する
     private func presentPrintSystemView() {
-        let printSystemView = PrintSystemView.handleURLScheme()
-
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let rootController = scene.windows.first?.rootViewController
         else {
             return
         }
 
-        let hostingController = UIHostingController(rootView: printSystemView)
-        rootController.present(hostingController, animated: true)
+        // 既に表示中のモーダルがあれば閉じてから新しく表示（共有ファイルの上書き対応）
+        if let presented = rootController.presentedViewController {
+            presented.dismiss(animated: false) {
+                let hostingController = UIHostingController(rootView: PrintSystemView())
+                rootController.present(hostingController, animated: true)
+            }
+        } else {
+            let hostingController = UIHostingController(rootView: PrintSystemView())
+            rootController.present(hostingController, animated: true)
+        }
     }
 }
 

@@ -262,10 +262,9 @@ final class PrintSystemService {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     // prCodeが空の場合、再試行
                     if let prCode = json["prCode"] as? String, !prCode.isEmpty {
-                        // 日付フォーマッター
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-                        dateFormatter.timeZone = TimeZone(abbreviation: "UTC")
+                        // 日付フォーマッター（固定フォーマットには en_US_POSIX が必須）
+                        let dateFormatter = ISO8601DateFormatter()
+                        dateFormatter.formatOptions = [.withInternetDateTime]
 
                         // 有効期限をパース
                         if let expiresAt = json["expiresAt"] as? String,
