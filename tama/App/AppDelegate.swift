@@ -132,9 +132,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
     /// UserDefaults に旧キャッシュデータが存在する場合、すべてクリアする
     private func clearLegacyUserDefaultsIfNeeded() {
-        let clearKey = "legacyUserDefaultsCleared"
-        guard !UserDefaults.standard.bool(forKey: clearKey) else { return }
-        
+        guard !AppDefaults.legacyUserDefaultsCleared else { return }
+
         let defaults = UserDefaults.standard
         let appGroupDefaults = UserDefaults(suiteName: "group.com.meikenn.tama")
         
@@ -169,14 +168,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
         
         // クリア完了フラグを設定
-        defaults.set(true, forKey: clearKey)
+        AppDefaults.legacyUserDefaultsCleared = true
     }
     
     /// SwiftData のすべてのデータをクリアする
     private func clearSwiftDataIfNeeded() {
         do {
-            let container = try SharedModelContainer.create()
-            let context = ModelContext(container)
+            let context = ModelContext(SharedModelContainer.shared)
             
             // すべてのモデルを削除
             try context.delete(model: CachedTimetable.self)

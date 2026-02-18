@@ -18,7 +18,7 @@ final class NotificationService: NSObject, ObservableObject {
         super.init()
         UNUserNotificationCenter.current().delegate = self
         self.deviceToken = UserService.shared.getDeviceToken()
-        self.lastTokenRefreshDate = UserDefaults.standard.object(forKey: "lastTokenRefreshDate") as? Date
+        self.lastTokenRefreshDate = AppDefaults.lastTokenRefreshDate
     }
 
     // MARK: - 通知権限
@@ -33,7 +33,7 @@ final class NotificationService: NSObject, ObservableObject {
                 } else {
                     UserService.shared.clearDeviceToken()
                     self.deviceToken = nil
-                    UserDefaults.standard.removeObject(forKey: "lastTokenRefreshDate")
+                    AppDefaults.lastTokenRefreshDate = nil
                     self.lastTokenRefreshDate = nil
                 }
 
@@ -184,7 +184,7 @@ final class NotificationService: NSObject, ObservableObject {
                     self.unregisterDeviceTokenFromServer(token: token)
                     UserService.shared.clearDeviceToken()
                     self.deviceToken = nil
-                    UserDefaults.standard.removeObject(forKey: "lastTokenRefreshDate")
+                    AppDefaults.lastTokenRefreshDate = nil
                     self.lastTokenRefreshDate = nil
                 }
             }
@@ -261,7 +261,7 @@ extension NotificationService {
         self.deviceToken = token
 
         let now = Date()
-        UserDefaults.standard.set(now, forKey: "lastTokenRefreshDate")
+        AppDefaults.lastTokenRefreshDate = now
         self.lastTokenRefreshDate = now
 
         UserService.shared.saveDeviceToken(token)
@@ -280,7 +280,7 @@ extension NotificationService {
         print("【通知】リモート通知の登録失敗: \(error.localizedDescription)")
         self.deviceToken = nil
         UserService.shared.clearDeviceToken()
-        UserDefaults.standard.removeObject(forKey: "lastTokenRefreshDate")
+        AppDefaults.lastTokenRefreshDate = nil
         self.lastTokenRefreshDate = nil
     }
 

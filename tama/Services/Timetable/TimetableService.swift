@@ -30,12 +30,7 @@ final class TimetableService {
 
     /// ModelContext を初期化
     private func setupModelContext() {
-        do {
-            let container = try SharedModelContainer.create()
-            modelContext = ModelContext(container)
-        } catch {
-            print("【時間割】ModelContainer の作成に失敗: \(error.localizedDescription)")
-        }
+        modelContext = ModelContext(SharedModelContainer.shared)
     }
 
     // 時間割データを取得する関数

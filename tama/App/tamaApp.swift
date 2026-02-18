@@ -20,15 +20,7 @@ struct TamaApp: App {
     @StateObject private var ratingService = RatingService.shared
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    let modelContainer: ModelContainer
-
-    init() {
-        do {
-            modelContainer = try SharedModelContainer.create()
-        } catch {
-            fatalError("Failed to create ModelContainer: \(error)")
-        }
-    }
+    let modelContainer = SharedModelContainer.shared
 
     // MARK: - ボディ
 

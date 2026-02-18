@@ -62,14 +62,14 @@ final class CourseColorRecord {
 final class PrintUploadRecord {
     var printNumber: String
     var fileName: String
-    var expiryDate: String
+    var expiryDate: Date
     var pageCount: Int
     var duplex: String
     var fileSize: String
     var nUp: String
     var createdAt: Date
 
-    init(printNumber: String, fileName: String, expiryDate: String,
+    init(printNumber: String, fileName: String, expiryDate: Date,
          pageCount: Int, duplex: String, fileSize: String, nUp: String) {
         self.printNumber = printNumber
         self.fileName = fileName

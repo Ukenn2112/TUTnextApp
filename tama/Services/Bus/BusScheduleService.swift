@@ -36,12 +36,7 @@ final class BusScheduleService {
 
     /// ModelContext を初期化
     private func setupModelContext() {
-        do {
-            let container = try SharedModelContainer.create()
-            modelContext = ModelContext(container)
-        } catch {
-            print("BusScheduleService: ModelContainer の作成に失敗: \(error.localizedDescription)")
-        }
+        modelContext = ModelContext(SharedModelContainer.shared)
     }
 
     /// バス時刻表データを取得（非同期）

@@ -29,12 +29,7 @@ final class PrintSystemViewModel: ObservableObject {
 
     /// ModelContext を初期化
     private func setupModelContext() {
-        do {
-            let container = try SharedModelContainer.create()
-            modelContext = ModelContext(container)
-        } catch {
-            print("【印刷】ModelContainer の作成に失敗: \(error.localizedDescription)")
-        }
+        modelContext = ModelContext(SharedModelContainer.shared)
     }
 
     // 共有拡張機能から共有されたファイルを確認

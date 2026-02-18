@@ -16,12 +16,7 @@ final class CourseColorService {
 
     /// ModelContext を初期化
     private func setupModelContext() {
-        do {
-            let container = try SharedModelContainer.create()
-            modelContext = ModelContext(container)
-        } catch {
-            print("【CourseColorService】ModelContainer の作成に失敗: \(error.localizedDescription)")
-        }
+        modelContext = ModelContext(SharedModelContainer.shared)
     }
 
     // MARK: - パブリックメソッド

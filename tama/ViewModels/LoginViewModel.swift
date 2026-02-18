@@ -46,9 +46,9 @@ final class LoginViewModel: ObservableObject {
 
     /// NFC初回ヒント表示チェック
     func checkAndShowNFCTip() {
-        if !UserDefaults.standard.bool(forKey: "hasShownNFCTip") {
+        if !AppDefaults.hasShownNFCTip {
             showNFCTip = true
-            UserDefaults.standard.set(true, forKey: "hasShownNFCTip")
+            AppDefaults.hasShownNFCTip = true
         }
     }
 

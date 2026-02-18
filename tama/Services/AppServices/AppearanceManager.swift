@@ -20,17 +20,10 @@ final class AppearanceManager: ObservableObject {
 
     @Published var mode: AppearanceMode
 
-    // MARK: - UserDefaultsキー
-
-    private enum DefaultsKey {
-        static let darkMode = "darkMode"
-    }
-
     // MARK: - 初期化
 
     init() {
-        let savedRawValue = UserDefaults.standard.integer(forKey: DefaultsKey.darkMode)
-        self.mode = AppearanceMode(rawValue: savedRawValue) ?? .system
+        self.mode = AppearanceMode(rawValue: AppDefaults.darkMode) ?? .system
     }
 
     // MARK: - 公開メソッド
@@ -38,7 +31,7 @@ final class AppearanceManager: ObservableObject {
     /// 外観モードを変更する
     func setMode(_ newMode: AppearanceMode) {
         mode = newMode
-        UserDefaults.standard.set(newMode.rawValue, forKey: DefaultsKey.darkMode)
+        AppDefaults.darkMode = newMode.rawValue
         applyAppearance()
     }
 

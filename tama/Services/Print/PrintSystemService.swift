@@ -267,22 +267,14 @@ final class PrintSystemService {
                         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
                         dateFormatter.timeZone = TimeZone(abbreviation: "UTC")
 
-                        // 有効期限をUTCからローカル時間に変換
+                        // 有効期限をパース
                         if let expiresAt = json["expiresAt"] as? String,
                             let utcDate = dateFormatter.date(from: expiresAt) {
-                            // ローカル時間用のフォーマッター
-                            let localFormatter = DateFormatter()
-                            localFormatter.dateStyle = .long
-                            localFormatter.timeStyle = .short
-                            localFormatter.timeZone = TimeZone.current
-
-                            let formattedExpiryDate = localFormatter.string(from: utcDate)
-
                             // プリント結果を作成
                             let printResult = PrintResult(
                                 printNumber: prCode,
                                 fileName: json["title"] as? String ?? "",
-                                expiryDate: formattedExpiryDate,
+                                expiryDate: utcDate,
                                 pageCount: json["pages"] as? Int ?? 0,
                                 duplex: PlexType(rawValue: json["plex"] as? String ?? "")?
                                     .displayName ?? "片面",

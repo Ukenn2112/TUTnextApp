@@ -5,13 +5,8 @@ final class CookieService {
     static let shared = CookieService()
 
     private let cookieStorage = HTTPCookieStorage.shared
-    private let keychain = KeychainService.shared
-    private let cookieKey = "savedCookies"
 
-    private init() {
-        // 起動時に保存されたCookieを復元
-        restoreCookies()
-    }
+    private init() {}
 
     // MARK: - パブリックメソッド
 
@@ -44,11 +39,6 @@ final class CookieService {
                     }
                 }
             }
-
-            // Cookieを永続化
-            DispatchQueue.main.async {
-                self.persistCookies()
-            }
         }
     }
 
@@ -76,9 +66,6 @@ final class CookieService {
                 }
             }
         }
-        DispatchQueue.main.async {
-            self.keychain.delete(forKey: self.cookieKey)
-        }
     }
 
     /// 指定ドメインのCookieが存在するか確認する
@@ -96,60 +83,5 @@ final class CookieService {
     /// セッションが有効かどうかを確認する
     func isSessionValid() -> Bool {
         return hasCookiesForDomain("https://next.tama.ac.jp")
-    }
-
-    // MARK: - プライベートメソッド
-
-    /// Cookieを永続化する
-    private func persistCookies() {
-        guard let cookies = cookieStorage.cookies else { return }
-
-        let cookieData = cookies.compactMap { cookie -> [String: Any]? in
-            guard let properties = cookie.properties else { return nil }
-            var serializedProperties: [String: Any] = [:]
-
-            for (key, value) in properties {
-                // Date オブジェクトを timestamp に変換して JSON 化可能にする
-                if let date = value as? Date {
-                    serializedProperties[key.rawValue] = date.timeIntervalSince1970
-                } else {
-                    serializedProperties[key.rawValue] = value
-                }
-            }
-
-            return serializedProperties
-        }
-
-        if let data = try? JSONSerialization.data(withJSONObject: cookieData) {
-            keychain.save(data, forKey: cookieKey)
-        }
-    }
-
-    /// 保存されたCookieを復元する
-    private func restoreCookies() {
-        guard let data = keychain.loadData(forKey: cookieKey),
-              let cookieArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
-        else { return }
-
-        for properties in cookieArray {
-            var cookieProperties: [HTTPCookiePropertyKey: Any] = [:]
-
-            for (key, value) in properties {
-                let propertyKey = HTTPCookiePropertyKey(key)
-                
-                // timestamp を Date に復元する
-                if propertyKey == .expires, let timestamp = value as? TimeInterval {
-                    cookieProperties[propertyKey] = Date(timeIntervalSince1970: timestamp)
-                } else {
-                    cookieProperties[propertyKey] = value
-                }
-            }
-
-            if let cookie = HTTPCookie(properties: cookieProperties) {
-                DispatchQueue.main.async {
-                    self.cookieStorage.setCookie(cookie)
-                }
-            }
-        }
     }
 }

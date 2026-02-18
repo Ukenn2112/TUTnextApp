@@ -61,9 +61,18 @@ enum NUpType: String, CaseIterable, Identifiable {
 struct PrintResult: Codable {
     let printNumber: String
     let fileName: String
-    let expiryDate: String
+    let expiryDate: Date
     let pageCount: Int
     let duplex: String
     let fileSize: String
     let nUp: String
+
+    /// 有効期限をローカライズされた文字列で表示する
+    var formattedExpiryDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short
+        formatter.timeZone = .current
+        return formatter.string(from: expiryDate)
+    }
 }

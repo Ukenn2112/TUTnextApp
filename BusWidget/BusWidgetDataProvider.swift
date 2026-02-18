@@ -53,17 +53,7 @@ private struct BusSchedule: Codable {
 }
 
 struct BusWidgetDataProvider {
-    private static var modelContext: ModelContext? = {
-        do {
-            let container = try SharedModelContainer.create()
-            return ModelContext(container)
-        } catch {
-            #if DEBUG
-            print("BusWidgetDataProvider: ModelContainer の作成に失敗: \(error.localizedDescription)")
-            #endif
-            return nil
-        }
-    }()
+    private static let modelContext = ModelContext(SharedModelContainer.shared)
 
     static func getScheduleTypeForDate(_ date: Date) -> String {
         let weekday = Calendar.current.component(.weekday, from: date)
@@ -121,18 +111,11 @@ struct BusWidgetDataProvider {
     }
     
     private static func fetchBusScheduleFromContext() -> BusSchedule? {
-        guard let context = modelContext else {
-            #if DEBUG
-            print("BusWidgetDataProvider: ModelContext が利用できません")
-            #endif
-            return nil
-        }
-
         do {
             let descriptor = FetchDescriptor<CachedBusSchedule>(
                 predicate: #Predicate { $0.key == "busSchedule" }
             )
-            guard let cached = try context.fetch(descriptor).first else {
+            guard let cached = try modelContext.fetch(descriptor).first else {
                 #if DEBUG
                 print("BusWidgetDataProvider: SwiftData からデータが見つかりませんでした")
                 #endif

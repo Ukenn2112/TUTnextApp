@@ -161,14 +161,7 @@ class TimetableWidgetDataProvider {
     }
 
     private func setupModelContext() {
-        do {
-            let container = try SharedModelContainer.create()
-            modelContext = ModelContext(container)
-        } catch {
-            #if DEBUG
-            print("TimetableWidgetDataProvider: ModelContainer の作成に失敗: \(error.localizedDescription)")
-            #endif
-        }
+        modelContext = ModelContext(SharedModelContainer.shared)
     }
 
     // MARK: データ取得

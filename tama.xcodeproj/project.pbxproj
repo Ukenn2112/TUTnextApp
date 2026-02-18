@@ -124,17 +124,17 @@
 			path = TimetableWidget;
 			sourceTree = "<group>";
 		};
+		13B5DA012E82A00100000001 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		13E90A222D8E41A100B91F46 /* BusWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				13E90A362D8E41A300B91F46 /* Exceptions for "BusWidget" folder in "BusWidgetExtension" target */,
 			);
 			path = BusWidget;
-			sourceTree = "<group>";
-		};
-		13B5DA012E82A00100000001 /* Shared */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -252,8 +252,8 @@
 				132FAA952D9B9C2700D6B817 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				13B5DA012E82A00100000001 /* Shared */,
 				134628F02D70417E00A27E98 /* tama */,
+				13B5DA012E82A00100000001 /* Shared */,
 			);
 			name = tama;
 			packageProductDependencies = (
@@ -275,8 +275,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				13B5DA012E82A00100000001 /* Shared */,
 				137DE3C12D9231C800DC08D2 /* TimetableWidget */,
+				13B5DA012E82A00100000001 /* Shared */,
 			);
 			name = TimetableWidgetExtension;
 			packageProductDependencies = (

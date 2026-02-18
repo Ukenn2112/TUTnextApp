@@ -78,37 +78,34 @@ final class KeychainService {
 
     /// UserDefaults に旧データが存在する場合、すべてのデータをクリアする
     func clearLegacyDataIfNeeded() {
-        let clearKey = "legacyDataCleared"
-        guard !UserDefaults.standard.bool(forKey: clearKey) else { return }
+        guard !AppDefaults.legacyDataCleared else { return }
 
         let defaults = UserDefaults.standard
-        
+
         // 旧データの存在をチェック
         let hasLegacyData = defaults.data(forKey: "currentUser") != nil ||
-                           defaults.string(forKey: "deviceToken") != nil ||
-                           defaults.array(forKey: "savedCookies") != nil
-        
+                           defaults.string(forKey: "deviceToken") != nil
+
         if hasLegacyData {
             print("【KeychainService】旧データ検出 - すべてのデータをクリアします")
             clearAllData()
         }
-        
+
         // クリア完了フラグを設定
-        defaults.set(true, forKey: clearKey)
+        AppDefaults.legacyDataCleared = true
     }
     
     /// すべての Keychain データをクリアする
     func clearAllKeychainData() {
         let keysToDelete = [
             "currentUser",
-            "deviceToken",
-            "savedCookies"
+            "deviceToken"
         ]
-        
+
         for key in keysToDelete {
             delete(forKey: key)
         }
-        
+
         print("【KeychainService】Keychain データをクリアしました")
     }
     
@@ -116,21 +113,17 @@ final class KeychainService {
     private func clearAllData() {
         // Keychain をクリア
         clearAllKeychainData()
-        
+
         // UserDefaults をクリア
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: "currentUser")
         defaults.removeObject(forKey: "deviceToken")
         defaults.removeObject(forKey: "savedCookies")
         defaults.removeObject(forKey: "oauth_state")
-        
-        // Cookies をクリア
-        if let cookies = HTTPCookieStorage.shared.cookies {
-            for cookie in cookies {
-                HTTPCookieStorage.shared.deleteCookie(cookie)
-            }
-        }
-        
+
+        // Cookies をクリア（CookieService に委譲）
+        CookieService.shared.clearCookies()
+
         print("【KeychainService】すべてのユーザーデータをクリアしました")
     }
 }

@@ -314,7 +314,7 @@ struct PrintSystemView: View {
 
                         Spacer()
 
-                        Text(result.expiryDate)
+                        Text(result.formattedExpiryDate)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -406,7 +406,7 @@ struct PrintResultView: View {
                     resultItemView(
                         title: NSLocalizedString("ファイル名", comment: ""), value: result.fileName)
                     resultItemView(
-                        title: NSLocalizedString("有効期限", comment: ""), value: result.expiryDate)
+                        title: NSLocalizedString("有効期限", comment: ""), value: result.formattedExpiryDate)
                     resultItemView(
                         title: NSLocalizedString("ページ数", comment: ""), value: "\(result.pageCount)")
                     resultItemView(
