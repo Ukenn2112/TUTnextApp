@@ -133,30 +133,30 @@
         }
       }
     },
-    "%@\n%@" : {
+    "%@ %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@\n%2$@"
+            "value" : "%1$@ %2$@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@\n%2$@"
+            "value" : "%1$@ %2$@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@\n%2$@"
+            "value" : "%1$@ %2$@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@\n%2$@"
+            "value" : "%1$@ %2$@"
           }
         }
       }
@@ -207,6 +207,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 同学"
+          }
+        }
+      }
+    },
+    "%@ 教室" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 교실"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 教室"
           }
         }
       }
@@ -1893,6 +1915,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请确认以下信息"
+          }
+        }
+      }
+    },
+    "保存" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
           }
         }
       }

@@ -210,7 +210,6 @@ struct TimetableView: View {
                         viewModel.updateCourseColor(
                             day: day, period: period, colorIndex: colorIndex)
                     },
-                    isLoggedIn: $isLoggedIn,
                     isCurrentDay: day == viewModel.getCurrentWeekday(),
                     isCurrentPeriod: period == viewModel.getCurrentPeriod()
                 )
@@ -250,7 +249,6 @@ struct TimeSlotCell: View {
     let cellWidth: CGFloat
     let cellHeight: CGFloat
     let onColorChange: (Int) -> Void
-    @Binding var isLoggedIn: Bool
     @Environment(\.colorScheme) private var colorScheme
 
     // 現在の時限かどうかを判断するプロパティを追加
@@ -339,8 +337,7 @@ struct TimeSlotCell: View {
                     course: course,
                     presetColors: presetColors,
                     selectedColorIndex: course.colorIndex,
-                    onColorChange: onColorChange,
-                    isLoggedIn: $isLoggedIn
+                    onColorChange: onColorChange
                 )
             }
         }
