@@ -89,6 +89,7 @@ TUTnextApp/
 │   │   │   ├── LanguageService.swift    # 多言語対応
 │   │   │   └── NFCReader.swift          # NFC読み取り機能
 │   │   └── AppServices/          #   アプリ全般サービス
+│   │       ├── AppDefaults.swift        # アプリ設定デフォルト値管理
 │   │       ├── AppearanceManager.swift  # ダークモード等の外観管理
 │   │       └── RatingService.swift      # App Store評価リクエスト
 │   │
@@ -119,6 +120,7 @@ TUTnextApp/
 │   │   ├── Auth/                 #   認証関連画面
 │   │   │   └── LoginView.swift          # ログイン画面
 │   │   ├── Settings/             #   設定関連画面
+│   │   │   ├── DarkModeSettingsView.swift # ダークモード設定画面
 │   │   │   └── UserSettingsView.swift   # ユーザー設定画面
 │   │   ├── Print/                #   印刷関連画面
 │   │   │   └── PrintSystemView.swift    # 印刷システム画面
