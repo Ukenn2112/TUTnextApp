@@ -1,22 +1,25 @@
 import Foundation
 import SwiftUI
 
-class AssignmentViewModel: ObservableObject {
+/// 課題一覧ViewModel
+@MainActor
+final class AssignmentViewModel: ObservableObject {
     @Published var assignments: [Assignment] = []
     @Published var isLoading: Bool = false
-    @Published var errorMessage: String? = nil
+    @Published var errorMessage: String?
 
     private let assignmentService = AssignmentService.shared
 
     // タイマーを使って残り時間を更新
-    private var timer: Timer?
+    nonisolated(unsafe) private var timer: Timer?
 
     init() {
         setupTimer()
     }
 
     deinit {
-        invalidateTimer()
+        timer?.invalidate()
+        timer = nil
     }
 
     private func setupTimer() {
@@ -53,7 +56,7 @@ class AssignmentViewModel: ObservableObject {
 
                 switch result {
                 case .success(let assignments):
-                    // 截止日期从近到远排序
+                    // 締切日が近い順にソート
                     self.assignments = assignments.sorted { $0.dueDate < $1.dueDate }
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription

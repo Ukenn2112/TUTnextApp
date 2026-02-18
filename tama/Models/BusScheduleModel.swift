@@ -1,42 +1,39 @@
 import Foundation
 
 // MARK: - バス時刻表データモデル
+
+/// バス時刻表データを表すモデル
 struct BusSchedule: Codable {
+
     // MARK: - 列挙型
 
     /// バス路線タイプ
     enum RouteType: String, Codable {
-        case fromSeisekiToSchool  // 聖蹟桜ヶ丘駅発
-        case fromNagayamaToSchool  // 永山駅発
-        case fromSchoolToSeiseki  // 聖蹟桜ヶ丘駅行
-        case fromSchoolToNagayama  // 永山駅行
+        case fromSeisekiToSchool
+        case fromNagayamaToSchool
+        case fromSchoolToSeiseki
+        case fromSchoolToNagayama
     }
 
     /// バス時刻表タイプ
     enum ScheduleType: String, Codable {
-        case weekday  // 平日（水曜日を除く）
-        case saturday  // 土曜日
-        case wednesday  // 水曜日特別ダイヤ
+        case weekday
+        case saturday
+        case wednesday
     }
 
-    // MARK: - 構造体
+    // MARK: - ネスト構造体
 
     /// 個別の時刻データ
     struct TimeEntry: Equatable, Codable {
         let hour: Int
         let minute: Int
-        let isSpecial: Bool  // 特別便かどうか（◯や*などのマーク）
-        let specialNote: String?  // 特別便の備考
+        let isSpecial: Bool
+        let specialNote: String?
 
-        /// 時間を文字列にフォーマット (HH:MM)
+        /// フォーマットされた時間文字列（HH:MM）
         var formattedTime: String {
-            return String(format: "%02d:%02d", hour, minute)
-        }
-
-        /// Equatableプロトコルの実装
-        static func == (lhs: TimeEntry, rhs: TimeEntry) -> Bool {
-            return lhs.hour == rhs.hour && lhs.minute == rhs.minute
-                && lhs.isSpecial == rhs.isSpecial && lhs.specialNote == rhs.specialNote
+            String(format: "%02d:%02d", hour, minute)
         }
     }
 
@@ -59,13 +56,13 @@ struct BusSchedule: Codable {
         let description: String
     }
 
-    // MARK: - 臨時ダイヤメッセージ
+    /// 臨時ダイヤメッセージ
     struct TemporaryMessage: Codable {
         let title: String
         let url: String
     }
 
-    // MARK: - ピンメッセージ
+    /// ピンメッセージ
     struct PinMessage: Codable {
         let title: String
         let url: String
@@ -73,16 +70,17 @@ struct BusSchedule: Codable {
 
     // MARK: - プロパティ
 
-    /// すべての路線の時刻表
-    let weekdaySchedules: [DaySchedule]  // 平日時刻表
-    let saturdaySchedules: [DaySchedule]  // 土曜日時刻表
-    let wednesdaySchedules: [DaySchedule]  // 水曜日時刻表
-    let specialNotes: [SpecialNote]  // 特別便の説明
-    let temporaryMessages: [TemporaryMessage]?  // 臨時ダイヤメッセージ
-    let pin: PinMessage?  // ピンメッセージ
+    let weekdaySchedules: [DaySchedule]
+    let saturdaySchedules: [DaySchedule]
+    let wednesdaySchedules: [DaySchedule]
+    let specialNotes: [SpecialNote]
+    let temporaryMessages: [TemporaryMessage]?
+    let pin: PinMessage?
 }
 
-// MARK: - APIレスポンス用のデコード構造体
+// MARK: - APIレスポンス用デコード構造体
+
+/// バスAPIのレスポンス
 struct BusAPIResponse: Codable {
     let messages: [BusSchedule.TemporaryMessage]?
     let pin: BusSchedule.PinMessage?

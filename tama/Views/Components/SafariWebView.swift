@@ -7,19 +7,17 @@ struct SafariWebView: UIViewControllerRepresentable {
     let url: URL
 
     // オプションの通知タイプを追加
-    var dismissNotification: Notification.Name? = nil
+    var dismissNotification: Notification.Name?
 
     func makeUIViewController(context: Context) -> SFSafariViewController {
         let safariViewController = SFSafariViewController(url: url)
         safariViewController.delegate = context.coordinator
 
-        // 根据当前主题设置颜色
+        // 現在のテーマに応じて色を設定
         if colorScheme == .dark {
-            // 暗黑模式
             safariViewController.preferredBarTintColor = UIColor.systemBackground
             safariViewController.preferredControlTintColor = .white
         } else {
-            // 浅色模式
             safariViewController.preferredBarTintColor = .white
             safariViewController.preferredControlTintColor = .black
         }
@@ -28,7 +26,7 @@ struct SafariWebView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {
-        // 当主题变化时更新颜色
+        // テーマ変更時に色を更新
         if colorScheme == .dark {
             uiViewController.preferredBarTintColor = UIColor.systemBackground
             uiViewController.preferredControlTintColor = .white

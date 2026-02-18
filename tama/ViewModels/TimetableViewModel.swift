@@ -1,18 +1,20 @@
 import Combine
 import SwiftUI
 
-class TimetableViewModel: ObservableObject {
-    // MARK: - Published Properties
+/// 時間割ViewModel
+@MainActor
+final class TimetableViewModel: ObservableObject {
+    // MARK: - 公開プロパティ
     @Published var courses: [String: [String: CourseModel]] = [:]
     @Published var isLoading = false
-    @Published var errorMessage: String? = nil
+    @Published var errorMessage: String?
     @Published var currentSemester: Semester = .current
 
-    // MARK: - Private Properties
+    // MARK: - プライベートプロパティ
     private var cancellables = Set<AnyCancellable>()
     private let timetableService = TimetableService.shared
 
-    // MARK: - Initialization
+    // MARK: - 初期化
     init() {
         // サンプルデータを初期値として設定
         self.courses = CourseModel.sampleCourses
@@ -25,7 +27,7 @@ class TimetableViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    // MARK: - Public Methods
+    // MARK: - パブリックメソッド
 
     /// 時間割データを取得 - 新インターフェース
     func fetchTimetableData(forYear year: Int = 0, termNo: Int = 0) {
@@ -69,7 +71,7 @@ class TimetableViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Helper Methods
+    // MARK: - ヘルパーメソッド
 
     /// 特定の時限が存在するかチェック
     func hasSpecificPeriod(_ period: String) -> Bool {
@@ -100,7 +102,7 @@ class TimetableViewModel: ObservableObject {
             ("4", "14:40", "16:10"),
             ("5", "16:20", "17:50"),
             ("6", "18:00", "19:30"),
-            ("7", "19:40", "21:10"),
+            ("7", "19:40", "21:10")
         ]
 
         // 時限の存在チェック
@@ -142,7 +144,7 @@ class TimetableViewModel: ObservableObject {
             ("4", 14 * 60 + 40, 16 * 60 + 10),  // 14:40-16:10
             ("5", 16 * 60 + 20, 17 * 60 + 50),  // 16:20-17:50
             ("6", 18 * 60, 19 * 60 + 30),  // 18:00-19:30
-            ("7", 19 * 60 + 40, 21 * 60 + 10),  // 19:40-21:10
+            ("7", 19 * 60 + 40, 21 * 60 + 10)  // 19:40-21:10
         ]
 
         // 現在時刻が含まれる時限を探す

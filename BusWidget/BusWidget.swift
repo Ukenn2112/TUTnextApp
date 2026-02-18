@@ -1,338 +1,158 @@
-//
-//  BusWidget.swift
-//  BusWidget
-//
-//  Created by 维安雨轩 on 2025/03/22.
-//
-
 import SwiftUI
 import WidgetKit
 
-// バス時刻表データモデル（メインアプリと互換）
-struct BusSchedule: Codable {
-    // 列挙型
-    enum RouteType: String, Codable {
-        case fromSeisekiToSchool  // 聖蹟桜ヶ丘駅発
-        case fromNagayamaToSchool  // 永山駅発
-        case fromSchoolToSeiseki  // 聖蹟桜ヶ丘駅行
-        case fromSchoolToNagayama  // 永山駅行
-    }
+// MARK: - モデル
 
-    // 構造体
-    struct TimeEntry: Codable, Equatable {
-        let hour: Int
-        let minute: Int
-        let isSpecial: Bool
-        let specialNote: String?
-
-        var formattedTime: String {
-            return String(format: "%02d:%02d", hour, minute)
-        }
-
-        static func == (lhs: TimeEntry, rhs: TimeEntry) -> Bool {
-            return lhs.hour == rhs.hour && lhs.minute == rhs.minute
-        }
-    }
-
-    struct HourSchedule: Codable {
-        let hour: Int
-        let times: [TimeEntry]
-    }
-
-    struct DaySchedule: Codable {
-        let routeType: RouteType
-        let scheduleType: String  // "weekday", "saturday", "wednesday"のいずれか
-        let hourSchedules: [HourSchedule]
-    }
-
-    struct SpecialNote: Codable {
-        let symbol: String
-        let description: String
-    }
-
-    struct TemporaryMessage: Codable {
-        let title: String
-        let url: String
-    }
-
-    // プロパティ
-    let weekdaySchedules: [DaySchedule]
-    let saturdaySchedules: [DaySchedule]
-    let wednesdaySchedules: [DaySchedule]
-    let specialNotes: [SpecialNote]
-    let temporaryMessages: [TemporaryMessage]?
-}
-
-// ウィジェット用の簡略化したバス時刻データモデル
 struct BusWidgetSchedule {
-    // 路線タイプ
-    enum RouteType: String, Codable {
-        case fromSeisekiToSchool  // 聖蹟桜ヶ丘駅発
-        case fromNagayamaToSchool  // 永山駅発
-        case fromSchoolToSeiseki  // 聖蹟桜ヶ丘駅行
-        case fromSchoolToNagayama  // 永山駅行
-    }
-
-    // 時刻エントリー
     struct TimeEntry: Codable, Identifiable, Equatable {
         let hour: Int
         let minute: Int
         let isSpecial: Bool
         let specialNote: String?
 
-        var id: String {
-            "\(hour):\(minute)"
-        }
+        var id: String { "\(hour):\(minute)" }
 
         var formattedTime: String {
-            return String(format: "%02d:%02d", hour, minute)
+            String(format: "%02d:%02d", hour, minute)
         }
 
-        static func == (lhs: TimeEntry, rhs: TimeEntry) -> Bool {
-            return lhs.hour == rhs.hour && lhs.minute == rhs.minute
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.hour == rhs.hour && lhs.minute == rhs.minute
         }
 
-        // 簡略コンストラクタ（プレビュー用）
-        init(hour: Int, minute: Int) {
-            self.hour = hour
-            self.minute = minute
-            self.isSpecial = false
-            self.specialNote = nil
-        }
-
-        // 完全コンストラクタ
-        init(hour: Int, minute: Int, isSpecial: Bool, specialNote: String?) {
+        init(hour: Int, minute: Int, isSpecial: Bool = false, specialNote: String? = nil) {
             self.hour = hour
             self.minute = minute
             self.isSpecial = isSpecial
             self.specialNote = specialNote
         }
+
+        func date(relativeTo referenceDate: Date) -> Date? {
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: referenceDate)
+            components.hour = hour
+            components.minute = minute
+            components.second = 0
+            guard let date = calendar.date(from: components) else { return nil }
+            return date <= referenceDate ? calendar.date(byAdding: .day, value: 1, to: date) : date
+        }
     }
 }
+
+// MARK: - ルートテーマ
+
+enum RouteTheme {
+    static func color(for route: RouteTypeEnum) -> Color {
+        switch route {
+        case .fromSeisekiToSchool, .fromSchoolToSeiseki: .blue
+        case .fromNagayamaToSchool, .fromSchoolToNagayama: .teal
+        }
+    }
+}
+
+// MARK: - タイムラインプロバイダー
 
 struct Provider: AppIntentTimelineProvider {
-    // 次のバス時刻を取得
-    func getNextBusTimes(routeType: RouteTypeEnum, from: Date) -> [BusWidgetSchedule.TimeEntry] {
-        // 現在の曜日に基づいてスケジュールタイプを決定
-        let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(from)
-
-        // BusWidgetDataProviderから実際のデータを取得
-        let routeTypeString = routeType.rawValue
-
-        // App Groupsからデータを取得
-        return BusWidgetDataProvider.getNextBusTimes(
-            routeType: routeTypeString,
-            scheduleType: scheduleType,
-            from: from
-        )
-    }
 
     func placeholder(in context: Context) -> SimpleEntry {
-        let nextBusTimes = [
-            BusWidgetSchedule.TimeEntry(hour: 10, minute: 0),
-            BusWidgetSchedule.TimeEntry(hour: 10, minute: 30),
-            BusWidgetSchedule.TimeEntry(hour: 11, minute: 0),
-        ]
-        return SimpleEntry(
-            date: Date(), configuration: ConfigurationAppIntent(), nextBusTimes: nextBusTimes,
-            scheduleType: "weekday")
+        SimpleEntry(
+            date: .now,
+            configuration: ConfigurationAppIntent(),
+            nextBusTimes: [
+                .init(hour: 10, minute: 0),
+                .init(hour: 10, minute: 30),
+                .init(hour: 11, minute: 0),
+            ],
+            scheduleType: "weekday"
+        )
     }
 
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async
-        -> SimpleEntry
-    {
-        // 現在の日付に基づいてスケジュールタイプを決定
-        let currentDate = Date()
-        let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(currentDate)
+    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
+        let now = Date()
+        let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(now)
 
-        // ウィジェットギャラリー用のプレビューデータを作成
         if context.isPreview {
-            // プレビュー用の固定データを提供
-            let previewTimes: [BusWidgetSchedule.TimeEntry] = [
-                BusWidgetSchedule.TimeEntry(
-                    hour: 8, minute: 30, isSpecial: false, specialNote: nil),
-                BusWidgetSchedule.TimeEntry(hour: 9, minute: 0, isSpecial: false, specialNote: nil),
-                BusWidgetSchedule.TimeEntry(
-                    hour: 9, minute: 30, isSpecial: false, specialNote: nil),
-                BusWidgetSchedule.TimeEntry(
-                    hour: 10, minute: 0, isSpecial: false, specialNote: nil),
-                BusWidgetSchedule.TimeEntry(
-                    hour: 10, minute: 30, isSpecial: false, specialNote: nil),
-                BusWidgetSchedule.TimeEntry(
-                    hour: 12, minute: 30, isSpecial: false, specialNote: nil),
-                BusWidgetSchedule.TimeEntry(
-                    hour: 22, minute: 00, isSpecial: false, specialNote: nil),
-                BusWidgetSchedule.TimeEntry(
-                    hour: 23, minute: 59, isSpecial: false, specialNote: nil),
-            ]
             return SimpleEntry(
-                date: currentDate, configuration: configuration, nextBusTimes: previewTimes,
-                scheduleType: scheduleType)
+                date: now,
+                configuration: configuration,
+                nextBusTimes: [
+                    .init(hour: 8, minute: 30),
+                    .init(hour: 9, minute: 0),
+                    .init(hour: 9, minute: 30),
+                ],
+                scheduleType: scheduleType
+            )
         }
 
-        // 実際のデータを使用
-        let nextBusTimes = getNextBusTimes(
-            routeType: configuration.routeType,
-            from: currentDate
-        )
-        return SimpleEntry(
-            date: currentDate, configuration: configuration, nextBusTimes: nextBusTimes,
-            scheduleType: scheduleType)
+        let times = fetchNextBusTimes(for: configuration.routeType, from: now)
+        return SimpleEntry(date: now, configuration: configuration, nextBusTimes: times, scheduleType: scheduleType)
     }
 
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<
-        SimpleEntry
-    > {
-        let currentDate = Date()
+    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
+        let now = Date()
+        let calendar = Calendar.current
         var entries: [SimpleEntry] = []
 
-        // 次のバス時刻を取得
-        let busTimes = getNextBusTimes(
-            routeType: configuration.routeType,
-            from: currentDate
-        )
+        let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(now)
+        let busTimes = fetchNextBusTimes(for: configuration.routeType, from: now)
 
-        // タイムライン更新時刻を計算
-        var refreshDates = [currentDate]  // 最初のエントリーは現在時刻
+        // 現在のエントリー（カウントダウンはText(date, style: .relative)で自動更新）
+        entries.append(SimpleEntry(date: now, configuration: configuration, nextBusTimes: busTimes, scheduleType: scheduleType))
 
-        // 最大3つのバスについてタイムラインを生成
-        let maxBusesToProcess = min(3, busTimes.count)
+        // バス出発時にバスリストをローテーションするためのエントリー
+        for bus in busTimes {
+            guard let busDate = bus.date(relativeTo: now),
+                  busDate > now else { continue }
 
-        if maxBusesToProcess > 0 {
-            // バスの出発時間をDate型に変換
-            var busDates: [Date] = []
-
-            for i in 0..<maxBusesToProcess {
-                let bus = busTimes[i]
-                if let busDate = calculateBusDate(
-                    from: currentDate, hour: bus.hour, minute: bus.minute)
-                {
-                    busDates.append(busDate)
-
-                    // バスの時刻に関連する更新タイミングを追加
-                    let timeToNextBus = busDate.timeIntervalSince(currentDate)
-
-                    if timeToNextBus > 0 {
-                        // バスまでの更新スケジュールを設定（残り時間に応じて頻度を変える）
-                        if timeToNextBus <= 300 {  // 5分以内
-                            // より頻繁に更新（10秒ごと）
-                            for second in stride(from: 0, to: min(300, timeToNextBus), by: 10) {
-                                refreshDates.append(currentDate.addingTimeInterval(second))
-                            }
-                        } else if timeToNextBus <= 900 {  // 15分以内
-                            // 30秒ごとに更新
-                            for second in stride(from: 0, to: min(900, timeToNextBus), by: 30) {
-                                refreshDates.append(currentDate.addingTimeInterval(second))
-                            }
-                        } else if timeToNextBus <= 1800 {  // 30分以内
-                            // 1分ごとに更新
-                            for second in stride(from: 0, to: min(1800, timeToNextBus), by: 60) {
-                                refreshDates.append(currentDate.addingTimeInterval(second))
-                            }
-                        }
-
-                        // バス出発の直前と直後に更新
-                        if timeToNextBus <= 1800 {  // 30分以内のバスのみ詳細更新
-                            refreshDates.append(busDate.addingTimeInterval(-30))  // 30秒前
-                            refreshDates.append(busDate.addingTimeInterval(-5))  // 5秒前
-                        }
-
-                        // バス出発時刻とその直後
-                        refreshDates.append(busDate)
-                        refreshDates.append(busDate.addingTimeInterval(1))  // 1秒後
-                        refreshDates.append(busDate.addingTimeInterval(5))  // 5秒後
-                    }
-                }
+            // 緊急度の色の境界線（各時点のバスリストを再取得して、出発済みのバスを除外する）
+            let fiveMinBefore = busDate.addingTimeInterval(-5 * 60)
+            if fiveMinBefore > now {
+                let timesAtDate = fetchNextBusTimes(for: configuration.routeType, from: fiveMinBefore)
+                entries.append(SimpleEntry(date: fiveMinBefore, configuration: configuration, nextBusTimes: timesAtDate, scheduleType: scheduleType))
             }
-        } else {
-            // バスがない場合は30分ごとに更新
-            for minuteOffset in stride(from: 30, to: 180, by: 30) {
-                refreshDates.append(
-                    Calendar.current.date(byAdding: .minute, value: minuteOffset, to: currentDate)!)
+            let oneMinBefore = busDate.addingTimeInterval(-60)
+            if oneMinBefore > now {
+                let timesAtDate = fetchNextBusTimes(for: configuration.routeType, from: oneMinBefore)
+                entries.append(SimpleEntry(date: oneMinBefore, configuration: configuration, nextBusTimes: timesAtDate, scheduleType: scheduleType))
             }
+
+            // 出発直後 — バスリストを更新（+60秒で分レベルフィルターが正しく除外する）
+            let shiftDate = busDate.addingTimeInterval(60)
+            let updatedType = BusWidgetDataProvider.getScheduleTypeForDate(shiftDate)
+            let updatedTimes = fetchNextBusTimes(for: configuration.routeType, from: shiftDate)
+            entries.append(SimpleEntry(date: shiftDate, configuration: configuration, nextBusTimes: updatedTimes, scheduleType: updatedType))
         }
 
-        // 深夜0時の更新ポイントを追加（日付変更による運行ダイヤ変更のため）
-        let calendar = Calendar.current
-        var midnight = calendar.startOfDay(for: currentDate)
-        midnight = calendar.date(byAdding: .day, value: 1, to: midnight)!  // 翌日の深夜0時
-        refreshDates.append(midnight)
-        refreshDates.append(calendar.date(byAdding: .second, value: 10, to: midnight)!)  // 0時10秒後（確実に更新するため）
-
-        // 重複を削除して昇順にソート
-        refreshDates = Array(Set(refreshDates)).sorted()
-
-        // 現在時刻より過去の日時は除外
-        refreshDates = refreshDates.filter { $0 >= currentDate }
-
-        // 各更新時点でのエントリーを作成
-        for date in refreshDates {
-            // 各更新時点で日付に基づいてスケジュールタイプを再評価
-            let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(date)
-            let times = getNextBusTimes(
-                routeType: configuration.routeType,
-                from: date
-            )
-            entries.append(
-                SimpleEntry(
-                    date: date, configuration: configuration, nextBusTimes: times,
-                    scheduleType: scheduleType))
+        // 明日の真夜中
+        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) {
+            let midnightType = BusWidgetDataProvider.getScheduleTypeForDate(tomorrow)
+            let midnightTimes = fetchNextBusTimes(for: configuration.routeType, from: tomorrow)
+            entries.append(SimpleEntry(date: tomorrow, configuration: configuration, nextBusTimes: midnightTimes, scheduleType: midnightType))
         }
 
-        // 次のリロードポリシーを決定
-        let reloadPolicy: TimelineReloadPolicy
-
-        if let firstBus = busTimes.first,
-            let firstBusDate = calculateBusDate(
-                from: currentDate, hour: firstBus.hour, minute: firstBus.minute)
-        {
-            let timeToFirstBus = firstBusDate.timeIntervalSince(currentDate)
-
-            if timeToFirstBus <= 0 {
-                // バスの時間が過ぎた場合、すぐに更新
-                reloadPolicy = .after(currentDate.addingTimeInterval(1))
-            } else if timeToFirstBus <= 60 {  // 1分以内
-                // 10秒ごとに更新
-                reloadPolicy = .after(currentDate.addingTimeInterval(10))
-            } else if timeToFirstBus <= 300 {  // 5分以内
-                // 30秒ごとに更新
-                reloadPolicy = .after(currentDate.addingTimeInterval(30))
-            } else if timeToFirstBus <= 900 {  // 15分以内
-                // 1分ごとに更新
-                reloadPolicy = .after(currentDate.addingTimeInterval(60))
-            } else if timeToFirstBus <= 1800 {  // 30分以内
-                // 3分ごとに更新
-                reloadPolicy = .after(currentDate.addingTimeInterval(180))
-            } else {
-                // それ以上は15分ごとに更新
-                reloadPolicy = .after(currentDate.addingTimeInterval(900))
+        let reloadDate: Date = {
+            if let lastBus = busTimes.last,
+               let lastDate = lastBus.date(relativeTo: now),
+               lastDate > now {
+                return lastDate.addingTimeInterval(60)
             }
-        } else {
-            // バスがない場合は30分後に更新
-            reloadPolicy = .after(currentDate.addingTimeInterval(1800))
-        }
+            return now.addingTimeInterval(1800)
+        }()
 
-        return Timeline(entries: entries, policy: reloadPolicy)
+        return Timeline(entries: entries, policy: .after(reloadDate))
     }
 
-    // 日付とバスの時間からバスの具体的な日時を計算
-    private func calculateBusDate(from currentDate: Date, hour: Int, minute: Int) -> Date? {
-        let calendar = Calendar.current
-        var components = calendar.dateComponents([.year, .month, .day], from: currentDate)
-        components.hour = hour
-        components.minute = minute
-        components.second = 0
-
-        guard var busDate = calendar.date(from: components) else { return nil }
-
-        // バス時刻が過去の場合は翌日とする
-        if busDate < currentDate {
-            busDate = calendar.date(byAdding: .day, value: 1, to: busDate)!
-        }
-
-        return busDate
+    private func fetchNextBusTimes(for routeType: RouteTypeEnum, from date: Date) -> [BusWidgetSchedule.TimeEntry] {
+        let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(date)
+        return BusWidgetDataProvider.getNextBusTimes(
+            routeType: routeType.rawValue,
+            scheduleType: scheduleType,
+            from: date
+        )
     }
 }
+
+// MARK: - タイムラインエントリー
 
 struct SimpleEntry: TimelineEntry {
     let date: Date
@@ -340,591 +160,255 @@ struct SimpleEntry: TimelineEntry {
     let nextBusTimes: [BusWidgetSchedule.TimeEntry]
     let scheduleType: String
 
-    // URLスキームを作成する関数
-    func getBusDeepLink() -> URL {
-        // 選択されている路線タイプに基づいてURLを構築
-        var urlComponents = URLComponents()
-        urlComponents.scheme = "tama"
-        urlComponents.host = "bus"
-
-        // 路線タイプをクエリパラメータとして追加
-        urlComponents.queryItems = [
+    var deepLinkURL: URL {
+        var components = URLComponents()
+        components.scheme = "tama"
+        components.host = "bus"
+        components.queryItems = [
             URLQueryItem(name: "route", value: configuration.routeType.rawValue),
             URLQueryItem(name: "schedule", value: scheduleType),
         ]
-
-        return urlComponents.url ?? URL(string: "tama://bus")!
+        return components.url ?? URL(string: "tama://bus")!
     }
 
-    // バス時刻をDate型に変換するメソッド
-    func getBusTimeAsDate(index: Int) -> Date? {
-        guard index < nextBusTimes.count else { return nil }
+    var themeColor: Color { RouteTheme.color(for: configuration.routeType) }
+    var currentBus: BusWidgetSchedule.TimeEntry? { nextBusTimes.first }
+    var upcomingBuses: [BusWidgetSchedule.TimeEntry] { Array(nextBusTimes.dropFirst().prefix(2)) }
+    var isServiceEnded: Bool { nextBusTimes.isEmpty }
 
-        let busTime = nextBusTimes[index]
-        let calendar = Calendar.current
-        let now = date  // エントリーの日時を基準にする
-
-        // 現在の日付の年月日を取得
-        var components = calendar.dateComponents([.year, .month, .day], from: now)
-        // バスの時間と分を設定
-        components.hour = busTime.hour
-        components.minute = busTime.minute
-        components.second = 0
-
-        guard let busDate = calendar.date(from: components) else { return nil }
-
-        // バス時刻が過去の場合は翌日とする
-        if busDate <= now {
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: busDate)!
-            return nextDay
-        }
-
-        return busDate
+    func busDate(for entry: BusWidgetSchedule.TimeEntry) -> Date? {
+        entry.date(relativeTo: date)
     }
 
-    // 現在表示すべき最初のバスのインデックスを返す
-    // これはバスの時刻が過ぎた場合に自動的に次のバスを表示するために使用
-    func getCurrentBusIndex() -> Int {
-        // バスがない場合は0を返す
-        if nextBusTimes.isEmpty {
-            return 0
-        }
-
-        // 現在の時刻（エントリーの日時）
-        let now = date
-
-        // 各バスについて、時間が過ぎていないかチェック
-        for (index, busTime) in nextBusTimes.enumerated() {
-            // バスの日時を取得
-            let calendar = Calendar.current
-            var components = calendar.dateComponents([.year, .month, .day], from: now)
-            components.hour = busTime.hour
-            components.minute = busTime.minute
-            components.second = 0
-
-            guard let busDate = calendar.date(from: components) else { continue }
-
-            // バス時刻が過去の場合は翌日の日付にする
-            var actualBusDate = busDate
-            if busDate < now {
-                // 当日中にまだ到着していないバスがある場合は、翌日のバスではなく当日のバスを表示する
-                let hasLaterBusesToday = nextBusTimes.dropFirst(index + 1).contains { laterBus in
-                    var laterComponents = calendar.dateComponents([.year, .month, .day], from: now)
-                    laterComponents.hour = laterBus.hour
-                    laterComponents.minute = laterBus.minute
-                    laterComponents.second = 0
-
-                    guard let laterBusDate = calendar.date(from: laterComponents) else {
-                        return false
-                    }
-                    return laterBusDate > now
-                }
-
-                if !hasLaterBusesToday {
-                    // 翌日のこのバスを表示
-                    actualBusDate = calendar.date(byAdding: .day, value: 1, to: busDate)!
-                } else {
-                    // 過去のバスなのでスキップ
-                    continue
-                }
-            }
-
-            // 現在時刻より未来のバスを見つけたらそのインデックスを返す
-            if actualBusDate > now {
-                return index
-            }
-        }
-
-        // すべてのバスが過去の場合は最初のバスを返す（翌日分として）
-        return 0
-    }
-
-    // 現在表示すべき次のバス
-    var currentBus: BusWidgetSchedule.TimeEntry? {
-        let index = getCurrentBusIndex()
-        return index < nextBusTimes.count ? nextBusTimes[index] : nil
-    }
-
-    // 現在のバスの時刻をDate型で取得
-    var currentBusDate: Date? {
-        let index = getCurrentBusIndex()
-        return getBusTimeAsDate(index: index)
-    }
-
-    // 本日の運行が終了したかどうか
-    var isServiceEndedForToday: Bool {
-        guard currentBus != nil, let busDate = currentBusDate else {
-            // バスがない場合は運行終了と判断
-            return true
-        }
-
-        let calendar = Calendar.current
-        let now = date
-
-        // バスの日付が翌日かどうかをチェック
-        let busDay = calendar.component(.day, from: busDate)
-        let todayDay = calendar.component(.day, from: now)
-
-        // 翌日のバスを表示している場合、かつバスまでの残り時間が6時間以上ある場合は、本日の運行は終了と判断
-        if busDay != todayDay {
-            let timeInterval = busDate.timeIntervalSince(now)
-            // 6時間（21600秒）以上先のバスは翌日のバスとみなす
-            return timeInterval >= 21600
-        }
-
-        return false
-    }
-
-    // 現在のバスの次に来るバス配列 - その日のバスをすべて表示
-    var upcomingBuses: [BusWidgetSchedule.TimeEntry] {
-        // 本日の運行が終了した場合は空配列を返す
-        if isServiceEndedForToday {
-            return []
-        }
-
-        // 現在時刻
-        let now = date
-        let calendar = Calendar.current
-
-        // 現在の表示中バスのインデックスを取得
-        let currentIndex = getCurrentBusIndex()
-
-        // 現在表示中の次のバスをスキップして、その後のバスを表示
-        let upcomingIndices = currentIndex + 1..<min(currentIndex + 3, nextBusTimes.count)
-        let todayBuses = upcomingIndices.compactMap { index -> BusWidgetSchedule.TimeEntry? in
-            let bus = nextBusTimes[index]
-
-            // バス時刻のコンポーネントを取得
-            var components = calendar.dateComponents([.year, .month, .day], from: now)
-            components.hour = bus.hour
-            components.minute = bus.minute
-
-            guard let busDate = calendar.date(from: components) else { return nil }
-
-            // 今日のバスのみを表示（翌日のバスは除外）
-            return calendar.isDate(busDate, inSameDayAs: now) ? bus : nil
-        }
-
-        return todayBuses
+    func minutesUntil(_ busEntry: BusWidgetSchedule.TimeEntry) -> Int? {
+        guard let target = busDate(for: busEntry) else { return nil }
+        let seconds = target.timeIntervalSince(date)
+        guard seconds > 0 else { return nil }
+        return Int(ceil(seconds / 60))
     }
 }
+
+// MARK: - ウィジェットビュー
 
 struct BusWidgetEntryView: View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var family
-    @Environment(\.colorScheme) var colorScheme
 
-    // 路線名を取得
+    private var accent: Color { entry.themeColor }
+
     var routeName: String {
         switch entry.configuration.routeType {
-        case .fromSeisekiToSchool:
-            return NSLocalizedString("聖蹟桜ヶ丘駅発", comment: "")
-        case .fromNagayamaToSchool:
-            return NSLocalizedString("永山駅発", comment: "")
-        case .fromSchoolToSeiseki:
-            return NSLocalizedString("聖蹟桜ヶ丘駅行", comment: "")
-        case .fromSchoolToNagayama:
-            return NSLocalizedString("永山駅行", comment: "")
+        case .fromSeisekiToSchool: "聖蹟桜ヶ丘駅発"
+        case .fromNagayamaToSchool: "永山駅発"
+        case .fromSchoolToSeiseki: "聖蹟桜ヶ丘駅行"
+        case .fromSchoolToNagayama: "永山駅行"
         }
     }
 
-    // ダイヤタイプ
     var scheduleTypeName: String {
-        return BusWidgetDataProvider.getScheduleTypeDisplayName(entry.scheduleType)
-    }
-
-    // テーマカラー - ダークモード対応
-    var themeColor: Color {
-        return colorScheme == .dark ? .cyan : .blue
-    }
-
-    // セカンダリテキストカラー - ダークモード対応
-    var secondaryTextColor: Color {
-        return .secondary
-    }
-
-    // 背景色 - ダークモード対応
-    func cardBackgroundColor(opacity: Double = 0.05) -> Color {
-        return colorScheme == .dark ? Color.white.opacity(opacity) : themeColor.opacity(opacity)
-    }
-
-    // URLスキームを作成する関数
-    func getBusDeepLink() -> URL {
-        // 選択されている路線タイプに基づいてURLを構築
-        var urlComponents = URLComponents()
-        urlComponents.scheme = "tama"
-        urlComponents.host = "bus"
-
-        // 路線タイプをクエリパラメータとして追加
-        urlComponents.queryItems = [
-            URLQueryItem(name: "route", value: entry.configuration.routeType.rawValue),
-            URLQueryItem(name: "schedule", value: entry.scheduleType),
-        ]
-
-        return urlComponents.url ?? URL(string: "tama://bus")!
+        BusWidgetDataProvider.getScheduleTypeDisplayName(entry.scheduleType)
     }
 
     var body: some View {
-        // タップ時にリンクを開くため、コンテンツをLink要素でラップ
-        Link(destination: getBusDeepLink()) {
-            if family == .systemSmall {
-                smallWidgetLayout
-            } else {
-                mediumWidgetLayout
+        Link(destination: entry.deepLinkURL) {
+            switch family {
+            case .systemMedium: mediumLayout
+            default: smallLayout
             }
         }
     }
 
-    // ウィジェット共通のヘッダー部分
-    private func headerView(fontSize: Font = .caption) -> some View {
-        HStack(alignment: .center, spacing: 6) {
-            Image(systemName: "bus.fill")
-                .foregroundColor(themeColor)
-                .font(fontSize)
+    private func urgencyColor(minutes: Int?) -> Color {
+        guard let m = minutes else { return .secondary }
+        if m <= 1 { return .red }
+        if m <= 5 { return .orange }
+        return accent
+    }
 
+    // MARK: - 共有サブビュー
+
+    private func headerView(titleSize: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 4) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(accent)
+                .frame(width: 3)
             VStack(alignment: .leading, spacing: 1) {
                 Text(routeName)
-                    .font(fontSize)
-                    .fontWeight(.bold)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
+                    .font(.system(size: titleSize, weight: .semibold))
                 Text(scheduleTypeName)
-                    .font(fontSize == .caption ? .caption2 : .caption)
-                    .foregroundColor(secondaryTextColor)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func countdownView(for bus: BusWidgetSchedule.TimeEntry, fontSize: CGFloat) -> some View {
+        let mins = entry.minutesUntil(bus)
+        let departed = mins == nil
+        return HStack(spacing: 3) {
+            if departed {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 11))
+                Text("出発済み")
+                    .font(.system(size: fontSize, weight: .medium))
+            } else {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 11))
+                (Text("あと ")
+                    .font(.system(size: fontSize, weight: .medium))
+                + Text(entry.busDate(for: bus) ?? .now, style: .relative)
+                    .font(.system(size: fontSize, weight: .bold, design: .rounded)))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            }
+        }
+        .foregroundStyle(departed ? .green : urgencyColor(minutes: mins))
+    }
+
+    private func busTimeView(for bus: BusWidgetSchedule.TimeEntry, departed: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 2) {
+            Text(bus.formattedTime)
+                .font(.system(size: 38, weight: .heavy, design: .rounded))
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+                .foregroundColor(departed ? .secondary : .primary)
+            if bus.isSpecial, let note = bus.specialNote {
+                Text(note)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(.red)
             }
         }
     }
 
-    // バスがない場合の表示
-    private func noScheduleView(fontSize: Font = .caption, widgetType: String) -> some View {
-        HStack {
-            Spacer()
-            VStack(spacing: 4) {
-                Image(systemName: "moon.zzz.fill")
-                    .font(fontSize == .caption ? .title3 : .title2)
-                    .foregroundColor(secondaryTextColor)
-                Text(widgetType == "medium" ? "本日の運行終了しました" : "本日の運行終了")
-                    .font(fontSize)
-                    .foregroundColor(secondaryTextColor)
-            }
-            Spacer()
+    private var serviceEndedView: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "moon.zzz.fill")
+                .font(.title3)
+                .foregroundStyle(.tertiary)
+            Text("本日の運行終了")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity)
     }
 
-    // タイマー形式の残り時間表示コンポーネント
-    private func timerView(
-        for busDate: Date, fontSize: Font = .caption2, style: Text.DateStyle = .timer
-    ) -> some View {
-        // バスまでの残り時間（秒）
-        let timeInterval = busDate.timeIntervalSince(entry.date)
-        // バスの時刻が過ぎていないか確認
-        guard timeInterval > 0 else {
-            // 過ぎている場合は「出発済み」と表示
-            return AnyView(
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(
-                            colorScheme == .dark ? Color.gray.opacity(0.2) : Color.gray.opacity(0.1)
-                        )
+    // MARK: - スモールウィジェット
 
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(fontSize)
-                            .foregroundColor(.green)
+    private var smallLayout: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            headerView(titleSize: 13)
 
-                        Text("出発済み")
-                            .font(fontSize)
-                            .fontWeight(.medium)
-                            .foregroundColor(secondaryTextColor)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                })
+            if entry.isServiceEnded {
+                Spacer()
+                serviceEndedView
+                Spacer()
+            } else if let bus = entry.currentBus {
+                let departed = entry.minutesUntil(bus) == nil
+
+                Spacer()
+
+                busTimeView(for: bus, departed: departed)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                Spacer().frame(height: 6)
+
+                countdownView(for: bus, fontSize: 13)
+                    .frame(maxWidth: .infinity)
+
+                Spacer()
+            }
         }
+        .padding(10)
+    }
 
-        // 最大表示時間（30分 = 1800秒）
-        let maxInterval: TimeInterval = 1800
-        // 進捗バーの幅（0.0〜1.0）
-        let progressWidth = min(1.0, max(0.0, timeInterval / maxInterval))
+    // MARK: - ミディアムウィジェット
 
-        return AnyView(
-            ZStack(alignment: .leading) {
-                // 背景 - 薄いグレー
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.gray.opacity(0.1))
+    private var mediumLayout: some View {
+        HStack(alignment: .top, spacing: 0) {
+            // 左パネル
+            VStack(alignment: .leading, spacing: 0) {
+                headerView(titleSize: 14)
 
-                // 進捗バー - 時間に応じた色
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(getTimeColor(for: busDate).opacity(colorScheme == .dark ? 0.25 : 0.15))
-                    .frame(width: progressWidth > 0.05 ? nil : 0, alignment: .leading)
-                    .scaleEffect(x: progressWidth, y: 1, anchor: .leading)
+                if entry.isServiceEnded {
+                    Spacer()
+                    serviceEndedView
+                    Spacer()
+                } else if let bus = entry.currentBus {
+                    let departed = entry.minutesUntil(bus) == nil
 
-                // 内容
-                HStack(spacing: 4) {
-                    // タイマーアイコン
-                    Image(systemName: "timer")
-                        .font(fontSize)
-                        .foregroundColor(getTimeColor(for: busDate))
+                    Spacer().frame(height: 10)
 
-                    // 時間表示
-                    Text(busDate, style: style)
-                        .font(fontSize)
-                        .fontWeight(.medium)
-                        .foregroundColor(getTimeColor(for: busDate))
+                    busTimeView(for: bus, departed: departed)
+
+                    Spacer().frame(height: 4)
+
+                    countdownView(for: bus, fontSize: 14)
+
+                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-            })
-    }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-    // 小サイズウィジェットのレイアウト
-    var smallWidgetLayout: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // ヘッダー
-            headerView()
-
-            Divider()
+            Rectangle()
+                .fill(.quaternary)
+                .frame(width: 0.5)
                 .padding(.vertical, 2)
 
-            if entry.nextBusTimes.isEmpty || entry.isServiceEndedForToday {
-                Spacer()
-                noScheduleView(widgetType: "small")
-                Spacer()
-            } else if let currentBus = entry.currentBus, let currentBusDate = entry.currentBusDate {
-                // バス時刻が現在時刻より未来かどうか確認
-                let timeToNextBus = currentBusDate.timeIntervalSince(entry.date)
-                let isBusDeparted = timeToNextBus <= 0
+            // 右パネル
+            VStack(alignment: .leading, spacing: 0) {
+                Text("その後")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
 
-                // 次のバス情報パネル
-                VStack(spacing: 2) {
-                    // 「次のバス」ラベル行
-                    HStack {
-                        Text("次のバス")
-                            .font(.caption2)
-                            .foregroundColor(secondaryTextColor)
-
-                        Spacer()
-
-                        // 特殊タグがある場合は表示
-                        if currentBus.isSpecial, let note = currentBus.specialNote {
-                            Text(note)
-                                .font(.caption2)
-                                .bold()
-                                .foregroundColor(.red)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Color.red.opacity(colorScheme == .dark ? 0.2 : 0.1))
-                                .cornerRadius(4)
+                if entry.isServiceEnded || entry.upcomingBuses.isEmpty {
+                    Spacer()
+                    Text("なし")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity)
+                    Spacer()
+                } else {
+                    Spacer().frame(height: 10)
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(entry.upcomingBuses) { bus in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                                    Text(bus.formattedTime)
+                                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    if bus.isSpecial, let note = bus.specialNote {
+                                        Text(" " + note)
+                                            .font(.system(size: 10, weight: .heavy))
+                                            .foregroundStyle(.red)
+                                    }
+                                }
+                                Text(entry.busDate(for: bus) ?? .now, style: .relative)
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
-
-                    // バス時刻
-                    Text(currentBus.formattedTime)
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundColor(isBusDeparted ? secondaryTextColor : themeColor)
-                        .frame(maxWidth: .infinity, alignment: .center)
-
-                    // タイマー形式の残り時間
-                    timerView(for: currentBusDate)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-                .padding(.top, 4)
-
-                Spacer()
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 10)
-        .id("widget-\(entry.date.timeIntervalSince1970)")  // 強制的に更新するためのID
-    }
-
-    // 中サイズウィジェットのレイアウト
-    var mediumWidgetLayout: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // ヘッダー部分
-            headerView(fontSize: .subheadline)
-
-            Divider()
-                .background(themeColor.opacity(0.2))
-
-            if entry.nextBusTimes.isEmpty || entry.isServiceEndedForToday {
-                HStack {
-                    Spacer()
-                    noScheduleView(fontSize: .subheadline, widgetType: "medium")
-                    Spacer()
-                }
-                .padding(.vertical, 10)
-            } else {
-                // バス時刻情報を2列レイアウトで表示
-                HStack(alignment: .top, spacing: 16) {
-                    // 左列 - 現在の次のバス
-                    if let currentBus = entry.currentBus, let currentBusDate = entry.currentBusDate
-                    {
-                        // バス時刻が現在時刻より未来かどうか確認
-                        let timeToNextBus = currentBusDate.timeIntervalSince(entry.date)
-                        let isBusDeparted = timeToNextBus <= 0
-
-                        nextBusColumn(
-                            bus: currentBus, busDate: currentBusDate, isDeparted: isBusDeparted)
-                    }
-
-                    // 右列 - その後のバス
-                    upcomingBusesColumn
+                    Spacer(minLength: 0)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 12)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 8)
-        .id("widget-\(entry.date.timeIntervalSince1970)")  // 強制的に更新するためのID
-    }
-
-    // 次のバス情報の列
-    private func nextBusColumn(
-        bus: BusWidgetSchedule.TimeEntry, busDate: Date, isDeparted: Bool = false
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // ヘッダー
-            HStack {
-                Text("次のバス")
-                    .font(.caption)
-                    .foregroundColor(secondaryTextColor)
-
-                // 特殊タグがある場合は表示
-                if bus.isSpecial, let note = bus.specialNote {
-                    Text(note)
-                        .font(.caption2)
-                        .bold()
-                        .foregroundColor(.red)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color.red.opacity(colorScheme == .dark ? 0.2 : 0.1))
-                        .cornerRadius(4)
-                }
-            }
-
-            // 時刻
-            Text(bus.formattedTime)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(isDeparted ? secondaryTextColor : themeColor)
-
-            // 相対時間形式の残り時間
-            timerView(for: busDate, fontSize: .caption, style: .relative)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(cardBackgroundColor())
-        )
-    }
-
-    // その後のバス情報の列
-    private var upcomingBusesColumn: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("その後のバス")
-                .font(.caption)
-                .foregroundColor(secondaryTextColor)
-                .padding(.bottom, 2)
-
-            if entry.upcomingBuses.isEmpty {
-                Text("本日の次のバスはありません")
-                    .font(.caption2)
-                    .foregroundColor(secondaryTextColor)
-                    .padding(.vertical, 8)
-            } else {
-                // その後のバス時刻を表示 - 最大2行に制限
-                let maxVisibleBuses = 2  // 画面に表示する最大バス数
-
-                ForEach(0..<min(maxVisibleBuses, entry.upcomingBuses.count), id: \.self) {
-                    index in busRowView(for: entry.upcomingBuses[index], at: index)
-                }
-            }
-        }
-        .padding(.top, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // バス行の表示（上のメソッドから利用）
-    private func busRowView(for bus: BusWidgetSchedule.TimeEntry, at index: Int) -> some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                // 時刻と特殊タグを重ねて表示
-                ZStack(alignment: .topTrailing) {
-                    // 時刻
-                    Text(bus.formattedTime)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .padding(.trailing, bus.isSpecial ? 14 : 0)  // 特殊タグがある場合はパディングを追加
-
-                    // 特殊タグの表示
-                    if bus.isSpecial, let note = bus.specialNote {
-                        Text(note)
-                            .font(.caption2)
-                            .bold()
-                            .foregroundColor(.red)
-                            .padding(.horizontal, 2)
-                            .padding(.vertical, 0.3)
-                            .background(Color.red.opacity(colorScheme == .dark ? 0.2 : 0.05))
-                            .cornerRadius(2)
-                            .offset(x: 2, y: 3)  // 少し上にオフセット
-                    }
-                }
-
-                Spacer()
-
-                // 相対時間形式の残り時間
-                if let busIndex = entry.nextBusTimes.firstIndex(where: { $0.id == bus.id }),
-                    let busDate = entry.getBusTimeAsDate(index: busIndex)
-                {
-                    HStack(spacing: 2) {
-                        Text(busDate, style: .relative)
-                            .font(.caption2)
-                            .foregroundColor(secondaryTextColor)
-                    }
-                }
-            }
-
-            // 区切り線 - 最初のバスと2番目のバスの間にのみ表示（バスが2つある場合）
-            if index == 0 && entry.upcomingBuses.count > 1 {
-                Divider()
-                    .padding(.vertical, 4)
-                    .padding(.leading, 20)
-            }
-        }
-    }
-
-    // 残り時間によって色を変える
-    private func getTimeColor(for busDate: Date) -> Color {
-        let timeInterval = busDate.timeIntervalSince(entry.date)
-
-        if timeInterval <= 60 {  // 1分以内
-            return colorScheme == .dark ? .pink : .red
-        } else if timeInterval <= 600 {  // 10分以内
-            return colorScheme == .dark ? .yellow : .orange
-        } else {
-            return colorScheme == .dark ? .cyan : .blue
-        }
+        .padding(10)
     }
 }
 
+// MARK: - ウィジェット設定
+
+@main
 struct BusWidget: Widget {
     let kind: String = "BusWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(
-            kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()
-        ) { entry in
+        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
             BusWidgetEntryView(entry: entry)
-                .containerBackground(for: .widget) {
-                    Color.clear
-                        .overlay {
-                            // ダークモード対応のグラデーション背景
-                            WidgetBackgroundView()
-                        }
-                }
-                // ウィジェットのURLを指定
-                // Link要素で個別に対応しているが、古いiOSバージョンとの互換性のために残しておく
-                .widgetURL(entry.getBusDeepLink())
+                .containerBackground(.fill.tertiary, for: .widget)
+                .widgetURL(entry.deepLinkURL)
         }
         .configurationDisplayName("学校バス時刻表")
         .description("次のバスの発車時刻を表示します")
@@ -932,86 +416,56 @@ struct BusWidget: Widget {
     }
 }
 
-// ウィジェット背景ビュー
-struct WidgetBackgroundView: View {
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        // ライト/ダークモードに応じた背景色
-        LinearGradient(
-            gradient: Gradient(
-                colors: colorScheme == .dark
-                    ? [
-                        Color(uiColor: UIColor(red: 0.1, green: 0.1, blue: 0.15, alpha: 1.0)),
-                        Color(uiColor: UIColor(red: 0.15, green: 0.15, blue: 0.2, alpha: 1.0)),
-                    ]
-                    : [
-                        Color(uiColor: UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)),
-                        Color(uiColor: UIColor(red: 0.98, green: 0.98, blue: 1.0, alpha: 1.0)),
-                    ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-}
-
-// ColorSchemeキー
-private struct ColorSchemeKey: PreferenceKey {
-    static var defaultValue: ColorScheme = .light
-    static func reduce(value: inout ColorScheme, nextValue: () -> ColorScheme) {
-        value = nextValue()
-    }
-}
-
-// プレビュー用の拡張
-extension ConfigurationAppIntent {
-    fileprivate static var seiseki: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.routeType = .fromSeisekiToSchool
-        return intent
-    }
-
-    fileprivate static var nagayama: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.routeType = .fromNagayamaToSchool
-        return intent
-    }
-}
+// MARK: - プレビュー
 
 #Preview(as: .systemSmall) {
     BusWidget()
 } timeline: {
-    let times1 = [
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 0),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 30),
-        BusWidgetSchedule.TimeEntry(hour: 11, minute: 0),
-    ]
-    let times2 = [
-        BusWidgetSchedule.TimeEntry(hour: 9, minute: 45),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 15),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 45),
-    ]
-    SimpleEntry(date: .now, configuration: .seiseki, nextBusTimes: times1, scheduleType: "weekday")
-    SimpleEntry(date: .now, configuration: .nagayama, nextBusTimes: times2, scheduleType: "weekday")
+    SimpleEntry(
+        date: .now,
+        configuration: .seiseki,
+        nextBusTimes: [
+            .init(hour: 10, minute: 0),
+            .init(hour: 10, minute: 30),
+            .init(hour: 11, minute: 0, isSpecial: true, specialNote: "M"),
+        ],
+        scheduleType: "weekday"
+    )
+    SimpleEntry(
+        date: .now,
+        configuration: .nagayama,
+        nextBusTimes: [.init(hour: 9, minute: 45), .init(hour: 10, minute: 15)],
+        scheduleType: "wednesday"
+    )
+    SimpleEntry(
+        date: .now, configuration: .seiseki, nextBusTimes: [], scheduleType: "weekday"
+    )
 }
 
 #Preview(as: .systemMedium) {
     BusWidget()
 } timeline: {
-    let times1 = [
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 0),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 30),
-        BusWidgetSchedule.TimeEntry(hour: 11, minute: 0),
-    ]
-    let times2 = [
-        BusWidgetSchedule.TimeEntry(hour: 9, minute: 45),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 15),
-        BusWidgetSchedule.TimeEntry(hour: 10, minute: 45),
-    ]
-    let emptyTimes: [BusWidgetSchedule.TimeEntry] = []
-
-    SimpleEntry(date: .now, configuration: .seiseki, nextBusTimes: times1, scheduleType: "weekday")
-    SimpleEntry(date: .now, configuration: .nagayama, nextBusTimes: times2, scheduleType: "weekday")
     SimpleEntry(
-        date: .now, configuration: .seiseki, nextBusTimes: emptyTimes, scheduleType: "weekday")
+        date: .now,
+        configuration: .seiseki,
+        nextBusTimes: [
+            .init(hour: 10, minute: 0),
+            .init(hour: 10, minute: 30),
+            .init(hour: 11, minute: 0, isSpecial: true, specialNote: "M"),
+        ],
+        scheduleType: "weekday"
+    )
+    SimpleEntry(
+        date: .now,
+        configuration: .nagayama,
+        nextBusTimes: [
+            .init(hour: 9, minute: 45),
+            .init(hour: 10, minute: 15),
+            .init(hour: 10, minute: 45),
+        ],
+        scheduleType: "wednesday"
+    )
+    SimpleEntry(
+        date: .now, configuration: .seiseki, nextBusTimes: [], scheduleType: "saturday"
+    )
 }

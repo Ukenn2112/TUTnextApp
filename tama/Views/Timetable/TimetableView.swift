@@ -1,0 +1,349 @@
+import SwiftUI
+
+struct TimetableView: View {
+    // MARK: - プロパティ
+    @StateObject private var viewModel = TimetableViewModel()
+    @Binding var isLoggedIn: Bool
+    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var ratingService: RatingService
+    // フォアグラウンド復帰通知オブザーバー
+    @State private var willEnterForegroundObserver: NSObjectProtocol?
+    // 掲示リストSafariView閉じる通知オブザーバー
+    @State private var announcementSafariDismissObserver: NSObjectProtocol?
+
+    // 曜日インデックスを表示用文字列に変換するヘルパー
+    private func weekdayString(from index: String) -> String {
+        guard let idx = Int(index), idx >= 1 && idx <= 7 else { return "" }
+        let weekdays = [
+            NSLocalizedString("月", comment: ""),
+            NSLocalizedString("火", comment: ""),
+            NSLocalizedString("水", comment: ""),
+            NSLocalizedString("木", comment: ""),
+            NSLocalizedString("金", comment: ""),
+            NSLocalizedString("土", comment: ""),
+            NSLocalizedString("日", comment: "")
+        ]
+        return weekdays[idx - 1]
+    }
+
+    private let presetColors: [Color] = [
+        .white,
+        Color(red: 0.98, green: 0.86, blue: 0.86),  // ピンク
+        Color(red: 0.98, green: 0.92, blue: 0.86),  // オレンジ
+        Color(red: 0.98, green: 0.98, blue: 0.86),  // イエロー
+        Color(red: 0.92, green: 0.98, blue: 0.86),  // ライトグリーン
+        Color(red: 0.86, green: 0.98, blue: 0.86),  // グリーン
+        Color(red: 0.86, green: 0.98, blue: 0.98),  // シアン
+        Color(red: 0.98, green: 0.86, blue: 0.92),  // ピンクパープル
+        Color(red: 0.92, green: 0.86, blue: 0.98),  // パープル
+        Color(red: 0.86, green: 0.92, blue: 0.98),  // ブルー
+        Color(red: 0.98, green: 0.86, blue: 0.98)   // マゼンタ
+    ]
+
+    // MARK: - ボディ
+    var body: some View {
+        GeometryReader { geometry in
+            // Layout constants
+            let layout = LayoutMetrics(
+                geometry: geometry,
+                columnCount: viewModel.getWeekdays().count,
+                rowCount: viewModel.getPeriods().count
+            )
+
+            VStack(spacing: 0) {
+                if viewModel.isLoading {
+                    ProgressView("読み込み中...")
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let errorMessage = viewModel.errorMessage {
+                    VStack {
+                        Text("エラーが発生しました")
+                            .font(.headline)
+                            .padding(.bottom, 8)
+
+                        Text(errorMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+
+                        Button("再読み込み") {
+                            // データを再取得
+                            viewModel.fetchTimetableData()
+                        }
+                        .padding(.top, 16)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    weekdayHeaderView(layout: layout)
+                    timeTableGridView(layout: layout)
+                }
+            }
+            .padding(.leading, layout.leftPadding)
+            .padding(.trailing, layout.rightPadding)
+            .padding(.top, 8)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .edgesIgnoringSafeArea(.bottom)
+            .onAppear {
+                viewModel.fetchTimetableData()
+                // 時間割表示の重要イベントを記録
+                ratingService.recordSignificantEvent()
+                // アプリがフォアグラウンドに復帰した時にページを更新
+                willEnterForegroundObserver = NotificationCenter.default.addObserver(
+                    forName: UIApplication.willEnterForegroundNotification,
+                    object: nil,
+                    queue: .main
+                ) { _ in
+                    Task { @MainActor in
+                        print("TimetableView: アプリがフォアグラウンドに復帰しました")
+                        viewModel.fetchTimetableData()
+
+                        // 通知設定の状態を確認してサーバーと同期
+                        NotificationService.shared.checkAuthorizationStatus()
+                        NotificationService.shared.syncNotificationStatusWithServer()
+                    }
+                }
+
+                // 掲示リストのSafariViewが閉じられた時の通知を受け取る
+                announcementSafariDismissObserver = NotificationCenter.default.addObserver(
+                    forName: .announcementSafariDismissed,
+                    object: nil,
+                    queue: .main
+                ) { _ in
+                    Task { @MainActor in
+                        print("TimetableView: 掲示リストのSafariViewが閉じられました")
+                        viewModel.fetchTimetableData()
+                    }
+                }
+            }
+            .onDisappear {
+                // 通知オブザーバーを削除
+                if let observer = willEnterForegroundObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                    willEnterForegroundObserver = nil
+                }
+
+                // 掲示リストSafari閉じる通知観察者を削除
+                if let observer = announcementSafariDismissObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                    announcementSafariDismissObserver = nil
+                }
+            }
+        }
+    }
+
+    // MARK: - サブビュー
+    private func weekdayHeaderView(layout: LayoutMetrics) -> some View {
+        HStack(spacing: 4) {
+            Text("")
+                .frame(width: layout.timeColumnWidth)
+
+            ForEach(viewModel.getWeekdays(), id: \.self) { day in
+                if day == viewModel.getCurrentWeekday() {
+                    currentDayView(day: day, width: layout.cellWidth)
+                } else {
+                    Text(weekdayString(from: day))
+                        .font(.system(size: 14))
+                        .foregroundColor(.primary)
+                        .frame(width: layout.cellWidth, height: 10)
+                }
+            }
+        }
+        .frame(height: 10)
+        .padding(.bottom, 16)
+    }
+
+    private func currentDayView(day: String, width: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .fill(Color.green)
+                .frame(width: 20, height: 20)
+            Text(weekdayString(from: day))
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+        }
+        .frame(width: width, height: 10)
+    }
+
+    private func timeTableGridView(layout: LayoutMetrics) -> some View {
+        VStack(spacing: 4) {
+            ForEach(viewModel.getPeriods(), id: \.0) { period, startTime, endTime in
+                HStack(spacing: 4) {
+                    timeColumnView(
+                        period: period, startTime: startTime, endTime: endTime, layout: layout)
+                    periodRowView(period: period, layout: layout)
+                }
+            }
+        }
+    }
+
+    private func timeColumnView(
+        period: String, startTime: String, endTime: String, layout: LayoutMetrics
+    ) -> some View {
+        VStack(spacing: 2) {
+            Text(startTime)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+            Text(period)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .center)
+            Text(endTime)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+        }
+        .frame(width: layout.timeColumnWidth, height: layout.cellHeight)
+    }
+
+    private func periodRowView(period: String, layout: LayoutMetrics) -> some View {
+        HStack(spacing: 4) {
+            ForEach(viewModel.getWeekdays(), id: \.self) { day in
+                TimeSlotCell(
+                    dayIndex: day,
+                    displayDay: weekdayString(from: day),
+                    period: period,
+                    course: viewModel.courses[day]?[period],
+                    presetColors: presetColors,
+                    cellWidth: layout.cellWidth,
+                    cellHeight: layout.cellHeight,
+                    onColorChange: { colorIndex in
+                        viewModel.updateCourseColor(
+                            day: day, period: period, colorIndex: colorIndex)
+                    },
+                    isCurrentDay: day == viewModel.getCurrentWeekday(),
+                    isCurrentPeriod: period == viewModel.getCurrentPeriod()
+                )
+            }
+        }
+    }
+}
+
+// MARK: - レイアウト定数
+private struct LayoutMetrics {
+    let timeColumnWidth: CGFloat = 35
+    let leftPadding: CGFloat = 8
+    let rightPadding: CGFloat = 10
+    let cellWidth: CGFloat
+    let cellHeight: CGFloat
+
+    init(geometry: GeometryProxy, columnCount: Int, rowCount: Int) {
+        let safeColumnCount = max(1, columnCount)
+        let safeRowCount = max(1, rowCount)
+
+        cellWidth =
+            (geometry.size.width - timeColumnWidth - leftPadding - rightPadding - CGFloat(
+                safeColumnCount - 1) * 4) / CGFloat(safeColumnCount)
+        cellHeight =
+            (geometry.size.height - 40 - CGFloat(safeRowCount - 1) * 4) / CGFloat(safeRowCount)
+    }
+}
+
+// MARK: - 時限セル
+/// 授業セルビュー
+struct TimeSlotCell: View {
+    let dayIndex: String
+    let displayDay: String
+    let period: String
+    let course: CourseModel?
+    let presetColors: [Color]
+    let cellWidth: CGFloat
+    let cellHeight: CGFloat
+    let onColorChange: (Int) -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    // 現在の時限かどうかを判断するプロパティを追加
+    let isCurrentDay: Bool
+    let isCurrentPeriod: Bool
+
+    @State private var showingDetail = false
+
+    // 背景色の調整
+    private var adjustedBackgroundColor: Color {
+        guard let course = course else {
+            return colorScheme == .dark ? Color(UIColor.systemGray6) : .white
+        }
+        let baseColor = presetColors[course.colorIndex]
+        return colorScheme == .dark ? baseColor.opacity(0.8) : baseColor
+    }
+
+    var body: some View {
+        ZStack {
+            // 背景色
+            RoundedRectangle(cornerRadius: 8)
+                .fill(adjustedBackgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(
+                            (isCurrentDay && isCurrentPeriod)
+                                ? Color.green
+                                : (colorScheme == .dark
+                                    ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2)),
+                            lineWidth: (isCurrentDay && isCurrentPeriod) ? 1.5 : 1
+                        )
+                )
+
+            if let course = course {
+                // 授業情報テキスト
+                VStack(spacing: 2) {
+                    Text(course.name)
+                        .font(.system(size: 12))
+                        .lineLimit(3)
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.8)
+                        .foregroundColor(.primary)
+                    Text(course.room)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 4)
+
+                // 未読掲示
+                if let keijiMidokCnt = course.keijiMidokCnt, keijiMidokCnt > 0 {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            ZStack {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 15, height: 15)
+                                Text("\(keijiMidokCnt)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.trailing, -6)
+                            .padding(.top, -6)
+                        }
+                        Spacer()
+                    }
+                    .padding(4)
+                    .frame(width: cellWidth, height: cellHeight)
+                }
+            } else {
+                // 空セルテキスト
+                Text("\(displayDay)\(period)")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(width: cellWidth, height: cellHeight)
+        .onTapGesture {
+            if course != nil {
+                showingDetail = true
+            }
+        }
+        .sheet(isPresented: $showingDetail) {
+            if let course = course {
+                CourseDetailView(
+                    course: course,
+                    presetColors: presetColors,
+                    selectedColorIndex: course.colorIndex,
+                    onColorChange: onColorChange
+                )
+            }
+        }
+    }
+}
+
+#Preview {
+    TimetableView(isLoggedIn: .constant(true))
+}

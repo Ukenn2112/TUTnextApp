@@ -1,2 +1,3 @@
 *.xcconfig
 .DS_Store
+build/

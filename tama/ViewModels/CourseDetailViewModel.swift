@@ -1,23 +1,36 @@
-import Combine
+import Foundation
 import SwiftUI
 
-class CourseDetailViewModel: ObservableObject {
+/// 授業詳細ViewModel
+@MainActor
+final class CourseDetailViewModel: ObservableObject {
     @Published var isLoading = false
-    @Published var errorMessage: String? = nil
-    @Published var courseDetail: CourseDetailResponse? = nil
+    @Published var errorMessage: String?
+    @Published var courseDetail: CourseDetailResponse?
     @Published var memo: String = ""
-    @Published var isMemoChanged = false
+    var isMemoChanged = false
 
-    private var cancellables = Set<AnyCancellable>()
     private let course: CourseModel
+    private let isPreview: Bool
 
     init(course: CourseModel) {
         self.course = course
+        self.isPreview = false
         self.memo = ""
+    }
+
+    /// プレビュー用初期化（APIを呼ばずにモックデータをセット）
+    init(course: CourseModel, previewDetail: CourseDetailResponse) {
+        self.course = course
+        self.isPreview = true
+        self.courseDetail = previewDetail
+        self.memo = previewDetail.memo
+        self.isLoading = false
     }
 
     // 課程詳細情報を取得
     func fetchCourseDetail() {
+        guard !isPreview else { return }
         isLoading = true
         errorMessage = nil
 
@@ -66,7 +79,7 @@ class CourseDetailViewModel: ObservableObject {
                 AttendanceData(type: NSLocalizedString("出席", comment: ""), count: 0, color: .green),
                 AttendanceData(type: NSLocalizedString("欠席", comment: ""), count: 0, color: .red),
                 AttendanceData(
-                    type: NSLocalizedString("遅早", comment: ""), count: 0, color: .yellow),
+                    type: NSLocalizedString("遅早", comment: ""), count: 0, color: .yellow)
             ]
         }
 
@@ -79,7 +92,7 @@ class CourseDetailViewModel: ObservableObject {
                 color: .red),
             AttendanceData(
                 type: NSLocalizedString("遅早", comment: ""),
-                count: detail.attendance.late + detail.attendance.early, color: .yellow),
+                count: detail.attendance.late + detail.attendance.early, color: .yellow)
         ]
     }
 
@@ -92,9 +105,80 @@ class CourseDetailViewModel: ObservableObject {
     var totalAttendance: Int {
         return attendanceData.reduce(0) { $0 + $1.count }
     }
+
+    // MARK: - URL生成
+
+    // シラバスURLを生成
+    func createSyllabusURL() -> URL? {
+        guard let user = UserService.shared.getCurrentUser(),
+            let encryptedPassword = user.encryptedPassword,
+            let courseYear = course.courseYear,
+            let jugyoCd = course.jugyoCd
+        else {
+            return nil
+        }
+
+        let webApiLoginInfo: [String: Any] = [
+            "paramaterMap": [
+                "nendo": courseYear,
+                "jugyoCd": jugyoCd
+            ],
+            "parameterMap": "",
+            "autoLoginAuthCd": "",
+            "userId": user.username,
+            "formId": "Pkx52301",
+            "password": "",
+            "funcId": "Pkx523",
+            "encryptedPassword": encryptedPassword
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
+            let jsonString = String(data: jsonData, encoding: .utf8)
+        else {
+            return nil
+        }
+
+        let encodedLoginInfo = jsonString.webAPIEncoded
+        let urlString =
+            "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
+        return URL(string: urlString)
+    }
+
+    // 掲示URLを生成
+    func createAnnouncementURL(announcementId: Int) -> URL? {
+        guard let user = UserService.shared.getCurrentUser(),
+            let encryptedPassword = user.encryptedPassword
+        else {
+            return nil
+        }
+
+        let webApiLoginInfo: [String: Any] = [
+            "autoLoginAuthCd": "",
+            "parameterMap": "",
+            "paramaterMap": [
+                "keijiNo": announcementId
+            ],
+            "encryptedPassword": encryptedPassword,
+            "formId": "Bsd50702",
+            "userId": user.username,
+            "funcId": "Bsd507",
+            "password": ""
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: webApiLoginInfo),
+            let jsonString = String(data: jsonData, encoding: .utf8)
+        else {
+            return nil
+        }
+
+        let encodedLoginInfo = jsonString.webAPIEncoded
+        let urlString =
+            "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
+        return URL(string: urlString)
+    }
 }
 
-// 出欠情報の構造体
+/// 出欠情報の表示用モデル
 struct AttendanceData: Identifiable {
     let id = UUID()
     let type: String
