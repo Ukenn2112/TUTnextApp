@@ -115,29 +115,32 @@ struct CourseDetailView: View {
 
     // MARK: - ヘルパー
 
-    /// 時限バッジのテキスト色（コントラストを確保するため彩度を上げて暗くする）
+    /// 時限バッジのテキスト色
     private var periodBadgeTextColor: Color {
-        let base = presetColors[selectedColorIndex]
         if colorScheme == .dark {
-            return base
-        } else {
-            // UIColorに変換してHSBを取得し、彩度を上げて明度を下げる
-            var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
-            UIColor(base).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-            return Color(UIColor(hue: hue, saturation: min(saturation + 0.4, 1.0), brightness: max(brightness - 0.35, 0.3), alpha: 1.0))
+            // ダークモード: 暗いバッジ背景に対して白テキストでコントラスト確保
+            return Color.white.opacity(0.9)
         }
+        // ライトモード: パステル色から彩度アップ・明度ダウンで視認性の高い派生色を生成
+        let base = presetColors[selectedColorIndex]
+        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(base).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        guard saturation > 0.05 else { return .secondary }
+        return Color(UIColor(hue: hue, saturation: min(saturation + 0.4, 1.0), brightness: max(brightness - 0.35, 0.3), alpha: 1.0))
     }
 
-    /// 時限バッジの背景色（テキストより薄いが視認性のある背景）
+    /// 時限バッジの背景色
     private var periodBadgeBackgroundColor: Color {
         let base = presetColors[selectedColorIndex]
         if colorScheme == .dark {
-            return base.opacity(0.25)
-        } else {
-            var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
-            UIColor(base).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-            return Color(UIColor(hue: hue, saturation: min(saturation + 0.15, 1.0), brightness: brightness, alpha: 0.45))
+            // ダークモード: カラーセットのダーク変種を使用（tertiarySystemFillをベースに重ねる）
+            return base.opacity(0.85)
         }
+        // ライトモード: 彩度を微調整した半透明バッジ背景
+        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(base).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        guard saturation > 0.05 else { return Color(UIColor.secondarySystemFill) }
+        return Color(UIColor(hue: hue, saturation: min(saturation + 0.15, 1.0), brightness: brightness, alpha: 0.45))
     }
 
     private func sectionHeader(icon: String, title: LocalizedStringKey, trailing: Text? = nil) -> some View {
@@ -158,21 +161,17 @@ struct CourseDetailView: View {
     @ViewBuilder
     private func cardBackground() -> some View {
         ZStack {
-            if colorScheme == .dark {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.05))
-                    .blur(radius: 1)
-                    .padding(-2)
-            }
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.cardGlow)
+                .blur(radius: 1)
+                .padding(-2)
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(UIColor.systemBackground))
         }
     }
 
     private var cardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        colorScheme == .dark
-            ? (Color.white.opacity(0.07), 8, 0, 0)
-            : (Color.black.opacity(0.1), 5, 0, 2)
+        (Color.cardShadow, 6, 0, 1)
     }
 
     // MARK: - Hero Header
@@ -209,8 +208,10 @@ struct CourseDetailView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(
-                            Capsule()
-                                .fill(periodBadgeBackgroundColor)
+                            ZStack {
+                                Capsule().fill(Color(UIColor.tertiarySystemFill))
+                                Capsule().fill(periodBadgeBackgroundColor)
+                            }
                         )
 
                     Spacer()
@@ -406,7 +407,7 @@ struct CourseDetailView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 5)
-                            .background(Capsule().fill(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255)))
+                            .background(Capsule().fill(Color.appPrimary))
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
@@ -606,19 +607,7 @@ struct CourseDetailView: View {
         keijiMidokCnt: 1
     )
 
-    let presetColors: [Color] = [
-        .white,
-        Color(red: 0.98, green: 0.86, blue: 0.86),
-        Color(red: 0.98, green: 0.92, blue: 0.86),
-        Color(red: 0.98, green: 0.98, blue: 0.86),
-        Color(red: 0.92, green: 0.98, blue: 0.86),
-        Color(red: 0.86, green: 0.98, blue: 0.86),
-        Color(red: 0.86, green: 0.98, blue: 0.98),
-        Color(red: 0.98, green: 0.86, blue: 0.92),
-        Color(red: 0.92, green: 0.86, blue: 0.98),
-        Color(red: 0.86, green: 0.92, blue: 0.98),
-        Color(red: 0.98, green: 0.86, blue: 0.98),
-    ]
+    let presetColors = Color.coursePresets
 
     let mockDetail = CourseDetailResponse(
         announcements: [

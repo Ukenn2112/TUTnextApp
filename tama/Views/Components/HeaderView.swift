@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct HeaderView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var oauthService: GoogleOAuthService
     @Binding var selectedTab: Int
     @Binding var isLoggedIn: Bool
@@ -201,7 +200,7 @@ struct HeaderView: View {
                     Text(semester.shortYearString)
                         .font(.system(size: 15, weight: .bold))
                         .padding(6)
-                        .background(Color.pink.opacity(colorScheme == .dark ? 0.25 : 0.15))
+                        .background(Color.notificationBadgeBackground)
                         .cornerRadius(10)
 
                     Text(semester.fullDisplayName)

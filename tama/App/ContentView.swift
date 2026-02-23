@@ -77,7 +77,7 @@ struct ContentView: View {
                     }
                     .tag(3)
             }
-            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+            .tint(.appPrimary)
             .onChange(of: selectedTab) { oldValue, newValue in
                 if newValue == 3 {
                     selectedTab = oldValue

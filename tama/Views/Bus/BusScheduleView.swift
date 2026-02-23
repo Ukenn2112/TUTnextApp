@@ -4,7 +4,6 @@ import SwiftUI
 struct BusScheduleView: View {
     // MARK: - プロパティ
     @StateObject private var viewModel = BusScheduleViewModel()
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
 
     // MARK: - ボディ
@@ -25,7 +24,6 @@ struct BusScheduleView: View {
                 // 路線セレクタ
                 BusRouteTypeSelector(
                     selectedRouteType: $viewModel.selectedRouteType,
-                    colorScheme: colorScheme,
                     onChanged: { viewModel.onRouteTypeChanged() }
                 )
 
@@ -34,11 +32,11 @@ struct BusScheduleView: View {
                     let basePadding: CGFloat = viewModel.selectedTimeEntry == nil ? 90 : 110
                     let pinExtraPadding: CGFloat = viewModel.busSchedule?.pin != nil ? 56 : 0
                     let topPadding: CGFloat = basePadding + pinExtraPadding
-                    BusTimeTableContent(viewModel: viewModel, colorScheme: colorScheme)
+                    BusTimeTableContent(viewModel: viewModel)
                         .padding(.top, topPadding)
 
                     // 浮動現在時刻表示カード
-                    BusTimeCardView(viewModel: viewModel, colorScheme: colorScheme)
+                    BusTimeCardView(viewModel: viewModel)
                         .padding(.horizontal)
                         .padding(.top, 10)
                 }
@@ -182,7 +180,6 @@ struct BusScheduleTypeSelector: View {
 
 struct BusRouteTypeSelector: View {
     @Binding var selectedRouteType: BusSchedule.RouteType
-    let colorScheme: ColorScheme
     var onChanged: () -> Void
 
     var body: some View {
@@ -241,12 +238,12 @@ struct BusRouteTypeSelector: View {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(
                             selectedRouteType == type
-                                ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255)
-                                : Color.gray.opacity(colorScheme == .dark ? 0.25 : 0.15)
+                                ? Color.appPrimary
+                                : Color(UIColor.secondarySystemFill)
                         )
                         .shadow(
                             color: selectedRouteType == type
-                                ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255)
+                                ? Color.appPrimary
                                     .opacity(0.3) : Color.clear,
                             radius: 3, x: 0, y: 2)
                 )
@@ -261,7 +258,6 @@ struct BusRouteTypeSelector: View {
 
 struct BusTimeCardView: View {
     @ObservedObject var viewModel: BusScheduleViewModel
-    let colorScheme: ColorScheme
 
     var body: some View {
         VStack(spacing: 10) {
@@ -349,7 +345,7 @@ struct BusTimeCardView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(UIColor.systemBackground))
                 .shadow(
-                    color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.2), radius: 3,
+                    color: Color.primary.opacity(0.15), radius: 3,
                     x: 0, y: 1)
         )
         .contentShape(Rectangle())
@@ -414,7 +410,6 @@ struct BusTimeCardView: View {
 
 struct BusTimeTableContent: View {
     @ObservedObject var viewModel: BusScheduleViewModel
-    let colorScheme: ColorScheme
 
     var body: some View {
         ScrollViewReader { scrollProxy in
@@ -460,17 +455,16 @@ struct BusTimeTableContent: View {
                 wednesdaySpecialMessage
             }
 
-            ForEach(viewModel.getFilteredSchedule().hourSchedules, id: \.hour) { hourSchedule in
-                if !hourSchedule.times.isEmpty {
-                    hourScheduleRow(hourSchedule)
-                }
+            let visibleSchedules = viewModel.getFilteredSchedule().hourSchedules.filter { !$0.times.isEmpty }
+            ForEach(Array(visibleSchedules.enumerated()), id: \.element.hour) { index, hourSchedule in
+                hourScheduleRow(hourSchedule, rowIndex: index)
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(UIColor.systemBackground))
                 .shadow(
-                    color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.1), radius: 3,
+                    color: Color.primary.opacity(0.12), radius: 3,
                     x: 0, y: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -498,7 +492,7 @@ struct BusTimeTableContent: View {
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 12)
         }
-        .background(Color.gray.opacity(colorScheme == .dark ? 0.15 : 0.05))
+        .background(Color(UIColor.systemFill))
     }
 
     private var wednesdaySpecialMessage: some View {
@@ -517,7 +511,7 @@ struct BusTimeTableContent: View {
     }
 
 
-    private func hourScheduleRow(_ hourSchedule: BusSchedule.HourSchedule) -> some View {
+    private func hourScheduleRow(_ hourSchedule: BusSchedule.HourSchedule, rowIndex: Int) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Text("\(hourSchedule.hour)")
@@ -556,10 +550,10 @@ struct BusTimeTableContent: View {
         .id("hour_\(hourSchedule.hour)")
         .background(
             viewModel.isCurrentHour(hourSchedule.hour)
-                ? Color.green.opacity(colorScheme == .dark ? 0.2 : 0.1)
-                : (hourSchedule.hour % 2 == 0
+                ? Color.currentHourBackground
+                : (rowIndex % 2 == 0
                     ? Color(UIColor.systemBackground)
-                    : Color.gray.opacity(colorScheme == .dark ? 0.1 : 0.03))
+                    : Color(UIColor.quaternarySystemFill))
         )
     }
 
@@ -578,7 +572,7 @@ struct BusTimeTableContent: View {
                             viewModel.selectedTimeEntry == time
                                 ? Color.orange.opacity(0.9)
                                 : (viewModel.isCurrentOrNextBus(time)
-                                    ? Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255) : Color.clear)
+                                    ? Color.appPrimary : Color.clear)
                         )
                 )
 
@@ -632,7 +626,7 @@ struct BusTimeTableContent: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(UIColor.systemBackground))
                 .shadow(
-                    color: Color.primary.opacity(colorScheme == .dark ? 0.15 : 0.1), radius: 3,
+                    color: Color.primary.opacity(0.12), radius: 3,
                     x: 0, y: 1)
         )
         .contentShape(Rectangle())

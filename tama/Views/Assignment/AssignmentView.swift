@@ -4,7 +4,6 @@ struct AssignmentView: View {
     @Binding var isLoggedIn: Bool
     @StateObject private var viewModel = AssignmentViewModel()
     @State private var selectedFilter: AssignmentFilter = .all
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
     @EnvironmentObject private var oauthService: GoogleOAuthService
     // フォアグラウンド復帰通知オブザーバー
@@ -173,7 +172,7 @@ struct AssignmentView: View {
                         .fill(
                             selectedFilter == filter
                                 ? Color.blue.opacity(0.9)
-                                : Color.gray.opacity(colorScheme == .dark ? 0.25 : 0.15)
+                                : Color(UIColor.secondarySystemFill)
                         )
                         .shadow(
                             color: selectedFilter == filter ? Color.blue.opacity(0.3) : Color.clear,

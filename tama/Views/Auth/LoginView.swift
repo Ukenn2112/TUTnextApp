@@ -4,7 +4,6 @@ import UserNotifications
 
 struct LoginView: View {
     // MARK: - プロパティ
-    @Environment(\.colorScheme) private var colorScheme
     @Binding var isLoggedIn: Bool
     @EnvironmentObject private var notificationService: NotificationService
     @EnvironmentObject private var ratingService: RatingService
@@ -22,9 +21,7 @@ struct LoginView: View {
     @State private var nfcShimmer = false
 
     // MARK: - 計算プロパティ
-    private var errorColor: Color {
-        colorScheme == .dark ? Color.red.opacity(0.8) : Color.red
-    }
+    private var errorColor: Color { .red }
 
     // MARK: - ボディ
     var body: some View {
@@ -166,12 +163,12 @@ struct LoginView: View {
                         Text("学生証スキャン")
                             .font(.system(size: 12))
                     }
-                    .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.5))
+                    .foregroundColor(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
                         RoundedRectangle(cornerRadius: 5)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.06))
+                            .fill(Color(UIColor.secondarySystemFill))
                     )
                     .overlay(
                         GeometryReader { geo in
@@ -237,7 +234,7 @@ struct LoginView: View {
                         } else {
                             Text("多摩大アカウントでサインイン")
                                 .frame(maxWidth: .infinity)
-                                .foregroundColor(colorScheme == .dark ? .black : .white)
+                                .foregroundColor(Color(UIColor.systemBackground))
                         }
                     }
                 }
@@ -248,30 +245,29 @@ struct LoginView: View {
                 .padding(.horizontal, 30)
                 .padding(.top, 20)
                 .disabled(viewModel.isLoginButtonDisabled)
-                .tint(colorScheme == .dark ? Color.white : Color.black)
+                .tint(Color(UIColor.label))
             } else {
                 Button(action: performLogin) {
                     ZStack {
                         Rectangle()
-                            .fill(colorScheme == .dark ? Color.white : Color.black)
+                            .fill(Color(UIColor.label))
                             .cornerRadius(25)
                             .frame(height: 50)
                             .shadow(
-                                color: (colorScheme == .dark ? Color.white : Color.black)
-                                    .opacity(colorScheme == .dark ? 0.1 : 0.15),
+                                color: Color(UIColor.label).opacity(0.12),
                                 radius: 5,
                                 x: 0,
-                                y: colorScheme == .dark ? -2 : 2
+                                y: 2
                             )
 
                         if viewModel.isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle())
-                                .tint(colorScheme == .dark ? .black : .white)
+                                .tint(Color(UIColor.systemBackground))
                         } else {
                             Text("多摩大アカウントでサインイン")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(colorScheme == .dark ? .black : .white)
+                                .foregroundColor(Color(UIColor.systemBackground))
                         }
                     }
                 }

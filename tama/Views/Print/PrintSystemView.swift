@@ -84,7 +84,7 @@ struct PrintSystemView: View {
                 HStack {
                     Image(systemName: "doc.fill")
                         .font(.title2)
-                        .foregroundStyle(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+                        .foregroundStyle(Color.appPrimary)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(selectedFile.name)
@@ -102,7 +102,7 @@ struct PrintSystemView: View {
                         viewModel.selectFile()
                     }
                     .font(.subheadline.weight(.medium))
-                    .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+                    .tint(Color.appPrimary)
                 }
                 .padding()
                 .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
@@ -124,7 +124,7 @@ struct PrintSystemView: View {
                     .padding(.vertical, 12)
             }
             .buttonStyle(.glassProminent)
-            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+            .tint(Color.appPrimary)
         } else {
             Button {
                 viewModel.selectFile()
@@ -135,7 +135,7 @@ struct PrintSystemView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
             }
-            .background(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color.appPrimary, in: RoundedRectangle(cornerRadius: 12))
         }
     }
 
@@ -228,7 +228,7 @@ struct PrintSystemView: View {
             ForEach(viewModel.recentUploads, id: \.printNumber) { result in
                 HStack {
                     Image(systemName: "doc.fill")
-                        .foregroundStyle(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+                        .foregroundStyle(Color.appPrimary)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(result.fileName)
@@ -269,7 +269,7 @@ struct PrintSystemView: View {
             }
             .buttonStyle(.glassProminent)
             .padding(.top, 10)
-            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+            .tint(Color.appPrimary)
         } else {
             Button {
                 viewModel.uploadFile()
@@ -279,7 +279,7 @@ struct PrintSystemView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.appPrimary, in: RoundedRectangle(cornerRadius: 12))
                     .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
             }
             .padding(.top, 10)
@@ -333,7 +333,7 @@ struct PrintResultView: View {
                             } label: {
                                 Image(systemName: "doc.on.doc")
                                     .font(.subheadline)
-                                    .foregroundStyle(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+                                    .foregroundStyle(Color.appPrimary)
                             }
                         }
                     }
@@ -417,7 +417,7 @@ struct PrintResultView: View {
                     .padding(.vertical, 12)
             }
             .buttonStyle(.glassProminent)
-            .tint(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255))
+            .tint(Color.appPrimary)
         } else {
             Button {
                 dismiss()
@@ -428,7 +428,7 @@ struct PrintResultView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color(red: 244 / 255, green: 134 / 255, blue: 142 / 255), in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.appPrimary, in: RoundedRectangle(cornerRadius: 12))
             }
         }
     }

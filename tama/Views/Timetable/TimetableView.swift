@@ -4,7 +4,6 @@ struct TimetableView: View {
     // MARK: - プロパティ
     @StateObject private var viewModel = TimetableViewModel()
     @Binding var isLoggedIn: Bool
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var ratingService: RatingService
     // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol?
@@ -26,19 +25,7 @@ struct TimetableView: View {
         return weekdays[idx - 1]
     }
 
-    private let presetColors: [Color] = [
-        .white,
-        Color(red: 0.98, green: 0.86, blue: 0.86),  // ピンク
-        Color(red: 0.98, green: 0.92, blue: 0.86),  // オレンジ
-        Color(red: 0.98, green: 0.98, blue: 0.86),  // イエロー
-        Color(red: 0.92, green: 0.98, blue: 0.86),  // ライトグリーン
-        Color(red: 0.86, green: 0.98, blue: 0.86),  // グリーン
-        Color(red: 0.86, green: 0.98, blue: 0.98),  // シアン
-        Color(red: 0.98, green: 0.86, blue: 0.92),  // ピンクパープル
-        Color(red: 0.92, green: 0.86, blue: 0.98),  // パープル
-        Color(red: 0.86, green: 0.92, blue: 0.98),  // ブルー
-        Color(red: 0.98, green: 0.86, blue: 0.98)   // マゼンタ
-    ]
+    private let presetColors = Color.coursePresets
 
     // MARK: - ボディ
     var body: some View {
@@ -249,7 +236,6 @@ struct TimeSlotCell: View {
     let cellWidth: CGFloat
     let cellHeight: CGFloat
     let onColorChange: (Int) -> Void
-    @Environment(\.colorScheme) private var colorScheme
 
     // 現在の時限かどうかを判断するプロパティを追加
     let isCurrentDay: Bool
@@ -257,27 +243,22 @@ struct TimeSlotCell: View {
 
     @State private var showingDetail = false
 
-    // 背景色の調整
-    private var adjustedBackgroundColor: Color {
-        guard let course = course else {
-            return colorScheme == .dark ? Color(UIColor.systemGray6) : .white
-        }
-        let baseColor = presetColors[course.colorIndex]
-        return colorScheme == .dark ? baseColor.opacity(0.8) : baseColor
+    private var courseBackgroundColor: Color {
+        guard let course = course else { return Color(UIColor.systemBackground) }
+        return presetColors[course.colorIndex]
     }
 
     var body: some View {
         ZStack {
             // 背景色
             RoundedRectangle(cornerRadius: 8)
-                .fill(adjustedBackgroundColor)
+                .fill(courseBackgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(
                             (isCurrentDay && isCurrentPeriod)
                                 ? Color.green
-                                : (colorScheme == .dark
-                                    ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2)),
+                                : Color(UIColor.separator),
                             lineWidth: (isCurrentDay && isCurrentPeriod) ? 1.5 : 1
                         )
                 )

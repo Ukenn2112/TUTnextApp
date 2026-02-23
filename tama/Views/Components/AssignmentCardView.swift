@@ -3,8 +3,6 @@ import SwiftUI
 struct AssignmentCardView: View {
     let assignment: Assignment
     var onTap: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-
     // 課題の状態に応じた色を返す
     private var timeColor: Color {
         if assignment.isOverdue {
@@ -82,13 +80,10 @@ struct AssignmentCardView: View {
             .padding()
             .background(
                 ZStack {
-                    // ダークモードの場合、白い光彩を追加
-                    if colorScheme == .dark {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white.opacity(0.05))
-                            .blur(radius: 1)
-                            .padding(-2)
-                    }
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.cardGlow)
+                        .blur(radius: 1)
+                        .padding(-2)
 
                     // カードの背景
                     RoundedRectangle(cornerRadius: 12)
@@ -96,12 +91,10 @@ struct AssignmentCardView: View {
                 }
             )
             .shadow(
-                color: colorScheme == .dark
-                    ? Color.white.opacity(0.07)
-                    : Color.black.opacity(0.1),
-                radius: colorScheme == .dark ? 8 : 5,
+                color: Color.cardShadow,
+                radius: 6,
                 x: 0,
-                y: colorScheme == .dark ? 0 : 2
+                y: 1
             )
         }
         .buttonStyle(PlainButtonStyle())
