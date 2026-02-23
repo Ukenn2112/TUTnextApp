@@ -16,7 +16,7 @@ final class BusScheduleService {
     private var cachedSchedule: BusSchedule?
 
     /// キャッシュの有効期限（秒）
-    private let cacheExpirationTime: TimeInterval = 3_600  // 1時間
+    private let cacheExpirationTime: TimeInterval = 43_200  // 12時間
 
     /// 最後にデータを取得した時間
     private var lastFetchTime: Date?
@@ -40,48 +40,52 @@ final class BusScheduleService {
     }
 
     /// バス時刻表データを取得（非同期）
+    /// キャッシュがあれば即座に返し、バックグラウンドでAPIから最新データを取得する。
+    /// API取得成功時はcompletionを再度呼び出してデータを更新する。
+    /// API取得失敗時はキャッシュが12時間以内なら何もしない。12時間を超えていればエラーを返す。
     func fetchBusScheduleData(completion: @escaping (BusSchedule?, Error?) -> Void) {
-        // リクエストが進行中の場合は、重複リクエストを避ける
+        // キャッシュがあれば先に返す（有効期限に関係なく）
+        if let cachedSchedule = cachedSchedule {
+            let lastFetch = lastFetchTime.map { formatDate($0) } ?? "不明"
+            print("BusScheduleService: キャッシュデータを先行表示します（取得時間: \(lastFetch)）")
+            completion(cachedSchedule, nil)
+        }
+
+        // リクエストが既に進行中の場合は重複を避ける
         if isRequestInProgress {
             print("BusScheduleService: リクエストが既に進行中です")
             return
         }
 
-        // キャッシュが有効な場合はキャッシュを返す
-        if let cachedSchedule = cachedSchedule,
-            let lastFetchTime = lastFetchTime,
-            Date().timeIntervalSince(lastFetchTime) < cacheExpirationTime {
-            print("BusScheduleService: キャッシュされたデータを使用します（取得時間: \(formatDate(lastFetchTime))）")
-            completion(cachedSchedule, nil)
-            return
-        }
-
-        print("BusScheduleService: APIから新しいデータを取得します")
+        print("BusScheduleService: バックグラウンドでAPIから最新データを取得します")
         isRequestInProgress = true
 
-        // APIからデータを取得
         guard let url = URL(string: apiURL) else {
-            let error = NSError(
-                domain: "BusScheduleService", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
-            print("BusScheduleService: エラー - \(error.localizedDescription)")
             isRequestInProgress = false
-            completion(nil, error)
+            if !isCacheValid() {
+                let error = NSError(
+                    domain: "BusScheduleService", code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+                print("BusScheduleService: エラー（キャッシュ無効）- \(error.localizedDescription)")
+                DispatchQueue.main.async { completion(nil, error) }
+            }
             return
         }
 
         let task = URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self else { return }
 
-            // データ取得完了後、進行中フラグをリセット
-            defer {
-                self.isRequestInProgress = false
-            }
+            defer { self.isRequestInProgress = false }
 
             if let error = error {
                 print("BusScheduleService: ネットワークエラー - \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(nil, error)
+                    if !self.isCacheValid() {
+                        print("BusScheduleService: キャッシュが12時間を超えているためエラーを返します")
+                        completion(nil, error)
+                    } else {
+                        print("BusScheduleService: キャッシュが有効期限内のためエラーを無視します")
+                    }
                 }
                 return
             }
@@ -90,9 +94,14 @@ final class BusScheduleService {
                 let error = NSError(
                     domain: "BusScheduleService", code: 2,
                     userInfo: [NSLocalizedDescriptionKey: "No data received"])
-                print("BusScheduleService: エラー - \(error.localizedDescription)")
+                print("BusScheduleService: データなし - \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(nil, error)
+                    if !self.isCacheValid() {
+                        print("BusScheduleService: キャッシュが12時間を超えているためエラーを返します")
+                        completion(nil, error)
+                    } else {
+                        print("BusScheduleService: キャッシュが有効期限内のためエラーを無視します")
+                    }
                 }
                 return
             }
@@ -101,31 +110,29 @@ final class BusScheduleService {
                 let decoder = JSONDecoder()
                 let apiResponse = try decoder.decode(BusAPIResponse.self, from: data)
 
-                // APIレスポンスからBusScheduleオブジェクトを作成
                 let busSchedule = self.createBusScheduleFromAPIResponse(apiResponse)
 
                 // キャッシュを更新
                 self.cachedSchedule = busSchedule
                 self.lastFetchTime = Date()
 
-                // SwiftData 操作はメインスレッドで実行
                 let fetchTime = self.lastFetchTime!
-                DispatchQueue.main.async {
-                    self.saveBusDataToSwiftData(
-                        busSchedule: busSchedule, lastFetchTime: fetchTime)
-                }
-
-                print(
-                    "BusScheduleService: 新しいデータの取得に成功しました（取得時間: \(self.formatDate(self.lastFetchTime!))）"
-                )
+                print("BusScheduleService: 新しいデータの取得に成功しました（取得時間: \(self.formatDate(fetchTime))）")
 
                 DispatchQueue.main.async {
+                    self.saveBusDataToSwiftData(busSchedule: busSchedule, lastFetchTime: fetchTime)
+                    // API成功時はデータを更新するため再度completionを呼ぶ
                     completion(busSchedule, nil)
                 }
             } catch {
                 print("BusScheduleService: デコードエラー - \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    completion(nil, error)
+                    if !self.isCacheValid() {
+                        print("BusScheduleService: キャッシュが12時間を超えているためエラーを返します")
+                        completion(nil, error)
+                    } else {
+                        print("BusScheduleService: キャッシュが有効期限内のためエラーを無視します")
+                    }
                 }
             }
         }
@@ -266,7 +273,7 @@ final class BusScheduleService {
     private func createSpecialNotes() -> [BusSchedule.SpecialNote] {
         return [
             BusSchedule.SpecialNote(
-                symbol: "◯", description: NSLocalizedString("印の付いた便は、永山駅経由学校行です。", comment: "")),
+                symbol: "◎", description: NSLocalizedString("印の付いた便は、永山駅経由学校行です。", comment: "")),
             BusSchedule.SpecialNote(
                 symbol: "*", description: NSLocalizedString("印のついた便は、永山駅経由聖蹟桜ヶ丘駅行です。", comment: "")),
             BusSchedule.SpecialNote(
@@ -274,7 +281,7 @@ final class BusScheduleService {
             BusSchedule.SpecialNote(
                 symbol: "K", description: NSLocalizedString("高校生乗車限定", comment: "")),
             BusSchedule.SpecialNote(
-                symbol: "M", description: NSLocalizedString("大学生用マイクロバス（火・水・木のみ）", comment: ""))
+                symbol: "M", description: NSLocalizedString("大学生用マイクロバス（月～木のみ）", comment: ""))
         ]
     }
 

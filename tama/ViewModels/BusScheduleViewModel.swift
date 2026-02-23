@@ -48,11 +48,17 @@ final class BusScheduleViewModel: ObservableObject {
     func fetchBusScheduleData() {
         busScheduleService.fetchBusScheduleData { [weak self] schedule, error in
             guard let self = self else { return }
-            if error != nil {
-                self.errorMessage = NSLocalizedString(
-                    "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。", comment: "")
-            } else {
+            if let schedule = schedule {
+                // キャッシュまたはAPI成功時：データを更新してエラーをクリア
                 self.busSchedule = schedule
+                self.errorMessage = nil
+            } else if let error = error {
+                // API失敗かつキャッシュが12時間を超えている場合のみエラー表示
+                print("BusScheduleViewModel: エラー - \(error.localizedDescription)")
+                if self.busSchedule == nil {
+                    self.errorMessage = NSLocalizedString(
+                        "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。", comment: "")
+                }
             }
         }
     }
@@ -61,7 +67,6 @@ final class BusScheduleViewModel: ObservableObject {
 
     func setupOnAppear() {
         fetchBusScheduleData()
-        checkCacheAndRefreshIfNeeded()
         setupLocationManager()
         setupTimers()
         checkIfWeekday()
@@ -147,11 +152,15 @@ final class BusScheduleViewModel: ObservableObject {
     }
 
     func updateScrollToHour() {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.hour], from: currentTime)
         scrollToHour = nil
         DispatchQueue.main.async {
-            self.scrollToHour = components.hour
+            if let nextBus = self.getNextBus() {
+                self.scrollToHour = nextBus.hour
+            } else {
+                let calendar = Calendar.current
+                let components = calendar.dateComponents([.hour], from: self.currentTime)
+                self.scrollToHour = components.hour
+            }
         }
     }
 
@@ -185,9 +194,8 @@ final class BusScheduleViewModel: ObservableObject {
     }
 
     func isCurrentHour(_ hour: Int) -> Bool {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.hour], from: currentTime)
-        return components.hour == hour
+        guard let nextBus = getNextBus() else { return false }
+        return nextBus.hour == hour
     }
 
     func isTimeEqual(_ timeEntry: BusSchedule.TimeEntry, to date: Date) -> Bool {
@@ -200,32 +208,8 @@ final class BusScheduleViewModel: ObservableObject {
     }
 
     func isCurrentOrNextBus(_ time: BusSchedule.TimeEntry) -> Bool {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.hour, .minute], from: currentTime)
-        guard let currentHour = components.hour, let currentMinute = components.minute else {
-            return false
-        }
-
-        if time.hour == currentHour && time.minute >= currentMinute {
-            return true
-        }
-
-        if time.hour == currentHour + 1 {
-            let currentHourSchedule = getFilteredSchedule().hourSchedules.first {
-                $0.hour == currentHour
-            }
-            if let currentHourSchedule = currentHourSchedule,
-                !currentHourSchedule.times.contains(where: { $0.minute > currentMinute }),
-                let nextHourSchedule = getFilteredSchedule().hourSchedules.first(where: {
-                    $0.hour == currentHour + 1
-                }),
-                let firstTimeInNextHour = nextHourSchedule.times.first,
-                time.minute == firstTimeInNextHour.minute {
-                return true
-            }
-        }
-
-        return false
+        guard let nextBus = getNextBus() else { return false }
+        return time.hour == nextBus.hour && time.minute == nextBus.minute
     }
 
     func getNextBus() -> BusSchedule.TimeEntry? {
@@ -315,13 +299,6 @@ final class BusScheduleViewModel: ObservableObject {
                 selectedTimeEntry = nil
                 cardInfoAppeared = false
             }
-        }
-    }
-
-    private func checkCacheAndRefreshIfNeeded() {
-        guard busSchedule != nil else { return }
-        if !busScheduleService.isCacheValid() {
-            fetchBusScheduleData()
         }
     }
 

@@ -2366,24 +2366,24 @@
         }
       }
     },
-    "大学生用マイクロバス（火・水・木のみ）" : {
+    "大学生用マイクロバス（月～木のみ）" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "University Student Microbus (Tue, Wed, Thu only)"
+            "value" : "University Student Microbus (Monday to Thursday only)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "대학생용 마이크로버스 (화요일, 수요일, 목요일만)"
+            "value" : "대학생용 마이크로버스 (월요일부터 목요일까지만 이용 가능)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "为大学生用小型巴士（仅限周二、周三和周四）"
+            "value" : "为大学生用小型巴士（仅限周一到周四）"
           }
         }
       }

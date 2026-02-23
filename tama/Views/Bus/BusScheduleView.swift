@@ -30,7 +30,7 @@ struct BusScheduleView: View {
                 // 時刻表コンテンツ（浮動時間カードを含む）
                 ZStack(alignment: .top) {
                     let basePadding: CGFloat = viewModel.selectedTimeEntry == nil ? 90 : 110
-                    let pinExtraPadding: CGFloat = viewModel.busSchedule?.pin != nil ? 56 : 0
+                    let pinExtraPadding: CGFloat = viewModel.busSchedule?.pin != nil ? 60 : 0
                     let topPadding: CGFloat = basePadding + pinExtraPadding
                     BusTimeTableContent(viewModel: viewModel)
                         .padding(.top, topPadding)
@@ -337,7 +337,7 @@ struct BusTimeCardView: View {
             }
 
             if let pinMessage = viewModel.busSchedule?.pin {
-                pinMessageRow(pinMessage)
+                PinMessageRowView(pinMessage: pinMessage)
             }
         }
         .padding()
@@ -353,14 +353,39 @@ struct BusTimeCardView: View {
         .animation(.easeInOut(duration: 0.2), value: viewModel.selectedTimeEntry)
     }
 
-    private func pinMessageRow(_ pinMessage: BusSchedule.PinMessage) -> some View {
+}
+
+// MARK: - ピンメッセージ行ビュー
+
+private struct PinMessageRowView: View {
+    let pinMessage: BusSchedule.PinMessage
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            rowContent
+                .glassEffect(.regular.tint(.orange.opacity(0.15)), in: RoundedRectangle(cornerRadius: 10))
+        } else {
+            rowContent
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.orange.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+                        )
+                )
+        }
+    }
+
+    private var rowContent: some View {
         HStack(alignment: .center, spacing: 10) {
             Image(systemName: "pin.fill")
-                .foregroundColor(.orange)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.orange)
 
             Text(pinMessage.title)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .minimumScaleFactor(0.8)
@@ -369,40 +394,30 @@ struct BusTimeCardView: View {
 
             if let url = URL(string: pinMessage.url) {
                 Link(destination: url) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 3) {
                         Text("詳細")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.orange)
-
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12))
-                            .foregroundColor(.orange)
+                            .font(.system(size: 10, weight: .bold))
                     }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 8)
-                    .background(Color.orange.opacity(0.2))
-                    .cornerRadius(8)
+                    .foregroundStyle(.orange)
+                    .padding(.vertical, 5)
+                    .padding(.horizontal, 9)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(Color.white.opacity(0.22))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 7)
+                                    .stroke(Color.orange.opacity(0.35), lineWidth: 0.5)
+                            )
+                    )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.08)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.orange.opacity(0.6), lineWidth: 1)
-        )
     }
 }
 

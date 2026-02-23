@@ -116,11 +116,11 @@ struct Provider: AppIntentTimelineProvider {
                 entries.append(SimpleEntry(date: oneMinBefore, configuration: configuration, nextBusTimes: timesAtDate, scheduleType: scheduleType))
             }
 
-            // 出発直後 — バスリストを更新（+60秒で分レベルフィルターが正しく除外する）
+            // 出発時刻に即時切り替え（+60秒で取得して分レベルフィルターで出発済みを除外、entryはbusDateに発火）
             let shiftDate = busDate.addingTimeInterval(60)
             let updatedType = BusWidgetDataProvider.getScheduleTypeForDate(shiftDate)
             let updatedTimes = fetchNextBusTimes(for: configuration.routeType, from: shiftDate)
-            entries.append(SimpleEntry(date: shiftDate, configuration: configuration, nextBusTimes: updatedTimes, scheduleType: updatedType))
+            entries.append(SimpleEntry(date: busDate, configuration: configuration, nextBusTimes: updatedTimes, scheduleType: updatedType))
         }
 
         // 明日の真夜中
