@@ -94,7 +94,7 @@ final class CourseDetailViewModel: ObservableObject {
                 type: NSLocalizedString("遅早", comment: ""),
                 count: detail.attendance.late + detail.attendance.early, color: .yellow),
             AttendanceData(
-                type: NSLocalizedString("未登録", comment: ""),
+                type: NSLocalizedString("公欠", comment: ""),
                 count: detail.attendance.unregistered, color: .gray)
         ]
     }

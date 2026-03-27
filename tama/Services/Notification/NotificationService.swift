@@ -319,6 +319,137 @@ extension NotificationService {
         AssignmentService.shared.handleAssignmentCountChangeNotification(userInfo: userInfo)
     }
 
+    // MARK: - 締め切りリマインダー
+
+    /// 課題一覧をもとに締め切りリマインダー通知をスケジュールする
+    /// 毎回全クリアして再登録する（同期のたびにIDが変わるため）
+    func scheduleAssignmentDeadlineNotifications(_ assignments: [Assignment]) {
+        let center = UNUserNotificationCenter.current()
+
+        center.getPendingNotificationRequests { requests in
+            // 既存の締め切りリマインダーのみ削除（他の通知は残す）
+            let deadlineIds = requests
+                .map { $0.identifier }
+                .filter { $0.hasPrefix("deadline-") }
+            center.removePendingNotificationRequests(withIdentifiers: deadlineIds)
+
+            let now = Date()
+
+            // 締め切りが未来の課題のみ、近い順に最大40件（iOS上限64件以内）
+            let upcoming = assignments
+                .filter { $0.dueDate > now }
+                .sorted { $0.dueDate < $1.dueDate }
+                .prefix(40)
+
+            for (index, assignment) in upcoming.enumerated() {
+                self.scheduleDeadlineReminder(assignment: assignment, index: index, hoursBefore: 1)
+            }
+
+            print("【通知】締め切りリマインダーを登録しました: \(upcoming.count)件")
+        }
+    }
+
+    /// 新しく追加された課題のローカル通知を即時送信する
+    /// 新しく追加された課題をまとめて1件のローカル通知で送信する
+    /// 締め切りまで1h未満の課題が含まれる場合は time-sensitive で送る
+    func sendNewAssignmentLocalNotifications(_ assignments: [Assignment]) {
+        guard !assignments.isEmpty else { return }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        let now = Date()
+
+        let hasUrgent = assignments.contains {
+            $0.dueDate > now && $0.dueDate.timeIntervalSince(now) < 3600
+        }
+
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        content.interruptionLevel = hasUrgent ? .timeSensitive : .active
+        content.userInfo = ["toPage": "assignment"]
+
+        if assignments.count == 1 {
+            let assignment = assignments[0]
+            content.title = NSLocalizedString("新しい課題が追加されました", comment: "new assignment title")
+            content.body = String(
+                format: NSLocalizedString("授業「%@」に新しい課題が追加されました。\n締め切り: %@", comment: "new assignment body"),
+                assignment.courseName,
+                formatter.string(from: assignment.dueDate)
+            )
+        } else {
+            content.title = NSLocalizedString("新しい課題が追加されました", comment: "new assignment title")
+            content.body = String(
+                format: NSLocalizedString("%d件の新しい課題が追加されました。", comment: "new assignments body2"),
+                assignments.count
+            )
+        }
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "new-assignments-\(Int(now.timeIntervalSince1970))",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("【通知】新課題通知送信失敗: \(error.localizedDescription)")
+            }
+        }
+
+        // 1h未満の課題は締め切りリマインダーの重複を防ぐ
+        for assignment in assignments where assignment.dueDate > now && assignment.dueDate.timeIntervalSince(now) < 3600 {
+            let sentKey = "deadline-sent-\(assignment.courseId)-\(Int(assignment.dueDate.timeIntervalSince1970))-\(assignment.title)-1h"
+            UserDefaults.standard.set(true, forKey: sentKey)
+        }
+    }
+
+    /// 指定時間前のリマインダーを1件登録する
+    private func scheduleDeadlineReminder(assignment: Assignment, index: Int, hoursBefore: Int) {
+        let sentKey = "deadline-sent-\(assignment.courseId)-\(Int(assignment.dueDate.timeIntervalSince1970))-\(assignment.title)-\(hoursBefore)h"
+        guard !UserDefaults.standard.bool(forKey: sentKey) else { return }
+
+        let fireDate = assignment.dueDate.addingTimeInterval(-Double(hoursBefore) * 3600)
+        let now = Date()
+
+        // 期限切れはスキップ
+        guard assignment.dueDate > now else { return }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+
+        let content = UNMutableNotificationContent()
+        content.title = NSLocalizedString("【注意】課題の締切が近づいています！", comment: "deadline reminder title")
+        content.body = String(
+            format: NSLocalizedString("授業「%@」の課題の締切が近づいています！\n締め切り: %@", comment: "deadline reminder body"),
+            assignment.courseName,
+            formatter.string(from: assignment.dueDate)
+        )
+        content.sound = .default
+        content.interruptionLevel = .timeSensitive
+        content.userInfo = ["toPage": "assignment"]
+
+        // 1h未満は即時、それ以外はカレンダートリガー
+        let trigger: UNNotificationTrigger
+        let identifier: String
+        if fireDate <= now {
+            trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            identifier = "deadline-immediate-\(assignment.courseId)-\(Int(assignment.dueDate.timeIntervalSince1970))"
+        } else {
+            let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            identifier = "deadline-\(index)-\(hoursBefore)h"
+        }
+
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request) { error in
+            if error == nil {
+                UserDefaults.standard.set(true, forKey: sentKey)
+            } else {
+                print("【通知】締め切りリマインダー登録失敗[\(assignment.title)]: \(error!.localizedDescription)")
+            }
+        }
+    }
+
     /// 部屋変更をユーザーに通知するローカル通知
     private func sendRoomChangeLocalNotification(courseName: String, newRoom: String) {
         let content = UNMutableNotificationContent()

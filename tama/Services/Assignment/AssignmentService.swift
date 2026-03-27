@@ -98,6 +98,15 @@ final class AssignmentService {
                         // アプリのバッジを更新
                         self.updateApplicationBadge(count: assignments.count)
 
+                        // 新しい課題を検知してローカル通知を送信
+                        let newAssignments = self.detectNewAssignments(assignments)
+                        if !newAssignments.isEmpty {
+                            NotificationService.shared.sendNewAssignmentLocalNotifications(newAssignments)
+                        }
+
+                        // 締め切りリマインダーを再スケジュール
+                        NotificationService.shared.scheduleAssignmentDeadlineNotifications(assignments)
+
                         completion(.success(assignments))
                     }
                 } else {
@@ -120,12 +129,11 @@ final class AssignmentService {
 
     // アプリのバッジを更新するメソッド
     private func updateApplicationBadge(count: Int) {
-        // デバイストークンの有無を確認（通知許可の判断）
-        let deviceToken = userService.getDeviceToken()
-
-        // デバイストークンがある場合のみバッジを更新（通知が許可されている）
-        if deviceToken != nil && deviceToken != "" {
-            // バッジを更新（iOS 17以降向けのAPI使用）
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else {
+                print("通知許可がないため、バッジは更新しません")
+                return
+            }
             UNUserNotificationCenter.current().setBadgeCount(count) { error in
                 if let error = error {
                     print("バッジ更新エラー: \(error.localizedDescription)")
@@ -133,9 +141,29 @@ final class AssignmentService {
                     print("アプリのバッジを更新しました: \(count)")
                 }
             }
-        } else {
-            print("通知許可がないため、バッジは更新しません")
         }
+    }
+
+    // MARK: - 新課題検知
+
+    /// 課題のフィンガープリントを生成する（idは毎回変わるためcourseId+title+dueDateで識別）
+    private func makeFingerprint(_ assignment: Assignment) -> String {
+        "\(assignment.courseId)-\(assignment.title)-\(Int(assignment.dueDate.timeIntervalSince1970))"
+    }
+
+    /// 前回との差分から新しい課題を検出し、フィンガープリントを保存する
+    private func detectNewAssignments(_ assignments: [Assignment]) -> [Assignment] {
+        let key = "assignment_fingerprints"
+        let previous = Set((UserDefaults.standard.array(forKey: key) as? [String]) ?? [])
+        let current = assignments.map { makeFingerprint($0) }
+
+        // 保存
+        UserDefaults.standard.set(current, forKey: key)
+
+        // 初回（previous が空）は通知しない
+        guard !previous.isEmpty else { return [] }
+
+        return assignments.filter { !previous.contains(makeFingerprint($0)) }
     }
 
     // APNSからの課題数変更通知を処理するメソッド

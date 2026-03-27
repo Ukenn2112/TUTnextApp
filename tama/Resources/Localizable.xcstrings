@@ -67,6 +67,29 @@
         }
       }
     },
+    "【注意】課題の締切が近づいています！" : {
+      "comment" : "deadline reminder title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[Notice] The deadline for the assignment is approaching!"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "【주의】 과제 마감일이 다가오고 있습니다!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "【注意】您还有未完成的作业！"
+          }
+        }
+      }
+    },
     "@%@" : {
       "localizations" : {
         "en" : {
@@ -307,6 +330,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "星期%1$@ 第%2$d节"
+          }
+        }
+      }
+    },
+    "%d件の新しい課題が追加されました。" : {
+      "comment" : "new assignments body2",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d new issues have been added."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d개의 새로운 과제가 추가되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "增加了%d个新作业"
           }
         }
       }
@@ -1985,6 +2031,28 @@
         }
       }
     },
+    "公欠" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public debt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공채"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公休"
+          }
+        }
+      }
+    },
     "再読み込み" : {
       "localizations" : {
         "en" : {
@@ -2565,6 +2633,64 @@
         }
       }
     },
+    "授業「%@」に新しい課題が追加されました。\n締め切り: %@" : {
+      "comment" : "new assignment body",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A new assignment has been added to the class \"%1$@\".\nDeadline: %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "授業「%1$@」に新しい課題が追加されました。\n締め切り: %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 「%1$@」 에 새로운 과제가 추가되었습니다.\n마감일: %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "课程「%1$@」增加了新的作业\n截止时间: %2$@"
+          }
+        }
+      }
+    },
+    "授業「%@」の課題の締切が近づいています！\n締め切り: %@" : {
+      "comment" : "deadline reminder body",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The deadline for the assignment in the class \"%1$@\" is approaching!\nDeadline: %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "授業「%1$@」の課題の締切が近づいています！\n締め切り: %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 「%1$@」 의 과제 마감일이 다가오고 있습니다!\n마감일: %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "课程「%1$@」的作业还尚未完成！\n截止时间: %2$@"
+          }
+        }
+      }
+    },
     "掲示はありません" : {
       "localizations" : {
         "en" : {
@@ -2694,6 +2820,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "教师联系方式"
+          }
+        }
+      }
+    },
+    "新しい課題が追加されました" : {
+      "comment" : "new assignment title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A new task has been added"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로운 과제가 추가되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您有新的作业来了"
           }
         }
       }
@@ -2941,9 +3090,6 @@
           }
         }
       }
-    },
-    "未登録" : {
-
     },
     "本日の運行は終了しました" : {
       "localizations" : {
