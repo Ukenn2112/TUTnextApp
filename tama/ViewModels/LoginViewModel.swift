@@ -136,8 +136,16 @@ final class LoginViewModel: ObservableObject {
     private func saveUserData(_ userData: [String: Any], onSuccess: @escaping () -> Void) {
         if let user = UserService.shared.createUser(from: userData) {
             UserService.shared.saveUser(user) {
-                DispatchQueue.main.async {
-                    onSuccess()
+                // ログイン後に初期設定を取得（maxJigenNo など）
+                AuthService.shared.firstSetting { result in
+                    if case .success(let settingData) = result,
+                        let maxJigenNo = settingData["maxJigenNo"] as? Int
+                    {
+                        UserService.shared.updateMaxJigenNo(maxJigenNo)
+                    }
+                    DispatchQueue.main.async {
+                        onSuccess()
+                    }
                 }
             }
         }

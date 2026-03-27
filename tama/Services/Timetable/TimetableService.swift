@@ -259,13 +259,16 @@ final class TimetableService {
                             let semesterTermNo = data["gakkiNo"] as? Int ?? 0
                             let semesterName = data["gakkiName"] as? String ?? ""
 
-                            // 学期情報を更新
+                            // 学期情報を更新し、UserDefaultsに永続化
                             DispatchQueue.main.async {
                                 self.currentSemester = Semester(
                                     year: semesterYear,
                                     termNo: semesterTermNo,
                                     termName: semesterName
                                 )
+                                UserDefaults.standard.set(semesterYear, forKey: "semester_year")
+                                UserDefaults.standard.set(semesterTermNo, forKey: "semester_termNo")
+                                UserDefaults.standard.set(semesterName, forKey: "semester_termName")
                             }
 
                             // 時間割データの変換
@@ -432,21 +435,58 @@ final class TimetableService {
 
         for courseData in courseList {
             guard let courseName = courseData["jugyoName"] as? String,
-                let roomName = courseData["kyostName"] as? String,
                 let teacherName = courseData["kyoinName"] as? String,
-                let startTime = courseData["jugyoStartTime"] as? String,
-                let endTime = courseData["jugyoEndTime"] as? String,
                 let weekdayNumber = courseData["kaikoYobi"] as? Int,
                 let periodNumber = courseData["jigenNo"] as? Int,
-                let jugyoCd = courseData["jugyoCd"] as? String,
                 let academicYear = courseData["nendo"] as? Int,
                 let courseYear = courseData["kaikoNendo"] as? Int,
                 let courseTerm = courseData["gakkiNo"] as? Int,
-                let jugyoKbn = courseData["jugyoKbn"] as? String,
                 let keijiMidokCnt = courseData["keijiMidokCnt"] as? Int
             else {
                 print("【時間割】コースデータの解析に失敗: \(courseData)")
                 continue
+            }
+
+            // kyostName は null の場合がある
+            let roomName = courseData["kyostName"] as? String ?? ""
+
+            // jugyoCd は Int または String で返る場合がある
+            let jugyoCd: String
+            if let cd = courseData["jugyoCd"] as? String {
+                jugyoCd = cd
+            } else if let cd = courseData["jugyoCd"] as? Int {
+                jugyoCd = String(cd)
+            } else {
+                print("【時間割】コースデータの解析に失敗: \(courseData)")
+                continue
+            }
+
+            // jugyoKbn は Int または String で返る場合がある
+            let jugyoKbn: String
+            if let kbn = courseData["jugyoKbn"] as? String {
+                jugyoKbn = kbn
+            } else if let kbn = courseData["jugyoKbn"] as? Int {
+                jugyoKbn = String(kbn)
+            } else {
+                jugyoKbn = ""
+            }
+
+            // jugyoStartTime / jugyoEndTime は "HH:MM" 文字列または HHMM 整数で返る場合がある
+            let startTime: String
+            if let t = courseData["jugyoStartTime"] as? String {
+                startTime = t
+            } else if let t = courseData["jugyoStartTime"] as? Int {
+                startTime = String(format: "%02d:%02d", t / 100, t % 100)
+            } else {
+                startTime = ""
+            }
+            let endTime: String
+            if let t = courseData["jugyoEndTime"] as? String {
+                endTime = t
+            } else if let t = courseData["jugyoEndTime"] as? Int {
+                endTime = String(format: "%02d:%02d", t / 100, t % 100)
+            } else {
+                endTime = ""
             }
 
             // 保存されている色インデックスを取得、なければデフォルト値を使用

@@ -16,10 +16,14 @@ struct Semester {
         "\(year)年度\(termName)"
     }
 
-    /// 現在の学期（デフォルト値）
-    static let current = Semester(
-        year: 2_026,
-        termNo: 1,
-        termName: "春学期"
-    )
+    /// 現在の学期（UserDefaultsから読み込み、なければフォールバック値）
+    static var current: Semester {
+        let year = UserDefaults.standard.integer(forKey: "semester_year")
+        let termNo = UserDefaults.standard.integer(forKey: "semester_termNo")
+        let termName = UserDefaults.standard.string(forKey: "semester_termName")
+        if year > 0, termNo > 0, let termName = termName, !termName.isEmpty {
+            return Semester(year: year, termNo: termNo, termName: termName)
+        }
+        return Semester(year: 2_026, termNo: 1, termName: "春学期")
+    }
 }

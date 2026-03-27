@@ -8,4 +8,5 @@ struct User: Codable, Equatable {
     var encryptedPassword: String?
     var allKeijiMidokCnt: Int?
     var deviceToken: String?
+    var maxJigenNo: Int?
 }

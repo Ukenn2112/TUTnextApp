@@ -92,7 +92,10 @@ final class CourseDetailViewModel: ObservableObject {
                 color: .red),
             AttendanceData(
                 type: NSLocalizedString("遅早", comment: ""),
-                count: detail.attendance.late + detail.attendance.early, color: .yellow)
+                count: detail.attendance.late + detail.attendance.early, color: .yellow),
+            AttendanceData(
+                type: NSLocalizedString("未登録", comment: ""),
+                count: detail.attendance.unregistered, color: .gray)
         ]
     }
 
@@ -145,19 +148,22 @@ final class CourseDetailViewModel: ObservableObject {
     }
 
     // 掲示URLを生成
-    func createAnnouncementURL(announcementId: Int) -> URL? {
+    func createAnnouncementURL(announcement: AnnouncementModel) -> URL? {
         guard let user = UserService.shared.getCurrentUser(),
             let encryptedPassword = user.encryptedPassword
         else {
             return nil
         }
 
+        var paramaterMap: [String: Any] = ["keijiNo": announcement.id]
+        if let torkDate = announcement.torkDate {
+            paramaterMap["keijiTorkDate"] = torkDate
+        }
+
         let webApiLoginInfo: [String: Any] = [
             "autoLoginAuthCd": "",
             "parameterMap": "",
-            "paramaterMap": [
-                "keijiNo": announcementId
-            ],
+            "paramaterMap": paramaterMap,
             "encryptedPassword": encryptedPassword,
             "formId": "Bsd50702",
             "userId": user.username,

@@ -260,7 +260,7 @@ struct CourseDetailView: View {
                         index, announcement in
                         Button(action: {
                             if let url = viewModel.createAnnouncementURL(
-                                announcementId: announcement.id)
+                                announcement: announcement)
                             {
                                 safariDestination = .announcement(url)
                             }
@@ -611,10 +611,10 @@ struct CourseDetailView: View {
 
     let mockDetail = CourseDetailResponse(
         announcements: [
-            AnnouncementModel(id: 1, title: "第5回レポート提出について", date: 1_739_836_800_000),
-            AnnouncementModel(id: 2, title: "来週の授業は休講です", date: 1_739_232_000_000),
+            AnnouncementModel(id: 1, title: "第5回レポート提出について", date: 1_739_836_800_000, torkDate: nil),
+            AnnouncementModel(id: 2, title: "来週の授業は休講です", date: 1_739_232_000_000, torkDate: nil),
         ],
-        attendance: AttendanceModel(present: 10, absent: 1, late: 2, early: 0, sick: 0),
+        attendance: AttendanceModel(present: 10, absent: 1, late: 2, early: 0, sick: 0, unregistered: 0),
         memo: "教科書P.120〜150を予習",
         syllabusPubFlg: true,
         syuKetuKanriFlg: true

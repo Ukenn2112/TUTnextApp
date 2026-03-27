@@ -18,6 +18,7 @@ struct AnnouncementModel: Identifiable {
     let id: Int
     let title: String
     let date: Int
+    let torkDate: String?
 
     /// フォーマットされた日付文字列
     var formattedDate: String {
@@ -39,10 +40,11 @@ struct AttendanceModel {
     let late: Int
     let early: Int
     let sick: Int
+    let unregistered: Int
 
     /// 合計回数
     var total: Int {
-        present + absent + late + early + sick
+        present + absent + late + early + sick + unregistered
     }
 
     /// 指定項目の割合を計算する

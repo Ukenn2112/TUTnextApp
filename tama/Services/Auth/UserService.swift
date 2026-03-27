@@ -53,6 +53,16 @@ final class UserService {
         }
     }
 
+    // 最大時限数を更新
+    func updateMaxJigenNo(_ maxJigenNo: Int, completion: (() -> Void)? = nil) {
+        if var user = getCurrentUser() {
+            user.maxJigenNo = maxJigenNo
+            saveUser(user) { completion?() }
+        } else {
+            completion?()
+        }
+    }
+
     // 全未読掲示数を更新
     func updateAllKeijiMidokCnt(keijiCnt: Int, completion: (() -> Void)? = nil) {
         if var user = getCurrentUser() {

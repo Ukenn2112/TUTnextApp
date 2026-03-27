@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// 認証サービス
 final class AuthService {
@@ -6,12 +7,12 @@ final class AuthService {
 
     private init() {}
 
-    // ログイン処理を実行する関数
+    // MARK: - ログイン
+
     func login(
         account: String, password: String,
         completion: @escaping (Result<[String: Any], Error>) -> Void
     ) {
-        // API リクエストの準備
         guard
             let url = URL(string: "https://next.tama.ac.jp/uprx/webapi/up/pk/Pky001Resource/login")
         else {
@@ -19,20 +20,29 @@ final class AuthService {
             return
         }
 
-        // リクエストボディの作成
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? ""
+
         let requestBody: [String: Any] = [
+            "productCd": "ap",
+            "subProductCd": "apa",
+            "loginUserId": account,
+            "encryptedLoginPassword": "",
+            "langCd": "ja",
             "data": [
                 "loginUserId": account,
-                "plainLoginPassword": password
+                "plainLoginPassword": password,
+                "judgeLoginPossibleFlg": false,
+                "deviceId": deviceId,
+                "autoLoginAuthCd": ""
             ]
         ]
 
-        guard let request = APIService.shared.createRequest(url: url, body: requestBody) else {
+        guard var request = APIService.shared.createRequest(url: url, body: requestBody) else {
             completion(.failure(AuthError.requestCreationFailed))
             return
         }
+        request = HeaderService.shared.addCommonHeaders(to: request)
 
-        // カスタムデコーダー
         let decoder: (Data) -> Result<[String: Any], Error> = { data in
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -49,7 +59,6 @@ final class AuthService {
             }
         }
 
-        // APIリクエストの実行
         APIService.shared.request(
             endpoint: url.absoluteString,
             body: requestBody,
@@ -59,20 +68,93 @@ final class AuthService {
         )(request)
     }
 
-    // ログアウト処理を実行する関数
-    func logout(
-        userId: String, encryptedPassword: String,
-        completion: @escaping (Result<Bool, Error>) -> Void
+    // MARK: - 初期設定取得（ログイン後に呼ぶ）
+
+    func firstSetting(
+        completion: @escaping (Result<[String: Any], Error>) -> Void
     ) {
-        // API リクエストの準備
+        guard let user = UserService.shared.getCurrentUser() else {
+            completion(.failure(AuthError.invalidEndpoint))
+            return
+        }
+
         guard
-            let url = URL(string: "https://next.tama.ac.jp/uprx/webapi/up/pk/Pky002Resource/logout")
+            let url = URL(
+                string: "https://next.tama.ac.jp/uprx/webapi/up/ap/Apa001Resource/firstSetting")
         else {
             completion(.failure(AuthError.invalidEndpoint))
             return
         }
 
-        // リクエストボディの作成
+        let requestBody: [String: Any] = [
+            "productCd": "ap",
+            "subProductCd": "apa",
+            "loginUserId": user.username,
+            "encryptedLoginPassword": user.encryptedPassword ?? "",
+            "langCd": "ja",
+            "data": [
+                "deviceId": UIDevice.current.identifierForVendor?.uuidString ?? "",
+                "token": "",
+                "keijiNoticeFlg": false,
+                "jugyoNoticeFlg": false,
+                "productIniFileDtoList": [
+                    ["productCd": "AP", "section": "ATTEND_PUSH", "key": "PUSH_USE_FLAG"],
+                    ["productCd": "AP", "section": "ATTEND_PUSH", "key": "PUSH_USE_FLAG_PARENT"]
+                ]
+            ]
+        ]
+
+        guard var request = APIService.shared.createRequest(url: url, body: requestBody) else {
+            completion(.failure(AuthError.requestCreationFailed))
+            return
+        }
+        request = HeaderService.shared.addCommonHeaders(to: request)
+        request = HeaderService.shared.addAuthHeaders(to: request)
+
+        APIService.shared.request(
+            request: request,
+            logTag: "初期設定",
+            replacingPercentEncoding: true
+        ) { data, _, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(AuthError.invalidResponse))
+                return
+            }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                    let statusDto = json["statusDto"] as? [String: Any],
+                    let success = statusDto["success"] as? Bool,
+                    success,
+                    let responseData = json["data"] as? [String: Any]
+                {
+                    completion(.success(responseData))
+                } else {
+                    completion(.failure(AuthError.invalidResponse))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    // MARK: - ログアウト
+
+    func logout(
+        userId: String, encryptedPassword: String,
+        completion: @escaping (Result<Bool, Error>) -> Void
+    ) {
+        guard
+            let url = URL(
+                string: "https://next.tama.ac.jp/uprx/webapi/up/pk/Pky002Resource/logout")
+        else {
+            completion(.failure(AuthError.invalidEndpoint))
+            return
+        }
+
         let requestBody: [String: Any] = [
             "subProductCd": "apa",
             "plainLoginPassword": "",
@@ -82,24 +164,23 @@ final class AuthService {
             "encryptedLoginPassword": encryptedPassword
         ]
 
-        guard let request = APIService.shared.createRequest(url: url, body: requestBody) else {
+        guard var request = APIService.shared.createRequest(url: url, body: requestBody) else {
             completion(.failure(AuthError.requestCreationFailed))
             return
         }
+        request = HeaderService.shared.addCommonHeaders(to: request)
+        request = HeaderService.shared.addAuthHeaders(to: request)
 
-        // デバイストークンを取得して通知登録を解除
         if let deviceToken = NotificationService.shared.deviceToken {
             NotificationService.shared.unregisterDeviceTokenFromServer(token: deviceToken)
         }
 
-        // カスタムデコーダー
         let decoder: (Data) -> Result<Bool, Error> = { data in
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                     let statusDto = json["statusDto"] as? [String: Any],
-                    let success = statusDto["success"] as? Bool {
-
-                    // 常にCookieとユーザー情報をクリア（成功・失敗に関わらず）
+                    let success = statusDto["success"] as? Bool
+                {
                     CookieService.shared.clearCookies()
                     UserService.shared.clearCurrentUser()
 
@@ -107,7 +188,6 @@ final class AuthService {
                         completion(.success(true))
                         return .success(true)
                     } else {
-                        // エラーメッセージがあれば取得
                         let errorMessage =
                             (statusDto["errorList"] as? [[String: Any]])?.first?["errorMessage"]
                             as? String ?? "Logout failed"
@@ -116,25 +196,20 @@ final class AuthService {
                         return .failure(error)
                     }
                 } else {
-                    // レスポンス解析失敗時もCookieとユーザー情報をクリア
                     CookieService.shared.clearCookies()
                     UserService.shared.clearCurrentUser()
-
                     let error = AuthError.invalidResponse
                     completion(.failure(error))
                     return .failure(error)
                 }
             } catch {
-                // エラー発生時もCookieとユーザー情報をクリア
                 CookieService.shared.clearCookies()
                 UserService.shared.clearCurrentUser()
-
                 completion(.failure(error))
                 return .failure(error)
             }
         }
 
-        // APIリクエストの実行
         APIService.shared.request(
             endpoint: url.absoluteString,
             body: requestBody,
