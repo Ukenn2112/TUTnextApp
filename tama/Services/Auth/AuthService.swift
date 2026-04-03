@@ -175,6 +175,11 @@ final class AuthService {
             NotificationService.shared.unregisterDeviceTokenFromServer(token: deviceToken)
         }
 
+        // Live Activity をすべて終了
+        Task { @MainActor in
+            await LiveActivityService.shared.endAllActivities()
+        }
+
         let decoder: (Data) -> Result<Bool, Error> = { data in
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],

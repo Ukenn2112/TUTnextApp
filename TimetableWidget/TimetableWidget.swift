@@ -747,7 +747,6 @@ struct TimeSlotCellWidget: View {
 
 // MARK: - ウィジェット定義
 
-@main
 struct TimetableWidget: Widget {
     let kind: String = "TimetableWidget"
 

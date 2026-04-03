@@ -27,6 +27,10 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.meikenn.tama.liveactivity.refresh</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
@@ -40,6 +44,10 @@
 	<string>$(CLIENT_ID)</string>
 	<key>REVERSED_CLIENT_ID</key>
 	<string>$(REVERSED_CLIENT_ID)</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>

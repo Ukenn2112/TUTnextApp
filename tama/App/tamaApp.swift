@@ -19,6 +19,7 @@ struct TamaApp: App {
     @StateObject private var languageService = LanguageService.shared
     @StateObject private var ratingService = RatingService.shared
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
 
     let modelContainer = SharedModelContainer.shared
 
@@ -40,6 +41,18 @@ struct TamaApp: App {
                 }
                 .onOpenURL { url in
                     _ = AppDelegate.shared.handleURL(url)
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    switch newPhase {
+                    case .active:
+                        Task { @MainActor in
+                            await LiveActivityScheduler.shared.syncLiveActivity()
+                        }
+                    case .background:
+                        LiveActivityScheduler.shared.pauseForegroundTimer()
+                    default:
+                        break
+                    }
                 }
         }
     }

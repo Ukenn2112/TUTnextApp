@@ -312,6 +312,12 @@ extension NotificationService {
 
         TimetableService.shared.handleRoomChange(courseName: courseName, newRoom: newRoom)
         sendRoomChangeLocalNotification(courseName: courseName, newRoom: newRoom)
+
+        // Live Activity のスケジュールキャッシュを無効化して再同期
+        TodayScheduleService.shared.invalidateCache()
+        Task { @MainActor in
+            await LiveActivityScheduler.shared.syncLiveActivity()
+        }
     }
 
     /// 課題数変更通知を処理する

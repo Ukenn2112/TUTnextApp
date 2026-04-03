@@ -39,6 +39,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         NotificationService.shared.syncNotificationStatusWithServer()
         RatingService.shared.onAppLaunch()
 
+        // Live Activity: BGTask 登録 + 同期開始
+        LiveActivityScheduler.shared.registerBackgroundTask()
+        Task { @MainActor in
+            await LiveActivityScheduler.shared.syncLiveActivity()
+        }
+
         return true
     }
 
@@ -77,6 +83,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func applicationWillEnterForeground(_ application: UIApplication) {
         NotificationService.shared.applicationWillEnterForeground()
         TimetableService.shared.cleanupExpiredRoomChanges()
+
+        // Live Activity の同期（フォアグラウンド復帰時）
+        Task { @MainActor in
+            await LiveActivityScheduler.shared.syncLiveActivity()
+        }
     }
 
     func application(
