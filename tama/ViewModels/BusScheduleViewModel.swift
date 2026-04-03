@@ -295,6 +295,7 @@ final class BusScheduleViewModel: ObservableObject {
 
         if (selectedTime.hour < currentHour)
             || (selectedTime.hour == currentHour && selectedTime.minute <= currentMinute) {
+            BusLiveActivityService.shared.endActivity()
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedTimeEntry = nil
                 cardInfoAppeared = false
@@ -306,11 +307,16 @@ final class BusScheduleViewModel: ObservableObject {
 
     func handleTimeEntryTap(_ time: BusSchedule.TimeEntry) {
         if selectedTimeEntry == time {
+            BusLiveActivityService.shared.endActivity()
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedTimeEntry = nil
                 cardInfoAppeared = false
             }
         } else {
+            BusLiveActivityService.shared.startActivity(
+                timeEntry: time,
+                routeType: selectedRouteType
+            )
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedTimeEntry = time
                 cardInfoAppeared = false
@@ -324,6 +330,7 @@ final class BusScheduleViewModel: ObservableObject {
     }
 
     func clearSelection() {
+        BusLiveActivityService.shared.endActivity()
         withAnimation(.easeInOut(duration: 0.2)) {
             selectedTimeEntry = nil
             cardInfoAppeared = false
@@ -331,11 +338,13 @@ final class BusScheduleViewModel: ObservableObject {
     }
 
     func onScheduleTypeChanged() {
+        BusLiveActivityService.shared.endActivity()
         selectedTimeEntry = nil
         updateScrollToHour()
     }
 
     func onRouteTypeChanged() {
+        BusLiveActivityService.shared.endActivity()
         selectedTimeEntry = nil
         updateScrollToHour()
     }

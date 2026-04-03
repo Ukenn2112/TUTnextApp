@@ -400,7 +400,6 @@ struct BusWidgetEntryView: View {
 
 // MARK: - ウィジェット設定
 
-@main
 struct BusWidget: Widget {
     let kind: String = "BusWidget"
 
@@ -413,6 +412,14 @@ struct BusWidget: Widget {
         .configurationDisplayName("学校バス時刻表")
         .description("次のバスの発車時刻を表示します")
         .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+@main
+struct BusWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        BusWidget()
+        BusLiveActivityWidget()
     }
 }
 

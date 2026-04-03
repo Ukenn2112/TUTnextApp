@@ -19,5 +19,6 @@ final class LiveActivityService {
         for activity in Activity<ClassLiveActivityAttributes>.activities {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
+        await BusLiveActivityService.shared.endAllActivities()
     }
 }
