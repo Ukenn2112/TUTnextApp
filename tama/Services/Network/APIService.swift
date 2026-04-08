@@ -4,6 +4,9 @@ import Foundation
 final class APIService {
     static let shared = APIService()
 
+    /// セッション期限切れ通知の重複防止フラグ
+    private var isSessionExpiredNotified = false
+
     private init() {}
 
     // MARK: - パブリックメソッド
@@ -159,11 +162,45 @@ final class APIService {
         if let httpResponse = response as? HTTPURLResponse {
             print("【\(logTag)】HTTPステータスコード: \(httpResponse.statusCode)")
 
+            // セッション期限切れの検出
+            if httpResponse.statusCode == 401 {
+                print("【\(logTag)】セッション期限切れを検出（401）")
+                notifySessionExpired()
+                return
+            }
+
+            // リダイレクトによるセッション期限切れの検出
+            // URLSessionはデフォルトで302リダイレクトを自動追従するため、
+            // next.tama.ac.jp へのAPIリクエストがログインページ等にリダイレクトされた場合を検出
+            if let responseURL = httpResponse.url,
+               responseURL.host == "next.tama.ac.jp",
+               !responseURL.absoluteString.contains("/webapi/") {
+                print("【\(logTag)】セッション期限切れを検出（リダイレクト: \(responseURL)）")
+                notifySessionExpired()
+                return
+            }
+
             // レスポンスの実際のURLを使用してCookieを保存
             if let response = response, let url = response.url {
                 CookieService.shared.saveCookies(from: response, for: url.absoluteString)
                 print("【\(logTag)】Cookieを保存しました")
             }
+        }
+    }
+
+    /// セッション期限切れを通知する（重複通知を防止）
+    private func notifySessionExpired() {
+        guard !isSessionExpiredNotified else { return }
+        isSessionExpiredNotified = true
+
+        DispatchQueue.main.async {
+            AuthService.shared.forceLogout()
+            NotificationCenter.default.post(name: .sessionExpired, object: nil)
+        }
+
+        // 一定時間後にフラグをリセット（再ログイン後に再度検出可能にする）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
+            self?.isSessionExpiredNotified = false
         }
     }
 

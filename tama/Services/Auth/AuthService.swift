@@ -141,6 +141,24 @@ final class AuthService {
         }
     }
 
+    // MARK: - 強制ログアウト（セッション期限切れ時）
+
+    /// セッション期限切れ時にAPIコールなしでローカルデータをクリアする
+    func forceLogout() {
+        print("【認証】セッション期限切れによる強制ログアウト")
+
+        if let deviceToken = NotificationService.shared.deviceToken {
+            NotificationService.shared.unregisterDeviceTokenFromServer(token: deviceToken)
+        }
+
+        Task { @MainActor in
+            await LiveActivityService.shared.endAllActivities()
+        }
+
+        CookieService.shared.clearCookies()
+        UserService.shared.clearCurrentUser()
+    }
+
     // MARK: - ログアウト
 
     func logout(

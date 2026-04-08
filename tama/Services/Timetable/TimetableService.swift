@@ -78,7 +78,8 @@ final class TimetableService {
         guard
             let url = URL(
                 string:
-                    "https://next.tama.ac.jp/uprx/webapi/up/ap/Apa004Resource/getJugyoKeijiMenuInfo"
+                    // "https://next.tama.ac.jp/uprx/webapi/up/ap/Apa004Resource/getJugyoKeijiMenuInfo"
+                    "https://tama.qaq.tw/schedule/class_bulletin"
             )
         else {
             print("【時間割】無効なエンドポイント")

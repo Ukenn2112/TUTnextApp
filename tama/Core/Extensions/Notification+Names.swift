@@ -39,6 +39,11 @@ extension Notification.Name {
     /// 課題データ更新
     static let assignmentsUpdated = Notification.Name("AssignmentsUpdatedNotification")
 
+    // MARK: - セッション関連
+
+    /// セッション期限切れ（自動ログアウト）
+    static let sessionExpired = Notification.Name("SessionExpired")
+
     // MARK: - 掲示関連
 
     /// 掲示Safari閉じ

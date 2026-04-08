@@ -42,6 +42,13 @@ struct ContentView: View {
                 navigateToTab(for: page)
             }
         }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .sessionExpired)
+        ) { _ in
+            withAnimation(.easeInOut(duration: 0.5)) {
+                isLoggedIn = false
+            }
+        }
     }
 
     // MARK: - サブビュー
