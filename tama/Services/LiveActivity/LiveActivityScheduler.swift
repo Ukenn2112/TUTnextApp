@@ -26,7 +26,17 @@ final class LiveActivityScheduler: ObservableObject {
     private var foregroundTimer: Timer?
     private var lastComputedDateKey: String = ""
     private var lastClassEndDate: Date?
-    private var pushTokenObservationTask: Task<Void, Never>?
+    /// Activity ID ごとの push token 監視タスク
+    private var pushTokenTasks: [String: Task<Void, Never>] = [:]
+    /// push-to-start 等で外部から開始された Activity を検知する長命タスク
+    private var activityUpdatesTask: Task<Void, Never>?
+    /// push-to-start トークン監視タスク（iOS 17.2+）
+    private var pushToStartTask: Task<Void, Never>?
+
+    // MARK: - 定数
+
+    private static let apiBase = "https://tama.qaq.tw"
+    private static let pushToStartTokenKey = "LiveActivity.lastSentPushToStartToken"
 
     // MARK: - Public API
 
@@ -34,6 +44,9 @@ final class LiveActivityScheduler: ObservableObject {
     /// Activity の健全性チェック → スケジュール取得 → 状態同期
     func syncLiveActivity() async {
         print("【LA】syncLiveActivity 開始")
+
+        // バス Live Activity の後始末（プロセス再起動後の取りこぼし対策）
+        await BusLiveActivityService.shared.cleanupDepartedActivities()
 
         guard UserService.shared.getCurrentUser()?.encryptedPassword != nil else {
             print("【LA】ユーザー未認証 → スキップ")
@@ -44,6 +57,10 @@ final class LiveActivityScheduler: ObservableObject {
             print("【LA】Live Activity 無効 → スキップ")
             return
         }
+
+        // 0. トークン監視（既存 Activity / push-to-start）を開始
+        observeAllActivities()
+        startPushToStartObservation()
 
         // 1. 既存 Activity のクリーンアップ
         await cleanupStaleActivities()
@@ -139,6 +156,10 @@ final class LiveActivityScheduler: ObservableObject {
 
     /// BGAppRefreshTask のハンドラを登録する（AppDelegate で1回だけ呼ぶ）
     func registerBackgroundTask() {
+        // アプリ起動時点でトークン監視を開始しておく
+        observeAllActivities()
+        startPushToStartObservation()
+
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.bgTaskIdentifier,
             using: nil
@@ -194,10 +215,10 @@ final class LiveActivityScheduler: ObservableObject {
 
         for activity in activities {
             let state = activity.activityState
-            let isStale =
+            // ⚠️ .stale は「内容が古い」だけで update 可能なため終了しない
+            let isFinished =
                 state == .ended ||
-                state == .dismissed ||
-                state == .stale
+                state == .dismissed
 
             // 最後の授業終了 + 30分超過
             let isPastGrace: Bool
@@ -207,14 +228,14 @@ final class LiveActivityScheduler: ObservableObject {
                 isPastGrace = false
             }
 
-            if isStale || isPastGrace {
-                await activity.end(nil, dismissalPolicy: .immediate)
+            if isFinished || isPastGrace {
+                await endAndUnregister(activity)
                 removedCount += 1
             } else {
                 validCount += 1
                 // 2つ以上の有効 Activity があれば古い方を終了（最大1つ維持）
                 if validCount > 1 {
-                    await activity.end(nil, dismissalPolicy: .immediate)
+                    await endAndUnregister(activity)
                     removedCount += 1
                 }
             }
@@ -225,10 +246,11 @@ final class LiveActivityScheduler: ObservableObject {
         }
     }
 
-    /// 有効な（アクティブまたは stale でない）Activity を1つ返す
+    /// 有効な Activity を1つ返す
+    /// `.stale` は「内容が古い」だけで update 可能なので有効として扱う
     private func findValidActivity() -> Activity<ClassLiveActivityAttributes>? {
         Activity<ClassLiveActivityAttributes>.activities.first { activity in
-            activity.activityState == .active
+            activity.activityState == .active || activity.activityState == .stale
         }
     }
 
@@ -267,10 +289,19 @@ final class LiveActivityScheduler: ObservableObject {
         }
 
         print("【LA】Activity を finished で終了（15分後に消去）")
+        cancelPushTokenObservation(for: activity.id)
+        unregisterActivity(id: activity.id)
         await activity.end(
             content,
             dismissalPolicy: .after(Date().addingTimeInterval(15 * 60))
         )
+    }
+
+    /// Activity を即座に終了し、バックエンドの登録も解除する
+    private func endAndUnregister(_ activity: Activity<ClassLiveActivityAttributes>) async {
+        cancelPushTokenObservation(for: activity.id)
+        unregisterActivity(id: activity.id)
+        await activity.end(nil, dismissalPolicy: .immediate)
     }
 
     /// 全 Activity を即座に終了する
@@ -280,10 +311,10 @@ final class LiveActivityScheduler: ObservableObject {
             print("【LA】全 Activity を即座に終了: \(count)件")
         }
         for activity in Activity<ClassLiveActivityAttributes>.activities {
-            await activity.end(nil, dismissalPolicy: .immediate)
+            await endAndUnregister(activity)
         }
-        pushTokenObservationTask?.cancel()
-        pushTokenObservationTask = nil
+        for task in pushTokenTasks.values { task.cancel() }
+        pushTokenTasks.removeAll()
     }
 
     // MARK: - フォアグラウンド Timer
@@ -321,26 +352,99 @@ final class LiveActivityScheduler: ObservableObject {
 
     // MARK: - Push Token
 
-    private func observePushToken(for activity: Activity<ClassLiveActivityAttributes>) {
-        pushTokenObservationTask?.cancel()
-        pushTokenObservationTask = Task { [weak self] in
-            for await tokenData in activity.pushTokenUpdates {
-                let token = tokenData.map { String(format: "%02x", $0) }.joined()
-                print("【LA】Push token 更新: \(token.prefix(16))...")
-                await self?.sendPushTokenToBackend(token: token, activityId: activity.id)
+    /// 既存のすべての Activity にトークン監視を張り、
+    /// push-to-start 等で新たに開始された Activity も監視対象に加える
+    private func observeAllActivities() {
+        for activity in Activity<ClassLiveActivityAttributes>.activities {
+            observePushToken(for: activity)
+        }
+
+        guard activityUpdatesTask == nil else { return }
+        activityUpdatesTask = Task { [weak self] in
+            for await activity in Activity<ClassLiveActivityAttributes>.activityUpdates {
+                await MainActor.run {
+                    print("【LA】新しい Activity を検出: \(activity.id.prefix(8))")
+                    self?.observePushToken(for: activity)
+                }
             }
         }
     }
 
-    private func sendPushTokenToBackend(token: String, activityId: String) async {
+    /// Activity ごとに1つだけ pushTokenUpdates 監視タスクを保持する
+    private func observePushToken(for activity: Activity<ClassLiveActivityAttributes>) {
+        let id = activity.id
+        guard pushTokenTasks[id] == nil else { return }
+
+        pushTokenTasks[id] = Task { [weak self] in
+            for await tokenData in activity.pushTokenUpdates {
+                let token = tokenData.map { String(format: "%02x", $0) }.joined()
+                print("【LA】Push token 更新 (\(id.prefix(8))): \(token.prefix(16))...")
+                await self?.sendPushTokenToBackend(token: token, activityId: id)
+            }
+            self?.clearPushTokenTask(for: id)
+        }
+    }
+
+    private func clearPushTokenTask(for id: String) {
+        pushTokenTasks[id] = nil
+    }
+
+    private func cancelPushTokenObservation(for id: String) {
+        pushTokenTasks[id]?.cancel()
+        pushTokenTasks[id] = nil
+    }
+
+    // MARK: - Push-to-Start（iOS 17.2+）
+
+    /// push-to-start トークンを監視し、バックエンドへ送信する
+    /// Activity が1つも動いていない状態でもサーバ側から開始できるようになる
+    func startPushToStartObservation() {
+        guard pushToStartTask == nil else { return }
+        guard UserService.shared.getCurrentUser()?.encryptedPassword != nil else { return }
+
+        if #available(iOS 17.2, *) {
+            pushToStartTask = Task { [weak self] in
+                for await tokenData in Activity<ClassLiveActivityAttributes>.pushToStartTokenUpdates {
+                    let token = tokenData.map { String(format: "%02x", $0) }.joined()
+                    await self?.sendPushToStartToken(token)
+                }
+            }
+            print("【LA】push-to-start トークン監視を開始")
+        }
+    }
+
+    /// push-to-start トークンをバックエンドへ送信する（同一トークンは送信しない）
+    private func sendPushToStartToken(_ token: String) async {
         guard let user = UserService.shared.getCurrentUser(),
               let encryptedPassword = user.encryptedPassword else { return }
 
-        guard let url = URL(string: "https://tama.qaq.tw/live-activity/register") else { return }
+        let defaults = UserDefaults.standard
+        if defaults.string(forKey: Self.pushToStartTokenKey) == token {
+            print("【LA】push-to-start トークン変化なし → 送信スキップ")
+            return
+        }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: String] = [
+            "username": user.username,
+            "encryptedPassword": encryptedPassword,
+            "pushToStartToken": token,
+        ]
+
+        let ok = await postJSON(path: "/live-activity/push-to-start", body: body)
+        if ok {
+            defaults.set(token, forKey: Self.pushToStartTokenKey)
+            print("【LA】push-to-start トークン登録成功: \(token.prefix(16))...")
+        } else {
+            print("【LA】push-to-start トークン登録失敗")
+        }
+    }
+
+    // MARK: - バックエンド通信
+
+    /// Activity の push token を登録する（失敗時は 2s / 5s / 10s のバックオフで最大3回リトライ）
+    private func sendPushTokenToBackend(token: String, activityId: String) async {
+        guard let user = UserService.shared.getCurrentUser(),
+              let encryptedPassword = user.encryptedPassword else { return }
 
         let body: [String: String] = [
             "username": user.username,
@@ -349,15 +453,57 @@ final class LiveActivityScheduler: ObservableObject {
             "activityId": activityId,
         ]
 
+        let backoff: [UInt64] = [2, 5, 10]
+        for attempt in 0...backoff.count {
+            if attempt > 0 {
+                try? await Task.sleep(nanoseconds: backoff[attempt - 1] * 1_000_000_000)
+                if Task.isCancelled { return }
+                print("【LA】トークン登録リトライ \(attempt)/\(backoff.count)")
+            }
+            if await postJSON(path: "/live-activity/register", body: body) {
+                print("【LA】トークン登録成功 (\(activityId.prefix(8)))")
+                return
+            }
+        }
+        print("【LA】トークン登録失敗: リトライ上限に到達 (\(activityId.prefix(8)))")
+    }
+
+    /// Activity の登録を解除する（fire-and-forget、1回のみ）
+    private func unregisterActivity(id: String) {
+        guard let user = UserService.shared.getCurrentUser() else { return }
+        let body: [String: String] = [
+            "username": user.username,
+            "activityId": id,
+        ]
+        Task { [body] in
+            let ok = await self.postJSON(path: "/live-activity/unregister", body: body)
+            print("【LA】登録解除\(ok ? "成功" : "失敗") (\(id.prefix(8)))")
+        }
+    }
+
+    /// JSON を POST し、レスポンスの `status` が true なら成功とみなす
+    private func postJSON(path: String, body: [String: String]) async -> Bool {
+        guard let url = URL(string: Self.apiBase + path) else { return false }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
-            let (data, _) = try await URLSession.shared.data(for: request)
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let status = json["status"] as? Bool {
-                print("【LA】トークン登録\(status ? "成功" : "失敗")")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                print("【LA】\(path) HTTP \(http.statusCode)")
+                return false
             }
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let status = json["status"] as? Bool else {
+                return false
+            }
+            return status
         } catch {
-            print("【LA】トークン登録エラー: \(error)")
+            print("【LA】\(path) 通信エラー: \(error)")
+            return false
         }
     }
 
@@ -373,10 +519,12 @@ final class LiveActivityScheduler: ObservableObject {
 
         for (i, lesson) in sorted.enumerated() {
             guard let lessonNum = lesson.lessonNum,
-                  let name = lesson.name,
+                  lesson.name != nil,
                   let startDate = lesson.startTime(on: dateString),
                   let endDate = lesson.endTime(on: dateString) else { continue }
 
+            // 授業名には教員名が末尾に付くため displayName で除去する
+            let name = lesson.displayName
             let room = lesson.cleanRoom
             let teacher = lesson.primaryTeacher
             let hasRoomChange = lesson.hasRoomChange
@@ -458,12 +606,13 @@ final class LiveActivityScheduler: ObservableObject {
                let nextStart = next.startTime(on: dateString),
                next.endTime(on: dateString) != nil,
                let nextNum = next.lessonNum,
-               let nextName = next.name {
+               next.name != nil {
 
                 // 隣接授業チェック: [start, end) ルール
                 // nextStart <= endDate → breakTime をスキップ
                 if nextStart > endDate {
                     let gap = nextStart.timeIntervalSince(endDate)
+                    let nextName = next.displayName
                     let nextRoom = next.cleanRoom
                     let nextTeacher = next.primaryTeacher
 
@@ -531,13 +680,13 @@ final class LiveActivityScheduler: ObservableObject {
 
     // MARK: - ユーティリティ
 
-    /// 現在の状態に対する staleDate を返す（カウントダウン対象時刻）
-    /// staleDate = countdownDate にすることで、倒計時が0に達した瞬間に
-    /// isStale = true → "0:00" 表示（正向計時を防止）
+    /// 現在の状態に対する staleDate を返す
+    /// ルール: 次のトランジション時刻 + 10分の猶予。次が無ければ nil
+    /// ⚠️ バックエンドの stale-date 算出ルールと一致させること
     private func staleDateForCurrentState() -> Date? {
         let now = Date()
-        return transitions.last(where: { $0.date <= now })?.state.countdownDate
-            ?? transitions.first?.state.countdownDate
+        guard let next = transitions.first(where: { $0.date > now }) else { return nil }
+        return next.date.addingTimeInterval(10 * 60)
     }
 
     private static let dateKeyFormatter: DateFormatter = {

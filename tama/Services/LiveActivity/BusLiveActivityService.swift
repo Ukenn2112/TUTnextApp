@@ -82,6 +82,43 @@ final class BusLiveActivityService {
         print("【Bus LA】終了")
     }
 
+    /// 発車済みのバス Live Activity を終了し、まだ有効なものを再採用する
+    /// プロセス再起動後は `currentActivity` が nil になり、Timer も失われるため
+    /// フォアグラウンド復帰時に必ず呼ぶこと（ロック画面への居座り防止）
+    func cleanupDepartedActivities() async {
+        let activities = Activity<BusLiveActivityAttributes>.activities
+        guard !activities.isEmpty else {
+            currentActivity = nil
+            return
+        }
+
+        let now = Date()
+        var adopted: Activity<BusLiveActivityAttributes>?
+
+        for activity in activities {
+            let state = activity.activityState
+            let deadline = activity.content.state.departureDate.addingTimeInterval(dismissalDelay)
+            let isDead = state == .ended || state == .dismissed || now > deadline
+
+            if isDead || adopted != nil {
+                await activity.end(nil, dismissalPolicy: .immediate)
+                print("【Bus LA】終了（発車済み or 重複）: \(activity.content.state.departureTimeText)")
+            } else {
+                adopted = activity
+            }
+        }
+
+        dismissalTimer?.invalidate()
+        dismissalTimer = nil
+        currentActivity = adopted
+
+        if let adopted {
+            // プロセス再起動後でも自動終了タイマーを張り直す
+            scheduleDismissal(at: adopted.content.state.departureDate.addingTimeInterval(dismissalDelay))
+            print("【Bus LA】既存 Activity を再採用: \(adopted.content.state.departureTimeText)")
+        }
+    }
+
     /// すべてのバス Live Activity を終了する（ログアウト時等）
     func endAllActivities() async {
         dismissalTimer?.invalidate()

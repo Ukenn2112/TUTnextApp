@@ -58,18 +58,37 @@ private func classAccentColor(_ state: ClassLiveActivityAttributes.ContentState)
     }
 }
 
-/// カウントダウンタイマー: 期限到達後は "0:00" を表示し正向計時を防ぐ
+/// カウントダウンタイマー
+/// `Text(timerInterval:)` は区間終了時に 0:00 で停止するため、正向計時に転じない
 private struct CountdownTimerText: View {
     let targetDate: Date
-    let isStale: Bool
+    /// 現在フェーズの開始時刻（省略時は描画時の現在時刻）
+    var phaseStart: Date?
 
     var body: some View {
-        if isStale {
-            Text("0:00")
-        } else {
-            Text(targetDate, style: .timer)
-        }
+        let end = targetDate
+        // start > end になると ClosedRange が不正になるためガードする
+        let start = min(phaseStart ?? Date(), end)
+        Text(timerInterval: start...end, pauseTime: nil, countsDown: true)
     }
+}
+
+/// 情報が古い可能性を示す控えめなインジケータ（ロック画面のみ）
+private struct StaleIndicator: View {
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 9))
+            Text("情報が古い可能性")
+                .font(.system(size: 10, weight: .medium))
+        }
+        .foregroundStyle(.tertiary)
+    }
+}
+
+/// カウントダウン区間の開始時刻（inProgress のみ確定値を持つ）
+private func phaseStartDate(_ state: ClassLiveActivityAttributes.ContentState) -> Date? {
+    state.phase == .inProgress ? state.startDate : nil
 }
 
 // MARK: - ロック画面ビュー
@@ -81,6 +100,9 @@ struct ClassLiveActivityLockScreenView: View {
         VStack(alignment: .leading, spacing: 12) {
             headerRow
             contentRows
+            if context.isStale {
+                StaleIndicator()
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -197,7 +219,7 @@ struct ClassLiveActivityLockScreenView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 0) {
-                CountdownTimerText(targetDate: context.state.countdownDate, isStale: context.isStale)
+                CountdownTimerText(targetDate: context.state.countdownDate, phaseStart: phaseStartDate(context.state))
                     .font(.system(size: 24, weight: .bold, design: .monospaced))
                     .foregroundStyle(classAccentColor(context.state))
                     .multilineTextAlignment(.trailing)
@@ -278,7 +300,7 @@ struct ClassLiveActivityLockScreenView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 0) {
-                    CountdownTimerText(targetDate: context.state.countdownDate, isStale: context.isStale)
+                    CountdownTimerText(targetDate: context.state.countdownDate, phaseStart: phaseStartDate(context.state))
                         .font(.system(size: 24, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.iosBlue)
                         .multilineTextAlignment(.trailing)
@@ -345,7 +367,7 @@ struct ClassLiveActivityLockScreenView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 0) {
-                CountdownTimerText(targetDate: context.state.countdownDate, isStale: context.isStale)
+                CountdownTimerText(targetDate: context.state.countdownDate, phaseStart: phaseStartDate(context.state))
                     .font(.system(size: 24, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.iosOrange)
                     .multilineTextAlignment(.trailing)
@@ -475,7 +497,7 @@ struct ClassActivityExpandedBottom: View {
                         Text(timerLabel)
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.white.opacity(0.5))
-                        CountdownTimerText(targetDate: context.state.countdownDate, isStale: context.isStale)
+                        CountdownTimerText(targetDate: context.state.countdownDate, phaseStart: phaseStartDate(context.state))
                             .font(.system(size: 22, weight: .black, design: .monospaced))
                             .foregroundStyle(classAccentColor(context.state))
                     }
@@ -677,7 +699,7 @@ struct ClassLiveActivityWidget: Widget {
         default:
             let remaining = abs(context.state.countdownDate.timeIntervalSinceNow)
             let maxW: CGFloat = remaining >= 3600 ? 54 : remaining >= 600 ? 40 : 32
-            CountdownTimerText(targetDate: context.state.countdownDate, isStale: context.isStale)
+            CountdownTimerText(targetDate: context.state.countdownDate, phaseStart: phaseStartDate(context.state))
                 .font(.system(size: 14, weight: .medium).monospacedDigit())
                 .foregroundStyle(classAccentColor(context.state))
                 .multilineTextAlignment(.trailing)
@@ -695,7 +717,7 @@ struct ClassLiveActivityWidget: Widget {
                         .font(.system(size: 11, weight: .semibold))
                         .lineLimit(1)
                 } else {
-                    CountdownTimerText(targetDate: context.state.countdownDate, isStale: context.isStale)
+                    CountdownTimerText(targetDate: context.state.countdownDate, phaseStart: phaseStartDate(context.state))
                         .font(.system(size: 11, weight: .semibold).monospacedDigit())
                         .lineLimit(1)
                 }

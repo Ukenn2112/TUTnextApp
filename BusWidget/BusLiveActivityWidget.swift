@@ -22,18 +22,17 @@ private extension Color {
     static let iosOrange = Color(red: 1.0, green: 0.624, blue: 0.039)
 }
 
-// MARK: - カウントダウンタイマー（stale 時は "0:00" 表示）
+// MARK: - カウントダウンタイマー
 
+/// `Text(timerInterval:)` は区間終了時に 0:00 で停止するため、正向計時に転じない
 private struct BusCountdownTimerText: View {
     let targetDate: Date
-    let isStale: Bool
 
     var body: some View {
-        if isStale {
-            Text("0:00")
-        } else {
-            Text(targetDate, style: .timer)
-        }
+        let end = targetDate
+        // start > end になると ClosedRange が不正になるためガードする
+        let start = min(Date(), end)
+        Text(timerInterval: start...end, pauseTime: nil, countsDown: true)
     }
 }
 
@@ -128,10 +127,7 @@ struct BusLiveActivityLockScreenView: View {
             Spacer(minLength: 4)
 
             VStack(alignment: .trailing, spacing: 0) {
-                BusCountdownTimerText(
-                    targetDate: context.state.departureDate,
-                    isStale: context.isStale
-                )
+                BusCountdownTimerText(targetDate: context.state.departureDate)
                 .font(.system(size: 24, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.iosOrange)
                 .multilineTextAlignment(.trailing)
@@ -218,10 +214,7 @@ struct BusLiveActivityWidget: Widget {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.iosOrange)
         } else {
-            BusCountdownTimerText(
-                targetDate: context.state.departureDate,
-                isStale: context.isStale
-            )
+            BusCountdownTimerText(targetDate: context.state.departureDate)
             .font(.system(size: 14, weight: .medium).monospacedDigit())
             .foregroundStyle(Color.iosOrange)
             .multilineTextAlignment(.trailing)
@@ -293,10 +286,7 @@ struct BusLiveActivityWidget: Widget {
                     Text(String(localized: "発車まで"))
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white.opacity(0.5))
-                    BusCountdownTimerText(
-                        targetDate: context.state.departureDate,
-                        isStale: context.isStale
-                    )
+                    BusCountdownTimerText(targetDate: context.state.departureDate)
                     .font(.system(size: 22, weight: .black, design: .monospaced))
                     .foregroundStyle(Color.iosOrange)
                 }
@@ -317,10 +307,7 @@ struct BusLiveActivityWidget: Widget {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 4) {
                     minimalProgressRing(context: context, size: 20, lineWidth: 2)
-                    BusCountdownTimerText(
-                        targetDate: context.state.departureDate,
-                        isStale: context.isStale
-                    )
+                    BusCountdownTimerText(targetDate: context.state.departureDate)
                     .font(.system(size: 11, weight: .semibold).monospacedDigit())
                     .lineLimit(1)
                 }
