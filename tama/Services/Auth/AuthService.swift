@@ -198,39 +198,18 @@ final class AuthService {
             await LiveActivityService.shared.endAllActivities()
         }
 
+        // ログアウトはローカル操作を優先する。
+        // サーバー側ログアウトはベストエフォートで送信し、その成否に関わらず
+        // ローカルセッションをクリアして完了を通知する。
+        // （ネットワークエラー・セッション期限切れ・解析失敗でもログアウトが詰まらないように）
         let decoder: (Data) -> Result<Bool, Error> = { data in
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                    let statusDto = json["statusDto"] as? [String: Any],
-                    let success = statusDto["success"] as? Bool
-                {
-                    CookieService.shared.clearCookies()
-                    UserService.shared.clearCurrentUser()
-
-                    if success {
-                        completion(.success(true))
-                        return .success(true)
-                    } else {
-                        let errorMessage =
-                            (statusDto["errorList"] as? [[String: Any]])?.first?["errorMessage"]
-                            as? String ?? "Logout failed"
-                        let error = AuthError.logoutFailed(errorMessage)
-                        completion(.failure(error))
-                        return .failure(error)
-                    }
-                } else {
-                    CookieService.shared.clearCookies()
-                    UserService.shared.clearCurrentUser()
-                    let error = AuthError.invalidResponse
-                    completion(.failure(error))
-                    return .failure(error)
-                }
-            } catch {
-                CookieService.shared.clearCookies()
-                UserService.shared.clearCurrentUser()
-                completion(.failure(error))
-                return .failure(error)
+            // サーバー応答はログ目的のみ。ローカルクリアと completion は下で無条件実行済み。
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let statusDto = json["statusDto"] as? [String: Any],
+                let success = statusDto["success"] as? Bool, success {
+                return .success(true)
             }
+            return .failure(AuthError.invalidResponse)
         }
 
         APIService.shared.request(
@@ -240,5 +219,10 @@ final class AuthService {
             replacingPercentEncoding: false,
             decoder: decoder
         )(request)
+
+        // サーバー応答を待たずにローカルセッションを即時クリアし、UI を確実に遷移させる
+        CookieService.shared.clearCookies()
+        UserService.shared.clearCurrentUser()
+        completion(.success(true))
     }
 }
