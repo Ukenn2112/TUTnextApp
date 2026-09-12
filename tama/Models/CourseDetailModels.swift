@@ -9,6 +9,58 @@ struct CourseDetailResponse {
     let memo: String
     let syllabusPubFlg: Bool
     let syuKetuKanriFlg: Bool
+
+    /// プレビュー/スクリーンショット用のモックデータを生成する
+    static func previewMock(for course: CourseModel) -> CourseDetailResponse {
+        // データベースII(SQL) 用の詳細モック（メイン動線のスクリーンショット用）
+        if course.jugyoCd == "DB001" {
+            return CourseDetailResponse(
+                announcements: [
+                    AnnouncementModel(
+                        id: 101,
+                        title: "第5回レポート『正規化』提出について",
+                        date: 1_745_020_800_000,
+                        torkDate: nil
+                    ),
+                    AnnouncementModel(
+                        id: 102,
+                        title: "中間試験範囲のお知らせ（JOIN/GROUP BY まで）",
+                        date: 1_744_416_000_000,
+                        torkDate: nil
+                    ),
+                    AnnouncementModel(
+                        id: 103,
+                        title: "演習用サンプルDBを配布しました",
+                        date: 1_743_811_200_000,
+                        torkDate: nil
+                    )
+                ],
+                attendance: AttendanceModel(
+                    present: 11, absent: 1, late: 1, early: 0, sick: 0, unregistered: 0
+                ),
+                memo: "第6回までの SQL 演習問題を復習する。\n- サブクエリ\n- 外部結合",
+                syllabusPubFlg: true,
+                syuKetuKanriFlg: true
+            )
+        }
+        // その他の授業用の汎用モック
+        return CourseDetailResponse(
+            announcements: [
+                AnnouncementModel(
+                    id: 1,
+                    title: NSLocalizedString("お知らせはまだありません", comment: ""),
+                    date: Int(Date().timeIntervalSince1970 * 1_000),
+                    torkDate: nil
+                )
+            ],
+            attendance: AttendanceModel(
+                present: 8, absent: 0, late: 0, early: 0, sick: 0, unregistered: 0
+            ),
+            memo: "",
+            syllabusPubFlg: true,
+            syuKetuKanriFlg: true
+        )
+    }
 }
 
 // MARK: - 掲示情報モデル

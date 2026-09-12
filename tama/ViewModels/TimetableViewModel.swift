@@ -16,8 +16,12 @@ final class TimetableViewModel: ObservableObject {
 
     // MARK: - 初期化
     init() {
-        // サンプルデータを初期値として設定
-        self.courses = CourseModel.sampleCourses
+        // Xcode Preview では numeric キーのプレビュー用データを初期値にする
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            self.courses = CourseModel.previewCourses
+        } else {
+            self.courses = CourseModel.sampleCourses
+        }
 
         // TimetableServiceからの学期情報を監視
         timetableService.$currentSemester
@@ -31,6 +35,10 @@ final class TimetableViewModel: ObservableObject {
 
     /// 時間割データを取得 - 新インターフェース
     func fetchTimetableData(forYear year: Int = 0, termNo: Int = 0) {
+        // プレビュー環境ではネットワーク取得をスキップ（`previewCourses` をそのまま表示）
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            return
+        }
         isLoading = true
         errorMessage = nil
 

@@ -15,8 +15,16 @@ final class CourseDetailViewModel: ObservableObject {
 
     init(course: CourseModel) {
         self.course = course
-        self.isPreview = false
-        self.memo = ""
+        // Xcode Preview ではモックデータを自動セット（時間割プレビューからのタップスルー対応）
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            let mock = CourseDetailResponse.previewMock(for: course)
+            self.isPreview = true
+            self.courseDetail = mock
+            self.memo = mock.memo
+        } else {
+            self.isPreview = false
+            self.memo = ""
+        }
     }
 
     /// プレビュー用初期化（APIを呼ばずにモックデータをセット）

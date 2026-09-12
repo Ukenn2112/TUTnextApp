@@ -747,5 +747,45 @@ final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
 // MARK: - プレビュー
 
 #Preview {
-    BusScheduleView()
+    BusScheduleViewPreviewHost()
+        .environmentObject(RatingService.shared)
+        .environmentObject(GoogleOAuthService.shared)
+}
+
+private struct BusScheduleViewPreviewHost: View {
+    @State private var selectedTab = 0
+    @State private var isLoggedIn = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+
+            TabView(selection: $selectedTab) {
+                BusScheduleView()
+                    .tabItem {
+                        Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
+                    }
+                    .tag(0)
+
+                Color.clear
+                    .tabItem {
+                        Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
+                    }
+                    .tag(1)
+
+                Color.clear
+                    .tabItem {
+                        Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
+                    }
+                    .tag(2)
+
+                Color.clear
+                    .tabItem {
+                        Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis.circle")
+                    }
+                    .tag(3)
+            }
+            .tint(.appPrimary)
+        }
+    }
 }

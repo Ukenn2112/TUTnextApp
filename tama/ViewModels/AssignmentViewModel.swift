@@ -15,6 +15,10 @@ final class AssignmentViewModel: ObservableObject {
 
     init() {
         setupTimer()
+        // Xcode Preview ではモックデータを初期値にする
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            self.assignments = Assignment.previewAssignments.sorted { $0.dueDate < $1.dueDate }
+        }
     }
 
     deinit {
@@ -45,6 +49,10 @@ final class AssignmentViewModel: ObservableObject {
     }
 
     func loadAssignments() {
+        // プレビュー環境ではネットワーク取得をスキップ（`previewAssignments` をそのまま表示）
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            return
+        }
         isLoading = true
         errorMessage = nil
 

@@ -591,41 +591,28 @@ struct CourseDetailView: View {
 
 #Preview {
     let sampleCourse = CourseModel(
-        name: "コンピュータ・サイエンス",
-        room: "242",
-        teacher: "中村 有一",
-        startTime: "1040",
-        endTime: "1210",
-        colorIndex: 1,
-        weekday: 1,
-        period: 2,
-        jugyoCd: "CS001",
+        name: "データベースII(SQL)",
+        room: "241",
+        teacher: "齋藤 S.裕美",
+        startTime: "1300",
+        endTime: "1430",
+        colorIndex: 6,
+        weekday: 2,
+        period: 3,
+        jugyoCd: "DB001",
         academicYear: 2_025,
         courseYear: 2_025,
         courseTerm: 1,
-        jugyoKbn: "1",
-        keijiMidokCnt: 1
-    )
-
-    let presetColors = Color.coursePresets
-
-    let mockDetail = CourseDetailResponse(
-        announcements: [
-            AnnouncementModel(id: 1, title: "第5回レポート提出について", date: 1_739_836_800_000, torkDate: nil),
-            AnnouncementModel(id: 2, title: "来週の授業は休講です", date: 1_739_232_000_000, torkDate: nil),
-        ],
-        attendance: AttendanceModel(present: 10, absent: 1, late: 2, early: 0, sick: 0, unregistered: 0),
-        memo: "教科書P.120〜150を予習",
-        syllabusPubFlg: true,
-        syuKetuKanriFlg: true
+        jugyoKbn: "A",
+        keijiMidokCnt: 3
     )
 
     CourseDetailView(
         course: sampleCourse,
-        presetColors: presetColors,
-        selectedColorIndex: 1,
+        presetColors: Color.coursePresets,
+        selectedColorIndex: sampleCourse.colorIndex,
         onColorChange: { _ in },
-        previewDetail: mockDetail
+        previewDetail: CourseDetailResponse.previewMock(for: sampleCourse)
     )
     .environmentObject(RatingService.shared)
 }

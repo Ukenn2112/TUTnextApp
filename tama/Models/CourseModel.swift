@@ -198,4 +198,132 @@ struct CourseModel: Identifiable, Equatable, Codable {
             )
         ]
     ]
+
+    /// プレビュー/スクリーンショット用の時間割データ（月〜金 × 1〜5限、一部空きあり）
+    /// キーは曜日番号（"1"=月 〜 "5"=金）、`TimetableViewModel.getWeekdays()` と対応
+    /// 未読掲示バッジは 2 コマのみ（火3限 データベースII / 木5限 ホームゼミII）
+    static let previewCourses: [String: [String: CourseModel]] = [
+        "1": [
+            "1": CourseModel(
+                name: "キャリア・デザインII C", room: "101", teacher: "葛本 幸枝",
+                startTime: "0900", endTime: "1030", colorIndex: 1,
+                weekday: 1, period: 1, jugyoCd: "CD001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "2": CourseModel(
+                name: "コンピュータ・サイエンス", room: "242", teacher: "中村 有一",
+                startTime: "1040", endTime: "1210", colorIndex: 2,
+                weekday: 1, period: 2, jugyoCd: "CS001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "4": CourseModel(
+                name: "中国ビジネスコミュニケーションII", room: "113", teacher: "田 園",
+                startTime: "1440", endTime: "1610", colorIndex: 3,
+                weekday: 1, period: 4, jugyoCd: "CB001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            )
+        ],
+        "2": [
+            "1": CourseModel(
+                name: "経営情報特講", room: "201", teacher: "青木 克彦",
+                startTime: "0900", endTime: "1030", colorIndex: 4,
+                weekday: 2, period: 1, jugyoCd: "KJ001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "2": CourseModel(
+                name: "消費心理学", room: "211", teacher: "浜田 正幸",
+                startTime: "1040", endTime: "1210", colorIndex: 5,
+                weekday: 2, period: 2, jugyoCd: "SK001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "3": CourseModel(
+                name: "データベースII(SQL)", room: "241", teacher: "齋藤 S.裕美",
+                startTime: "1300", endTime: "1430", colorIndex: 6,
+                weekday: 2, period: 3, jugyoCd: "DB001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 3
+            ),
+            "4": CourseModel(
+                name: "世界の宗教", room: "201", teacher: "高橋 恭寛",
+                startTime: "1440", endTime: "1610", colorIndex: 7,
+                weekday: 2, period: 4, jugyoCd: "SR001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            )
+        ],
+        "3": [
+            "2": CourseModel(
+                name: "国際関係論", room: "202", teacher: "伊藤 美咲",
+                startTime: "1040", endTime: "1210", colorIndex: 9,
+                weekday: 3, period: 2, jugyoCd: "IR001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "3": CourseModel(
+                name: "Webプログラミング入門", room: "201", teacher: "出原 至道",
+                startTime: "1300", endTime: "1430", colorIndex: 9,
+                weekday: 3, period: 3, jugyoCd: "WP001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "4": CourseModel(
+                name: "現代メディア論", room: "101", teacher: "中澤 弥",
+                startTime: "1440", endTime: "1610", colorIndex: 10,
+                weekday: 3, period: 4, jugyoCd: "GM001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            )
+        ],
+        "4": [
+            "1": CourseModel(
+                name: "経営科学", room: "212", teacher: "新西 誠人",
+                startTime: "0900", endTime: "1030", colorIndex: 2,
+                weekday: 4, period: 1, jugyoCd: "KK001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "2": CourseModel(
+                name: "図化技術概論", room: "201", teacher: "出原 至道",
+                startTime: "1040", endTime: "1210", colorIndex: 3,
+                weekday: 4, period: 2, jugyoCd: "ZG001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "5": CourseModel(
+                name: "ホームゼミII", room: "113", teacher: "小林 英夫",
+                startTime: "1620", endTime: "1750", colorIndex: 4,
+                weekday: 4, period: 5, jugyoCd: "HZ001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 2
+            )
+        ],
+        "5": [
+            "1": CourseModel(
+                name: "ミクロ経済学", room: "204", teacher: "中島 拓也",
+                startTime: "0900", endTime: "1030", colorIndex: 7,
+                weekday: 5, period: 1, jugyoCd: "ME001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "3": CourseModel(
+                name: "図化技概論", room: "201", teacher: "出原 至道",
+                startTime: "1300", endTime: "1430", colorIndex: 5,
+                weekday: 5, period: 3, jugyoCd: "ZG002",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            ),
+            "4": CourseModel(
+                name: "ホームゼII", room: "113", teacher: "小林 英夫",
+                startTime: "1440", endTime: "1610", colorIndex: 6,
+                weekday: 5, period: 4, jugyoCd: "HZ002",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1,
+                jugyoKbn: "A", keijiMidokCnt: 0
+            )
+        ]
+    ]
 }
