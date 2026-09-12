@@ -52,14 +52,58 @@ final class TimetableService {
         }
         
         // バックグラウンドで新しいデータを取得（最大3回リトライ）
-        fetchTimetableDataFromAPI(year: year, termNo: termNo, retryCount: 0, maxRetries: 3, completion: completion)
+        fetchTimetableDataFromAPI(year: year, termNo: termNo, maxRetries: 3, completion: completion)
     }
     
-    // API から時間割データを取得する内部関数（リトライ機能付き）
+    // MARK: - 取得元
+
+    /// 時間割データの取得元
+    /// T-NEXT 公式 API を優先し、失敗またはデータ不完全（教室・教員名が空）の場合のみ
+    /// 自社バックエンド（Redis から教室情報を補完するプロキシ）へフォールバックする
+    private enum TimetableSource {
+        case tnext
+        case backend
+
+        var url: URL? {
+            switch self {
+            case .tnext:
+                return URL(
+                    string: "https://next.tama.ac.jp/uprx/webapi/up/ap/Apa004Resource/getJugyoKeijiMenuInfo")
+            case .backend:
+                return URL(string: "https://tama.qaq.tw/schedule/class_bulletin")
+            }
+        }
+
+        /// T-NEXT はレスポンス中の文字列が URL エンコードされている（バックエンドはデコード済み）
+        var isPercentEncoded: Bool { self == .tnext }
+
+        var logName: String {
+            switch self {
+            case .tnext: return "T-NEXT"
+            case .backend: return "バックエンド"
+            }
+        }
+    }
+
+    /// API リクエストに使う認証情報
+    private struct RequestCredentials {
+        let username: String
+        let encryptedPassword: String
+    }
+
+    /// API から取得した時間割レスポンス（statusDto.success == true 時の data 部分）
+    private struct CourseListPayload {
+        let data: [String: Any]
+        let courseList: [[String: Any]]
+    }
+
+    // MARK: - API 取得
+
+    /// API から時間割データを取得する内部関数
+    /// 取得順: T-NEXT → （失敗または教室・教員名の欠損時のみ）バックエンド
     private func fetchTimetableDataFromAPI(
         year: Int,
         termNo: Int,
-        retryCount: Int,
         maxRetries: Int,
         completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
     ) {
@@ -67,30 +111,78 @@ final class TimetableService {
             let encryptedPassword = user.encryptedPassword
         else {
             print("【時間割】ユーザー認証情報なし")
-            // キャッシュの有効性を確認（12時間以内）
-            if cachedTimetableData == nil || !isCacheValid() {
-                completion(.failure(TimetableError.userNotAuthenticated))
-            }
+            finishWithFailure(TimetableError.userNotAuthenticated, completion: completion)
             return
         }
 
-        // API リクエストの準備
-        guard
-            let url = URL(
-                string:
-                    // "https://next.tama.ac.jp/uprx/webapi/up/ap/Apa004Resource/getJugyoKeijiMenuInfo"
-                    "https://tama.qaq.tw/schedule/class_bulletin"
-            )
-        else {
-            print("【時間割】無効なエンドポイント")
-            // キャッシュの有効性を確認（12時間以内）
-            if cachedTimetableData == nil || !isCacheValid() {
-                completion(.failure(TimetableError.invalidEndpoint))
+        let credentials = RequestCredentials(username: user.username, encryptedPassword: encryptedPassword)
+
+        requestCourseList(
+            from: .tnext, year: year, termNo: termNo, credentials: credentials,
+            retryCount: 0, maxRetries: maxRetries
+        ) { tnextResult in
+            switch tnextResult {
+            case .success(let payload) where self.isCourseListComplete(payload.courseList):
+                self.applyCourseListPayload(payload, source: .tnext, completion: completion)
+
+            case .success(let partialPayload):
+                print("【時間割】T-NEXT のデータに教室または教員名の欠損あり → バックエンドで補完を試行")
+                self.requestCourseList(
+                    from: .backend, year: year, termNo: termNo, credentials: credentials,
+                    retryCount: 0, maxRetries: maxRetries
+                ) { backendResult in
+                    switch backendResult {
+                    case .success(let payload):
+                        self.applyCourseListPayload(payload, source: .backend, completion: completion)
+                    case .failure(let error):
+                        print("【時間割】バックエンド補完失敗（\(error.localizedDescription)）→ T-NEXT のデータをそのまま使用")
+                        self.applyCourseListPayload(partialPayload, source: .tnext, completion: completion)
+                    }
+                }
+
+            case .failure(let tnextError):
+                print("【時間割】T-NEXT 取得失敗（\(tnextError.localizedDescription)）→ バックエンドへフォールバック")
+                self.requestCourseList(
+                    from: .backend, year: year, termNo: termNo, credentials: credentials,
+                    retryCount: 0, maxRetries: maxRetries
+                ) { backendResult in
+                    switch backendResult {
+                    case .success(let payload):
+                        self.applyCourseListPayload(payload, source: .backend, completion: completion)
+                    case .failure(let backendError):
+                        self.finishWithFailure(backendError, completion: completion)
+                    }
+                }
             }
+        }
+    }
+
+    /// 全コースに教室名と教員名が揃っているか
+    /// T-NEXT 側で教室・教員名が空で返る障害があったため、欠損があればバックエンドで補完する
+    private func isCourseListComplete(_ courseList: [[String: Any]]) -> Bool {
+        courseList.allSatisfy { course in
+            let room = (course["kyostName"] as? String ?? "").trimmingCharacters(in: .whitespaces)
+            let teacher = (course["kyoinName"] as? String ?? "").trimmingCharacters(in: .whitespaces)
+            return !room.isEmpty && !teacher.isEmpty
+        }
+    }
+
+    /// 指定した取得元に時間割をリクエストする（失敗時は最大 maxRetries 回、2秒間隔でリトライ）
+    private func requestCourseList(
+        from source: TimetableSource,
+        year: Int,
+        termNo: Int,
+        credentials: RequestCredentials,
+        retryCount: Int,
+        maxRetries: Int,
+        completion: @escaping (Result<CourseListPayload, Error>) -> Void
+    ) {
+        guard let url = source.url else {
+            print("【時間割】無効なエンドポイント: \(source.logName)")
+            completion(.failure(TimetableError.invalidEndpoint))
             return
         }
 
-        // リクエストボディの作成
         let requestBody: [String: Any] = [
             "plainLoginPassword": "",
             "data": [
@@ -98,335 +190,183 @@ final class TimetableService {
                 "gakkiNo": termNo
             ],
             "langCd": "",
-            "encryptedLoginPassword": encryptedPassword,
-            "loginUserId": user.username,
+            "encryptedLoginPassword": credentials.encryptedPassword,
+            "loginUserId": credentials.username,
             "productCd": "ap",
             "subProductCd": "apa"
         ]
 
-        // リクエストデータをログに出力
-        print("【時間割】リクエスト: \(url.absoluteString)")
-        if let jsonString = try? JSONSerialization.data(withJSONObject: requestBody),
-            let jsonStr = String(data: jsonString, encoding: .utf8) {
-            print("【時間割】リクエストボディ: \(jsonStr)")
-        }
+        print("【時間割】リクエスト(\(source.logName)): \(url.absoluteString)")
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             print("【時間割】リクエスト作成失敗")
-            // キャッシュの有効性を確認（12時間以内）
-            if cachedTimetableData == nil || !isCacheValid() {
-                completion(.failure(TimetableError.requestCreationFailed))
-            }
+            completion(.failure(TimetableError.requestCreationFailed))
             return
         }
 
-        // リクエストの設定
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
-
-        // リクエストにCookieを追加
         request = CookieService.shared.addCookies(to: request)
 
-        // APIリクエストの実行
+        let retryOrFail: (Error) -> Void = { error in
+            if retryCount < maxRetries {
+                print("【時間割】\(source.logName) リトライ \(retryCount + 1)/\(maxRetries): \(error.localizedDescription)")
+                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                    self.requestCourseList(
+                        from: source, year: year, termNo: termNo, credentials: credentials,
+                        retryCount: retryCount + 1, maxRetries: maxRetries, completion: completion
+                    )
+                }
+            } else {
+                print("【時間割】\(source.logName) 最大リトライ回数に達しました: \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("【時間割】エラー: \(error.localizedDescription)")
-                
-                // リトライ処理
-                if retryCount < maxRetries {
-                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                        self.fetchTimetableDataFromAPI(
-                            year: year,
-                            termNo: termNo,
-                            retryCount: retryCount + 1,
-                            maxRetries: maxRetries,
-                            completion: completion
-                        )
-                    }
-                } else {
-                    print("【時間割】最大リトライ回数に達しました")
-                    // キャッシュの有効性を確認（12時間以内）
-                    if self.cachedTimetableData == nil || !self.isCacheValid() {
-                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                        completion(.failure(error))
-                    } else {
-                        print("【時間割】キャッシュを使用します（有効期限内）")
-                    }
-                }
+                retryOrFail(error)
                 return
             }
 
-            // HTTPレスポンスをログに出力
             if let httpResponse = response as? HTTPURLResponse {
-                print("【時間割】HTTPステータスコード: \(httpResponse.statusCode)")
-
-                // 保存Cookie
+                print("【時間割】\(source.logName) HTTPステータスコード: \(httpResponse.statusCode)")
                 if let responseURL = httpResponse.url {
                     CookieService.shared.saveCookies(from: httpResponse, for: responseURL.absoluteString)
-                    print("【時間割】Cookieを保存しました")
                 }
             }
 
             guard let data = data else {
-                print("【時間割】データなし")
-                
-                // リトライ処理
-                if retryCount < maxRetries {
-                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                        self.fetchTimetableDataFromAPI(
-                            year: year,
-                            termNo: termNo,
-                            retryCount: retryCount + 1,
-                            maxRetries: maxRetries,
-                            completion: completion
-                        )
-                    }
-                } else {
-                    print("【時間割】最大リトライ回数に達しました")
-                    // キャッシュの有効性を確認（12時間以内）
-                    if self.cachedTimetableData == nil || !self.isCacheValid() {
-                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                        completion(.failure(TimetableError.noDataReceived))
-                    } else {
-                        print("【時間割】キャッシュを使用します（有効期限内）")
-                    }
-                }
+                retryOrFail(TimetableError.noDataReceived)
                 return
             }
 
-            // 生のレスポンスデータをログに出力
-            if let rawResponseString = String(data: data, encoding: .utf8) {
-                print("【時間割】生レスポンス: \(rawResponseString)")
-            }
-
-            // URLエンコードされたレスポンスをデコード
-            guard let responseString = String(data: data, encoding: .utf8),
-                let decodedData = responseString.removingPercentEncoding?
-                    .replacingOccurrences(of: "\u{3000}", with: " ")
-                    .replacingOccurrences(of: "+", with: " ")
-                    .data(using: .utf8)
-            else {
-                print("【時間割】デコード失敗")
-                
-                // リトライ処理
-                if retryCount < maxRetries {
-                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                        self.fetchTimetableDataFromAPI(
-                            year: year,
-                            termNo: termNo,
-                            retryCount: retryCount + 1,
-                            maxRetries: maxRetries,
-                            completion: completion
-                        )
-                    }
-                } else {
-                    print("【時間割】最大リトライ回数に達しました")
-                    // キャッシュの有効性を確認（12時間以内）
-                    if self.cachedTimetableData == nil || !self.isCacheValid() {
-                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                        completion(.failure(TimetableError.decodingFailed))
-                    } else {
-                        print("【時間割】キャッシュを使用します（有効期限内）")
-                    }
-                }
-                return
-            }
-
-            // デコードされたJSONデータをログに出力
-            if let decodedString = String(data: decodedData, encoding: .utf8) {
-                print("【時間割】デコード後レスポンス: \(decodedString)")
-            }
-
-            // JSONデータの解析
-            do {
-                if let json = try JSONSerialization.jsonObject(with: decodedData) as? [String: Any],
-                    let statusDto = json["statusDto"] as? [String: Any],
-                    let success = statusDto["success"] as? Bool {
-
-                    print("【時間割】ステータス: success=\(success)")
-
-                    if success {
-                        if let data = json["data"] as? [String: Any],
-                            let courseList = data["jgkmDtoList"] as? [[String: Any]] {
-                            print("【時間割】全未読掲示数: \(data["keijiCnt"] as? Int ?? 0)")
-
-                            // 授業年度と学期
-                            let semesterYear = data["nendo"] as? Int ?? 0
-                            let semesterTermNo = data["gakkiNo"] as? Int ?? 0
-                            let semesterName = data["gakkiName"] as? String ?? ""
-
-                            // 学期情報を更新し、UserDefaultsに永続化
-                            DispatchQueue.main.async {
-                                self.currentSemester = Semester(
-                                    year: semesterYear,
-                                    termNo: semesterTermNo,
-                                    termName: semesterName
-                                )
-                                UserDefaults.standard.set(semesterYear, forKey: "semester_year")
-                                UserDefaults.standard.set(semesterTermNo, forKey: "semester_termNo")
-                                UserDefaults.standard.set(semesterName, forKey: "semester_termName")
-                            }
-
-                            // 時間割データの変換
-                            let timetableData = self.convertToTimetableData(courseList)
-
-                            // メモリ内のキャッシュも更新
-                            self.cachedTimetableData = timetableData
-                            self.lastFetchTime = Date()
-                            
-                            // SwiftData 操作はメインスレッドで実行
-                            DispatchQueue.main.async {
-                                self.saveTimetableData(timetableData)
-                            }
-
-                            // 未読件数を更新してから時間割データを返す
-                            UserService.shared.updateAllKeijiMidokCnt(
-                                keijiCnt: data["keijiCnt"] as? Int ?? 0
-                            ) {
-                                print(
-                                    "【時間割】変換後データ: \(timetableData.keys) 曜日, 合計\(timetableData.values.flatMap { $0.values }.count)コース"
-                                )
-                                completion(.success(timetableData))
-                            }
-                        } else {
-                            print("【時間割】データ解析失敗")
-                            
-                            // リトライ処理
-                            if retryCount < maxRetries {
-                                print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                                    self.fetchTimetableDataFromAPI(
-                                        year: year,
-                                        termNo: termNo,
-                                        retryCount: retryCount + 1,
-                                        maxRetries: maxRetries,
-                                        completion: completion
-                                    )
-                                }
-                            } else {
-                                print("【時間割】最大リトライ回数に達しました")
-                                // キャッシュの有効性を確認（12時間以内）
-                                if self.cachedTimetableData == nil || !self.isCacheValid() {
-                                    print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                                    completion(.failure(TimetableError.dataParsingFailed))
-                                } else {
-                                    print("【時間割】キャッシュを使用します（有効期限内）")
-                                }
-                            }
-                        }
-                    } else {
-                        if let messageList = statusDto["messageList"] as? [String],
-                            !messageList.isEmpty {
-                            let errorMessage = messageList.first ?? "Unknown error"
-                            print("【時間割】APIエラー: \(errorMessage)")
-                            
-                            // リトライ処理
-                            if retryCount < maxRetries {
-                                print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                                    self.fetchTimetableDataFromAPI(
-                                        year: year,
-                                        termNo: termNo,
-                                        retryCount: retryCount + 1,
-                                        maxRetries: maxRetries,
-                                        completion: completion
-                                    )
-                                }
-                            } else {
-                                print("【時間割】最大リトライ回数に達しました")
-                                // キャッシュの有効性を確認（12時間以内）
-                                if self.cachedTimetableData == nil || !self.isCacheValid() {
-                                    print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                                    completion(.failure(TimetableError.apiError(errorMessage)))
-                                } else {
-                                    print("【時間割】キャッシュを使用します（有効期限内）")
-                                }
-                            }
-                        } else {
-                            print("【時間割】不明なAPIエラー")
-                            
-                            // リトライ処理
-                            if retryCount < maxRetries {
-                                print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                                    self.fetchTimetableDataFromAPI(
-                                        year: year,
-                                        termNo: termNo,
-                                        retryCount: retryCount + 1,
-                                        maxRetries: maxRetries,
-                                        completion: completion
-                                    )
-                                }
-                            } else {
-                                print("【時間割】最大リトライ回数に達しました")
-                                // キャッシュの有効性を確認（12時間以内）
-                                if self.cachedTimetableData == nil || !self.isCacheValid() {
-                                    print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                                    completion(.failure(TimetableError.apiError("Unknown error")))
-                                } else {
-                                    print("【時間割】キャッシュを使用します（有効期限内）")
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    print("【時間割】レスポンス解析失敗")
-                    
-                    // リトライ処理
-                    if retryCount < maxRetries {
-                        print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                        DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                            self.fetchTimetableDataFromAPI(
-                                year: year,
-                                termNo: termNo,
-                                retryCount: retryCount + 1,
-                                maxRetries: maxRetries,
-                                completion: completion
-                            )
-                        }
-                    } else {
-                        print("【時間割】最大リトライ回数に達しました")
-                        // キャッシュの有効性を確認（12時間以内）
-                        if self.cachedTimetableData == nil || !self.isCacheValid() {
-                            print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                            completion(.failure(TimetableError.invalidResponse))
-                        } else {
-                            print("【時間割】キャッシュを使用します（有効期限内）")
-                        }
-                    }
-                }
-            } catch {
-                print("【時間割】JSON解析エラー: \(error.localizedDescription)")
-                
-                // リトライ処理
-                if retryCount < maxRetries {
-                    print("【時間割】リトライ \(retryCount + 1)/\(maxRetries)")
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-                        self.fetchTimetableDataFromAPI(
-                            year: year,
-                            termNo: termNo,
-                            retryCount: retryCount + 1,
-                            maxRetries: maxRetries,
-                            completion: completion
-                        )
-                    }
-                } else {
-                    print("【時間割】最大リトライ回数に達しました")
-                    // キャッシュの有効性を確認（12時間以内）
-                    if self.cachedTimetableData == nil || !self.isCacheValid() {
-                        print("【時間割】有効なキャッシュがありません（12時間以上経過）")
-                        completion(.failure(error))
-                    } else {
-                        print("【時間割】キャッシュを使用します（有効期限内）")
-                    }
-                }
+            switch self.parseCourseListResponse(data, source: source) {
+            case .success(let payload):
+                completion(.success(payload))
+            case .failure(let error):
+                retryOrFail(error)
             }
         }.resume()
+    }
+
+    /// レスポンスをデコードし、成功時は data 部分を返す
+    private func parseCourseListResponse(
+        _ data: Data, source: TimetableSource
+    ) -> Result<CourseListPayload, Error> {
+        guard let responseString = String(data: data, encoding: .utf8) else {
+            print("【時間割】デコード失敗")
+            return .failure(TimetableError.decodingFailed)
+        }
+
+        // T-NEXT は文字列が URL エンコードされているためデコードする。全角スペースは両方とも半角に統一
+        let normalized: String?
+        if source.isPercentEncoded {
+            normalized = responseString.removingPercentEncoding?
+                .replacingOccurrences(of: "\u{3000}", with: " ")
+                .replacingOccurrences(of: "+", with: " ")
+        } else {
+            normalized = responseString.replacingOccurrences(of: "\u{3000}", with: " ")
+        }
+        guard let normalized, let jsonData = normalized.data(using: .utf8) else {
+            print("【時間割】デコード失敗")
+            return .failure(TimetableError.decodingFailed)
+        }
+
+        print("【時間割】\(source.logName) レスポンス: \(normalized)")
+
+        do {
+            guard let json = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                let statusDto = json["statusDto"] as? [String: Any],
+                let success = statusDto["success"] as? Bool
+            else {
+                print("【時間割】レスポンス解析失敗")
+                return .failure(TimetableError.invalidResponse)
+            }
+
+            guard success else {
+                let message = (statusDto["messageList"] as? [String])?.first ?? "Unknown error"
+                print("【時間割】\(source.logName) APIエラー: \(message)")
+                return .failure(TimetableError.apiError(message))
+            }
+
+            guard let payloadData = json["data"] as? [String: Any],
+                let courseList = payloadData["jgkmDtoList"] as? [[String: Any]]
+            else {
+                print("【時間割】データ解析失敗")
+                return .failure(TimetableError.dataParsingFailed)
+            }
+
+            return .success(CourseListPayload(data: payloadData, courseList: courseList))
+        } catch {
+            print("【時間割】JSON解析エラー: \(error.localizedDescription)")
+            return .failure(error)
+        }
+    }
+
+    /// 取得した時間割データを反映する（学期情報の更新・変換・キャッシュ・SwiftData 保存・未読件数更新）
+    private func applyCourseListPayload(
+        _ payload: CourseListPayload,
+        source: TimetableSource,
+        completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
+    ) {
+        let data = payload.data
+        print("【時間割】\(source.logName) のデータを採用（\(payload.courseList.count)コース）")
+        print("【時間割】全未読掲示数: \(data["keijiCnt"] as? Int ?? 0)")
+
+        // 授業年度と学期
+        let semesterYear = data["nendo"] as? Int ?? 0
+        let semesterTermNo = data["gakkiNo"] as? Int ?? 0
+        let semesterName = data["gakkiName"] as? String ?? ""
+
+        // 学期情報を更新し、UserDefaultsに永続化
+        DispatchQueue.main.async {
+            self.currentSemester = Semester(
+                year: semesterYear,
+                termNo: semesterTermNo,
+                termName: semesterName
+            )
+            UserDefaults.standard.set(semesterYear, forKey: "semester_year")
+            UserDefaults.standard.set(semesterTermNo, forKey: "semester_termNo")
+            UserDefaults.standard.set(semesterName, forKey: "semester_termName")
+        }
+
+        // 時間割データの変換
+        let timetableData = convertToTimetableData(payload.courseList)
+
+        // メモリ内のキャッシュも更新
+        cachedTimetableData = timetableData
+        lastFetchTime = Date()
+
+        // SwiftData 操作はメインスレッドで実行
+        DispatchQueue.main.async {
+            self.saveTimetableData(timetableData)
+        }
+
+        // 未読件数を更新してから時間割データを返す
+        UserService.shared.updateAllKeijiMidokCnt(
+            keijiCnt: data["keijiCnt"] as? Int ?? 0
+        ) {
+            print(
+                "【時間割】変換後データ: \(timetableData.keys) 曜日, 合計\(timetableData.values.flatMap { $0.values }.count)コース"
+            )
+            completion(.success(timetableData))
+        }
+    }
+
+    /// 取得失敗時の処理: 12時間以内のキャッシュがあればそれを使い続け、なければエラーを返す
+    private func finishWithFailure(
+        _ error: Error,
+        completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
+    ) {
+        if cachedTimetableData == nil || !isCacheValid() {
+            print("【時間割】有効なキャッシュがありません（12時間以上経過）: \(error.localizedDescription)")
+            completion(.failure(error))
+        } else {
+            print("【時間割】取得失敗、キャッシュを使用します（有効期限内）")
+        }
     }
 
     // APIレスポンスを時間割データに変換
@@ -436,7 +376,6 @@ final class TimetableService {
 
         for courseData in courseList {
             guard let courseName = courseData["jugyoName"] as? String,
-                let teacherName = courseData["kyoinName"] as? String,
                 let weekdayNumber = courseData["kaikoYobi"] as? Int,
                 let periodNumber = courseData["jigenNo"] as? Int,
                 let academicYear = courseData["nendo"] as? Int,
@@ -448,8 +387,9 @@ final class TimetableService {
                 continue
             }
 
-            // kyostName は null の場合がある
+            // kyostName / kyoinName は null の場合がある（欠損時はバックエンド補完を試みるが、コース自体は落とさない）
             let roomName = courseData["kyostName"] as? String ?? ""
+            let teacherName = courseData["kyoinName"] as? String ?? ""
 
             // jugyoCd は Int または String で返る場合がある
             let jugyoCd: String
