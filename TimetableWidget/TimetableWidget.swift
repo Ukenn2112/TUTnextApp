@@ -68,6 +68,13 @@ struct TimetableEntry: TimelineEntry {
     let lastFetchTime: Date?
     let currentWeekday: String
     let currentPeriod: String?
+    /// 表示する曜日（エントリ生成時に確定させ、描画時に SwiftData を読まない）
+    let weekdays: [String]
+    /// 表示する時限（番号・開始時刻・終了時刻）
+    let periods: [(String, String, String)]
+
+    /// 時間割データが未取得（アプリ未ログインなど）かどうか
+    var hasNoTimetableData: Bool { courses == nil }
 
     init(
         date: Date,
@@ -78,8 +85,28 @@ struct TimetableEntry: TimelineEntry {
         self.date = date
         self.courses = courses
         self.lastFetchTime = lastFetchTime
-        self.currentWeekday = dataProvider.getCurrentWeekday()
-        self.currentPeriod = dataProvider.getCurrentPeriod()
+        self.currentWeekday = dataProvider.getCurrentWeekday(for: date)
+        self.currentPeriod = dataProvider.getCurrentPeriod(at: date)
+        self.weekdays = dataProvider.getWeekdays(from: courses)
+        self.periods = dataProvider.getPeriods(from: courses)
+    }
+
+    /// プレビュー/スクリーンショット用：曜日と時限を明示的に指定
+    init(
+        date: Date,
+        courses: [String: [String: CourseModel]]?,
+        lastFetchTime: Date?,
+        currentWeekday: String,
+        currentPeriod: String?,
+        dataProvider: TimetableWidgetDataProvider = .shared
+    ) {
+        self.date = date
+        self.courses = courses
+        self.lastFetchTime = lastFetchTime
+        self.currentWeekday = currentWeekday
+        self.currentPeriod = currentPeriod
+        self.weekdays = dataProvider.getWeekdays(from: courses)
+        self.periods = dataProvider.getPeriods(from: courses)
     }
 }
 
@@ -87,6 +114,9 @@ struct TimetableEntry: TimelineEntry {
 
 struct Provider: TimelineProvider {
     typealias Entry = TimetableEntry
+
+    /// 1回のタイムラインで生成する最大エントリ数（安全弁）
+    private let maxEntryCount = 60
 
     func placeholder(in context: Context) -> Entry {
         TimetableEntry(
@@ -97,165 +127,112 @@ struct Provider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
-        completion(createEntry(at: Date(), context: context))
+        let loaded = TimetableWidgetDataProvider.shared.loadTimetable()
+        completion(makeEntry(at: Date(), loaded: loaded, context: context))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-        let currentDate = Date()
-        let entry = createEntry(at: currentDate, context: context)
-        let nextUpdateDate = calculateNextUpdate(from: currentDate, entry: entry)
+        let now = Date()
+        // ModelContext は呼び出しスレッド上で生成し、以降はローカルデータのみで計算する
+        let loaded = TimetableWidgetDataProvider.shared.loadTimetable()
+        let entryDates = timelineDates(from: now, loaded: loaded, context: context)
 
-        completion(Timeline(entries: [entry], policy: .after(nextUpdateDate)))
+        let entries = entryDates.map { makeEntry(at: $0, loaded: loaded, context: context) }
+        completion(Timeline(entries: entries, policy: .atEnd))
     }
 
     // MARK: エントリ作成
 
-    private func createEntry(at date: Date, context: Context) -> TimetableEntry {
-        let dataProvider = TimetableWidgetDataProvider.shared
-        let courses = dataProvider.getTimetableData()
-        let lastFetchTime = dataProvider.getLastFetchTime()
-        let entryCourses = courses ?? (context.isPreview ? CourseModel.sampleCourses : [:])
+    private func makeEntry(
+        at date: Date,
+        loaded: TimetableWidgetDataProvider.LoadedTimetable,
+        context: Context
+    ) -> TimetableEntry {
+        // プレビュー時のみサンプルデータを使用（実機ではデータ未取得の状態をそのまま表示）
+        let courses = loaded.courses ?? (context.isPreview ? CourseModel.sampleCourses : nil)
 
         return TimetableEntry(
             date: date,
-            courses: entryCourses,
-            lastFetchTime: lastFetchTime,
-            dataProvider: dataProvider
+            courses: courses,
+            lastFetchTime: loaded.lastFetchTime
         )
     }
 
-    // MARK: 更新時刻計算
+    // MARK: タイムライン時刻の計算
 
-    private func calculateNextUpdate(from currentDate: Date, entry: Entry) -> Date {
-        let dataProvider = TimetableWidgetDataProvider.shared
+    /// 当日と翌日の時限境界＋翌日0時のエントリ時刻を生成する
+    private func timelineDates(
+        from now: Date,
+        loaded: TimetableWidgetDataProvider.LoadedTimetable,
+        context: Context
+    ) -> [Date] {
         let calendar = Calendar.current
-        var updateTimes: [Date] = []
+        let courses = loaded.courses ?? (context.isPreview ? CourseModel.sampleCourses : nil)
+        let periods = TimetableWidgetDataProvider.shared.getPeriods(from: courses)
+        let today = calendar.startOfDay(for: now)
 
-        // 定期更新（10分ごと）
-        updateTimes.append(currentDate.addingTimeInterval(10 * 60))
-
-        // 授業時間前後の更新
-        addClassUpdateTimes(
-            to: &updateTimes, from: currentDate,
-            dataProvider: dataProvider, calendar: calendar)
-
-        // 翌日0時の更新
-        addMidnightUpdate(to: &updateTimes, from: currentDate, calendar: calendar)
-
-        // データが古い場合の即座更新
-        addStaleDataUpdate(
-            to: &updateTimes, from: currentDate,
-            lastFetchTime: entry.lastFetchTime, calendar: calendar)
-
-        // 授業中の頻繁な更新
-        if entry.currentPeriod != nil {
-            updateTimes.append(currentDate.addingTimeInterval(5 * 60))
+        var dates: [Date] = []
+        for dayOffset in 0...1 {
+            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: today) else {
+                continue
+            }
+            dates.append(contentsOf: periodBoundaries(on: day, periods: periods, calendar: calendar))
+            if dayOffset == 1 {
+                // 翌日0時（曜日の切り替え）
+                dates.append(day)
+            }
         }
 
-        return updateTimes.sorted().first ?? currentDate.addingTimeInterval(15 * 60)
+        let future = dates.filter { $0 > now }.sorted()
+        return Array(([now] + future).prefix(maxEntryCount))
     }
 
-    private func addClassUpdateTimes(
-        to updateTimes: inout [Date], from currentDate: Date,
-        dataProvider: TimetableWidgetDataProvider, calendar: Calendar
-    ) {
-        let periods = dataProvider.getPeriods()
+    /// 指定日の各時限の開始時刻と終了直後（終了時刻+1分）を返す
+    private func periodBoundaries(
+        on day: Date, periods: [(String, String, String)], calendar: Calendar
+    ) -> [Date] {
+        var dates: [Date] = []
 
         for (_, startTimeStr, endTimeStr) in periods {
-            // 授業開始時間
             if let start = parseTimeString(startTimeStr),
                 let startDate = calendar.date(
-                    from: makeDateComponents(
-                        from: currentDate, hour: start.hour, minute: start.minute,
-                        calendar: calendar))
+                    bySettingHour: start.hour, minute: start.minute, second: 0, of: day)
             {
-                appendIfFuture(
-                    calendar.date(byAdding: .minute, value: -5, to: startDate),
-                    after: currentDate, to: &updateTimes)
-                appendIfFuture(startDate, after: currentDate, to: &updateTimes)
-                appendIfFuture(
-                    calendar.date(byAdding: .minute, value: 3, to: startDate),
-                    after: currentDate, to: &updateTimes)
+                dates.append(startDate)
             }
 
-            // 授業終了時間
+            // 終了時刻は「その分まで授業中」の扱いのため、終了の1分後に状態が変わる
             if let end = parseTimeString(endTimeStr),
                 let endDate = calendar.date(
-                    from: makeDateComponents(
-                        from: currentDate, hour: end.hour, minute: end.minute,
-                        calendar: calendar))
+                    bySettingHour: end.hour, minute: end.minute, second: 0, of: day),
+                let afterEnd = calendar.date(byAdding: .minute, value: 1, to: endDate)
             {
-                appendIfFuture(
-                    calendar.date(byAdding: .minute, value: -5, to: endDate),
-                    after: currentDate, to: &updateTimes)
-                appendIfFuture(endDate, after: currentDate, to: &updateTimes)
-                appendIfFuture(
-                    calendar.date(byAdding: .minute, value: 1, to: endDate),
-                    after: currentDate, to: &updateTimes)
+                dates.append(afterEnd)
             }
         }
+
+        return dates
     }
+}
 
-    private func addMidnightUpdate(
-        to updateTimes: inout [Date], from currentDate: Date, calendar: Calendar
-    ) {
-        guard
-            let nextMidnight = calendar.date(
-                from: DateComponents(
-                    year: calendar.component(.year, from: currentDate),
-                    month: calendar.component(.month, from: currentDate),
-                    day: calendar.component(.day, from: currentDate) + 1,
-                    hour: 0, minute: 0, second: 0
-                ))
-        else { return }
+// MARK: - 未取得ビュー
 
-        if let fiveMinBefore = calendar.date(byAdding: .minute, value: -5, to: nextMidnight) {
-            updateTimes.append(fiveMinBefore)
+/// 時間割データが存在しない場合の表示
+struct TimetableEmptyStateView: View {
+    var fontSize: CGFloat = 11
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: fontSize + 5))
+                .foregroundStyle(.tertiary)
+            Text("アプリを開いて時間割を取得してください")
+                .font(.system(size: fontSize))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
-        updateTimes.append(nextMidnight)
-        if let fiveMinAfter = calendar.date(byAdding: .minute, value: 5, to: nextMidnight) {
-            updateTimes.append(fiveMinAfter)
-        }
-    }
-
-    private func addStaleDataUpdate(
-        to updateTimes: inout [Date], from currentDate: Date,
-        lastFetchTime: Date?, calendar: Calendar
-    ) {
-        let shouldUpdateSoon: Bool
-        if let fetchTime = lastFetchTime {
-            shouldUpdateSoon = currentDate.timeIntervalSince(fetchTime) > 30 * 60
-        } else {
-            shouldUpdateSoon = true
-        }
-
-        if shouldUpdateSoon {
-            let immediateUpdate =
-                calendar.date(byAdding: .minute, value: 1, to: currentDate)
-                ?? currentDate.addingTimeInterval(60)
-            updateTimes.append(immediateUpdate)
-        }
-    }
-
-    // MARK: ユーティリティ
-
-    private func makeDateComponents(
-        from date: Date, hour: Int, minute: Int, calendar: Calendar
-    ) -> DateComponents {
-        DateComponents(
-            year: calendar.component(.year, from: date),
-            month: calendar.component(.month, from: date),
-            day: calendar.component(.day, from: date),
-            hour: hour,
-            minute: minute
-        )
-    }
-
-    private func appendIfFuture(
-        _ date: Date?, after currentDate: Date, to times: inout [Date]
-    ) {
-        guard let date = date, date > currentDate else { return }
-        times.append(date)
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -297,9 +274,15 @@ struct LargeTimetableView: View {
     private let periodSpacing: CGFloat = 2
 
     var body: some View {
-        VStack(spacing: weekdaySpacing) {
-            weekdayHeaderView()
-            timeTableGridView()
+        Group {
+            if entry.hasNoTimetableData {
+                TimetableEmptyStateView(fontSize: 13)
+            } else {
+                VStack(spacing: weekdaySpacing) {
+                    weekdayHeaderView()
+                    timeTableGridView()
+                }
+            }
         }
         .padding(EdgeInsets(top: -8, leading: -12, bottom: -4, trailing: -2))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -312,7 +295,7 @@ struct LargeTimetableView: View {
             Text("")
                 .frame(width: timeColumnWidth + periodSpacing)
 
-            ForEach(dataProvider.getWeekdays(), id: \.self) { day in
+            ForEach(entry.weekdays, id: \.self) { day in
                 if day == entry.currentWeekday {
                     currentDayView(day: day)
                 } else {
@@ -342,7 +325,7 @@ struct LargeTimetableView: View {
 
     private func timeTableGridView() -> some View {
         VStack(spacing: itemSpacing) {
-            ForEach(dataProvider.getPeriods(), id: \.0) { periodInfo in
+            ForEach(entry.periods, id: \.0) { periodInfo in
                 let period = periodInfo.0
 
                 HStack(spacing: itemSpacing) {
@@ -353,7 +336,7 @@ struct LargeTimetableView: View {
                         .padding(.trailing, periodSpacing)
 
                     HStack(spacing: itemSpacing) {
-                        ForEach(dataProvider.getWeekdays(), id: \.self) { day in
+                        ForEach(entry.weekdays, id: \.self) { day in
                             TimeSlotCellWidget(
                                 period: period,
                                 course: entry.courses?[day]?[period],
@@ -415,7 +398,9 @@ struct SmallTimetableView: View {
 
     @ViewBuilder
     private func contentView() -> some View {
-        if let currentCourse = getCurrentCourse() {
+        if entry.hasNoTimetableData {
+            TimetableEmptyStateView()
+        } else if let currentCourse = getCurrentCourse() {
             VStack(spacing: 2) {
                 courseCardView(course: currentCourse, label: "現在の授業")
 
@@ -477,8 +462,8 @@ struct SmallTimetableView: View {
 
                     Spacer()
 
-                    if let period = course.period, period > 0, period <= dataProvider.getPeriods().count {
-                        let periodInfo = dataProvider.getPeriods()[period - 1]
+                    if let period = course.period, period > 0, period <= entry.periods.count {
+                        let periodInfo = entry.periods[period - 1]
                         Text("\(periodInfo.1)-\(periodInfo.2)")
                             .font(.system(size: 9))
                             .foregroundColor(.secondary)
@@ -520,8 +505,8 @@ struct SmallTimetableView: View {
         }
 
         // 現在時限がない場合、現在時刻より後の最初の授業を探す
-        let currentMinutes = currentTimeInMinutes()
-        let periods = dataProvider.getPeriods()
+        let currentMinutes = entryTimeInMinutes
+        let periods = entry.periods
 
         return courses.values
             .filter { course in
@@ -541,8 +526,8 @@ struct SmallTimetableView: View {
             return false
         }
 
-        let currentMinutes = currentTimeInMinutes()
-        let periods = dataProvider.getPeriods()
+        let currentMinutes = entryTimeInMinutes
+        let periods = entry.periods
 
         if let currentPeriod = entry.currentPeriod, let currentInt = Int(currentPeriod) {
             return !courses.values.contains { ($0.period ?? 0) > currentInt }
@@ -558,10 +543,11 @@ struct SmallTimetableView: View {
         }
     }
 
-    private func currentTimeInMinutes() -> Int {
-        let now = Date()
+    /// エントリの時刻（分単位）。描画時刻ではなくエントリ生成時刻に基づく
+    private var entryTimeInMinutes: Int {
         let calendar = Calendar.current
-        return calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
+        return calendar.component(.hour, from: entry.date) * 60
+            + calendar.component(.minute, from: entry.date)
     }
 }
 
@@ -611,7 +597,9 @@ struct MediumTimetableView: View {
         let todayCourses = getTodayCourses()
         let sortedPeriods = getSortedPeriods(from: todayCourses)
 
-        if sortedPeriods.isEmpty {
+        if entry.hasNoTimetableData {
+            TimetableEmptyStateView()
+        } else if sortedPeriods.isEmpty {
             Text("本日の授業はありません")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
@@ -763,13 +751,173 @@ struct TimetableWidget: Widget {
 
 // MARK: - プレビュー
 
+extension CourseModel {
+    /// スクリーンショット用のフル時間割データ（月〜金 × 1〜5限を全て埋める）
+    /// キーは曜日番号（"1"=月 〜 "5"=金）、`TimetableWidgetDataProvider.getWeekdays()` と対応
+    static let previewFullCourses: [String: [String: CourseModel]] = [
+        "1": [
+            "1": CourseModel(
+                name: "キャリア・デザインII C", room: "101", teacher: "葛本 幸枝", startTime: "0900",
+                endTime: "1030", colorIndex: 1, weekday: 1, period: 1, jugyoCd: "CD001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "2": CourseModel(
+                name: "コンピュータ・サイエンス", room: "242", teacher: "中村 有一", startTime: "1040",
+                endTime: "1210", colorIndex: 2, weekday: 1, period: 2, jugyoCd: "CS001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "3": CourseModel(
+                name: "統計学入門", room: "203", teacher: "佐藤 健", startTime: "1300",
+                endTime: "1430", colorIndex: 11, weekday: 1, period: 3, jugyoCd: "ST001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "4": CourseModel(
+                name: "中国ビジネスコミュニケーションII", room: "113", teacher: "田 園", startTime: "1440",
+                endTime: "1610", colorIndex: 3, weekday: 1, period: 4, jugyoCd: "CB001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "5": CourseModel(
+                name: "英語コミュニケーションII", room: "105", teacher: "山田 花子", startTime: "1620",
+                endTime: "1750", colorIndex: 12, weekday: 1, period: 5, jugyoCd: "EC001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+        ],
+        "2": [
+            "1": CourseModel(
+                name: "経営情報特講", room: "201", teacher: "青木 克彦", startTime: "0900",
+                endTime: "1030", colorIndex: 4, weekday: 2, period: 1, jugyoCd: "KJ001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "2": CourseModel(
+                name: "消費心理学", room: "211", teacher: "浜田 正幸", startTime: "1040",
+                endTime: "1210", colorIndex: 5, weekday: 2, period: 2, jugyoCd: "SK001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "3": CourseModel(
+                name: "データベースII(SQL)", room: "241", teacher: "齋藤 S.裕美", startTime: "1300",
+                endTime: "1430", colorIndex: 6, weekday: 2, period: 3, jugyoCd: "DB001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "4": CourseModel(
+                name: "世界の宗教", room: "201", teacher: "高橋 恭寛", startTime: "1440",
+                endTime: "1610", colorIndex: 7, weekday: 2, period: 4, jugyoCd: "SR001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "5": CourseModel(
+                name: "マーケティング・心理実践II", room: "111", teacher: "菅沼 睦", startTime: "1620",
+                endTime: "1750", colorIndex: 8, weekday: 2, period: 5, jugyoCd: "MP001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+        ],
+        "3": [
+            "1": CourseModel(
+                name: "基礎数学", room: "103", teacher: "鈴木 一郎", startTime: "0900",
+                endTime: "1030", colorIndex: 13, weekday: 3, period: 1, jugyoCd: "BM001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "2": CourseModel(
+                name: "国際関係論", room: "202", teacher: "伊藤 美咲", startTime: "1040",
+                endTime: "1210", colorIndex: 14, weekday: 3, period: 2, jugyoCd: "IR001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "3": CourseModel(
+                name: "Webプログラミング入門", room: "201", teacher: "出原 至道", startTime: "1300",
+                endTime: "1430", colorIndex: 9, weekday: 3, period: 3, jugyoCd: "WP001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "4": CourseModel(
+                name: "現代メディア論", room: "101", teacher: "中澤 弥", startTime: "1440",
+                endTime: "1610", colorIndex: 10, weekday: 3, period: 4, jugyoCd: "GM001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "5": CourseModel(
+                name: "会計学基礎", room: "213", teacher: "渡辺 智也", startTime: "1620",
+                endTime: "1750", colorIndex: 15, weekday: 3, period: 5, jugyoCd: "KG001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+        ],
+        "4": [
+            "1": CourseModel(
+                name: "経営科学", room: "212", teacher: "新西 誠人", startTime: "0900",
+                endTime: "1030", colorIndex: 2, weekday: 4, period: 1, jugyoCd: "KK001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "2": CourseModel(
+                name: "図化技術概論", room: "201", teacher: "出原 至道", startTime: "1040",
+                endTime: "1210", colorIndex: 3, weekday: 4, period: 2, jugyoCd: "ZG001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "3": CourseModel(
+                name: "アルゴリズムとデータ構造", room: "243", teacher: "小川 大輔", startTime: "1300",
+                endTime: "1430", colorIndex: 16, weekday: 4, period: 3, jugyoCd: "AD001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "4": CourseModel(
+                name: "日本文化論", room: "112", teacher: "森 優子", startTime: "1440",
+                endTime: "1610", colorIndex: 17, weekday: 4, period: 4, jugyoCd: "JB001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "5": CourseModel(
+                name: "ホームゼミII", room: "113", teacher: "小林 英夫", startTime: "1620",
+                endTime: "1750", colorIndex: 4, weekday: 4, period: 5, jugyoCd: "HZ001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+        ],
+        "5": [
+            "1": CourseModel(
+                name: "ミクロ経済学", room: "204", teacher: "中島 拓也", startTime: "0900",
+                endTime: "1030", colorIndex: 18, weekday: 5, period: 1, jugyoCd: "ME001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "2": CourseModel(
+                name: "iOSアプリ開発演習", room: "244", teacher: "藤井 翔", startTime: "1040",
+                endTime: "1210", colorIndex: 19, weekday: 5, period: 2, jugyoCd: "IA001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "3": CourseModel(
+                name: "図化技概論", room: "201", teacher: "出原 至道", startTime: "1300",
+                endTime: "1430", colorIndex: 5, weekday: 5, period: 3, jugyoCd: "ZG002",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "4": CourseModel(
+                name: "ホームゼII", room: "113", teacher: "小林 英夫", startTime: "1440",
+                endTime: "1610", colorIndex: 6, weekday: 5, period: 4, jugyoCd: "HZ002",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+            "5": CourseModel(
+                name: "プレゼンテーション技法", room: "114", teacher: "岡田 真理", startTime: "1620",
+                endTime: "1750", colorIndex: 20, weekday: 5, period: 5, jugyoCd: "PT001",
+                academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
+                keijiMidokCnt: 1),
+        ],
+    ]
+}
+
+/// スクリーンショット用：月曜日 12:00（2限中）を再現
+private var previewMondayAt1200: Date {
+    var components = Calendar.current.dateComponents([.year, .month, .day], from: .now)
+    // 月曜日になるまで日付を前後に調整（1=日, 2=月 ...）
+    if let base = Calendar.current.date(from: components) {
+        let weekday = Calendar.current.component(.weekday, from: base)
+        let offset = (2 - weekday + 7) % 7
+        if let monday = Calendar.current.date(byAdding: .day, value: offset, to: base) {
+            components = Calendar.current.dateComponents([.year, .month, .day], from: monday)
+        }
+    }
+    components.hour = 12
+    components.minute = 0
+    return Calendar.current.date(from: components) ?? .now
+}
+
 #Preview("Small", as: .systemSmall) {
     TimetableWidget()
 } timeline: {
     TimetableEntry(
-        date: .now,
-        courses: CourseModel.sampleCourses,
-        lastFetchTime: .now
+        date: previewMondayAt1200,
+        courses: CourseModel.previewFullCourses,
+        lastFetchTime: previewMondayAt1200,
+        currentWeekday: "1",
+        currentPeriod: "2"
     )
 }
 
@@ -777,9 +925,11 @@ struct TimetableWidget: Widget {
     TimetableWidget()
 } timeline: {
     TimetableEntry(
-        date: .now,
-        courses: CourseModel.sampleCourses,
-        lastFetchTime: .now
+        date: previewMondayAt1200,
+        courses: CourseModel.previewFullCourses,
+        lastFetchTime: previewMondayAt1200,
+        currentWeekday: "1",
+        currentPeriod: "2"
     )
 }
 
@@ -787,8 +937,10 @@ struct TimetableWidget: Widget {
     TimetableWidget()
 } timeline: {
     TimetableEntry(
-        date: .now,
-        courses: CourseModel.sampleCourses,
-        lastFetchTime: .now
+        date: previewMondayAt1200,
+        courses: CourseModel.previewFullCourses,
+        lastFetchTime: previewMondayAt1200,
+        currentWeekday: "1",
+        currentPeriod: "2"
     )
 }

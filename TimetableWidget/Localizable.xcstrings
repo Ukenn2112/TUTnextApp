@@ -268,6 +268,7 @@
       }
     },
     "0:00" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -307,6 +308,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "TUTnext"
+          }
+        }
+      }
+    },
+    "アプリを開いて時間割を取得してください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the app to load your timetable"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱을 열어 시간표를 불러오세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请打开 App 获取课程表"
           }
         }
       }
@@ -552,6 +575,9 @@
           }
         }
       }
+    },
+    "情報が古い可能性" : {
+
     },
     "授業中" : {
       "localizations" : {

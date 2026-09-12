@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import SwiftUI
+import WidgetKit
 
 // MARK: - バス時刻表データ提供サービス
 
@@ -351,6 +352,8 @@ final class BusScheduleService {
 
             try context.save()
             print("BusScheduleService: SwiftData にデータを保存しました")
+            // ウィジェットに最新データを反映
+            WidgetCenter.shared.reloadTimelines(ofKind: "BusWidget")
         } catch {
             print("BusScheduleService: SwiftData への保存に失敗しました - \(error.localizedDescription)")
         }

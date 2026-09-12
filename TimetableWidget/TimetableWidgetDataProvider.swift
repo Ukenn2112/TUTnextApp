@@ -51,7 +51,7 @@ struct CourseModel: Identifiable, Equatable, Codable {
     // MARK: サンプルデータ
 
     static let sampleCourses: [String: [String: CourseModel]] = [
-        "月": [
+        "1": [
             "1": CourseModel(
                 name: "キャリア・デザインII C", room: "101", teacher: "葛本 幸枝", startTime: "0900",
                 endTime: "1030", colorIndex: 1, weekday: 1, period: 1, jugyoCd: "CD001",
@@ -68,7 +68,7 @@ struct CourseModel: Identifiable, Equatable, Codable {
                 academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
                 keijiMidokCnt: 1),
         ],
-        "火": [
+        "2": [
             "1": CourseModel(
                 name: "経営情報特講", room: "201", teacher: "青木 克彦", startTime: "0900",
                 endTime: "1030", colorIndex: 4, weekday: 2, period: 1, jugyoCd: "KJ001",
@@ -95,7 +95,7 @@ struct CourseModel: Identifiable, Equatable, Codable {
                 academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
                 keijiMidokCnt: 1),
         ],
-        "水": [
+        "3": [
             "3": CourseModel(
                 name: "Webプログラミング入門", room: "201", teacher: "出原 至道", startTime: "1300",
                 endTime: "1430", colorIndex: 9, weekday: 3, period: 3, jugyoCd: "WP001",
@@ -107,7 +107,7 @@ struct CourseModel: Identifiable, Equatable, Codable {
                 academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
                 keijiMidokCnt: 1),
         ],
-        "木": [
+        "4": [
             "1": CourseModel(
                 name: "経営科学", room: "212", teacher: "新西 誠人", startTime: "0900",
                 endTime: "1030", colorIndex: 2, weekday: 4, period: 1, jugyoCd: "KK001",
@@ -124,7 +124,7 @@ struct CourseModel: Identifiable, Equatable, Codable {
                 academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
                 keijiMidokCnt: 1),
         ],
-        "金": [
+        "5": [
             "3": CourseModel(
                 name: "図化技概論", room: "201", teacher: "出原 至道", startTime: "1300",
                 endTime: "1430", colorIndex: 5, weekday: 5, period: 3, jugyoCd: "ZG002",
@@ -136,8 +136,8 @@ struct CourseModel: Identifiable, Equatable, Codable {
                 academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
                 keijiMidokCnt: 1),
         ],
-        "土": [
-            "7": CourseModel(
+        "6": [
+            "6": CourseModel(
                 name: "ホームゼミII", room: "113", teacher: "小林 英夫", startTime: "1940",
                 endTime: "2110", colorIndex: 7, weekday: 6, period: 6, jugyoCd: "HZ003",
                 academicYear: 2_025, courseYear: 2_025, courseTerm: 1, jugyoKbn: "A",
@@ -148,52 +148,34 @@ struct CourseModel: Identifiable, Equatable, Codable {
 
 // MARK: - データプロバイダー
 
+/// 時間割ウィジェット用のデータアクセス・時間計算ヘルパー
+/// SwiftData の ModelContext は呼び出しごとに生成する（スレッド安全性のため）
 class TimetableWidgetDataProvider {
     static let shared = TimetableWidgetDataProvider()
 
-    private var modelContext: ModelContext?
-    private var cachedData: [String: [String: CourseModel]]?
-    private var lastCacheTime: Date?
-    private let cacheValidity: TimeInterval = 60
+    /// SwiftData から読み込んだ時間割データ
+    struct LoadedTimetable {
+        let courses: [String: [String: CourseModel]]?
+        let lastFetchTime: Date?
 
-    private init() {
-        setupModelContext()
+        static let empty = LoadedTimetable(courses: nil, lastFetchTime: nil)
     }
 
-    private func setupModelContext() {
-        modelContext = ModelContext(SharedModelContainer.shared)
-    }
+    private init() {}
 
     // MARK: データ取得
 
-    func getTimetableData() -> [String: [String: CourseModel]]? {
-        if let cached = cachedData,
-            let cacheTime = lastCacheTime,
-            Date().timeIntervalSince(cacheTime) < cacheValidity
-        {
-            return cached
-        }
-
-        // ModelContext はメインスレッドで作成されたため、メインスレッドで同期的に実行
-        var result: [String: [String: CourseModel]]?
-        if Thread.isMainThread {
-            result = fetchTimetableFromContext()
-        } else {
-            DispatchQueue.main.sync {
-                result = self.fetchTimetableFromContext()
-            }
-        }
-        return result
-    }
-    
-    private func fetchTimetableFromContext() -> [String: [String: CourseModel]]? {
-        guard let context = modelContext else {
+    /// SwiftData から時間割データを読み込む（呼び出しスレッド上で ModelContext を生成）
+    /// データが存在しない場合や読み込みに失敗した場合は courses が nil になる
+    func loadTimetable() -> LoadedTimetable {
+        guard let container = SharedModelContainer.sharedForExtension else {
             #if DEBUG
-            print("TimetableWidgetDataProvider: ModelContext が利用できません")
+            print("TimetableWidgetDataProvider: ModelContainer が利用できません")
             #endif
-            return CourseModel.sampleCourses
+            return .empty
         }
 
+        let context = ModelContext(container)
         do {
             let descriptor = FetchDescriptor<CachedTimetable>(
                 predicate: #Predicate { $0.key == "timetable" }
@@ -202,74 +184,38 @@ class TimetableWidgetDataProvider {
                 #if DEBUG
                 print("TimetableWidgetDataProvider: SwiftData からデータが見つかりませんでした")
                 #endif
-                return CourseModel.sampleCourses
+                return .empty
             }
 
             let decoded = try JSONDecoder().decode(
                 [String: [String: CourseModel]].self, from: cached.data)
-            cachedData = decoded
-            lastCacheTime = Date()
-            return decoded
+            return LoadedTimetable(courses: decoded, lastFetchTime: cached.lastFetchTime)
         } catch {
             #if DEBUG
             print(
                 "TimetableWidgetDataProvider: データのデコードに失敗しました - \(error.localizedDescription)"
             )
             #endif
-            return CourseModel.sampleCourses
-        }
-    }
-
-    func getLastFetchTime() -> Date? {
-        // ModelContext はメインスレッドで作成されたため、メインスレッドで同期的に実行
-        var fetchTime: Date?
-        if Thread.isMainThread {
-            fetchTime = fetchLastFetchTimeFromContext()
-        } else {
-            DispatchQueue.main.sync {
-                fetchTime = self.fetchLastFetchTimeFromContext()
-            }
-        }
-        return fetchTime
-    }
-    
-    private func fetchLastFetchTimeFromContext() -> Date? {
-        guard let context = modelContext else { return nil }
-        do {
-            let descriptor = FetchDescriptor<CachedTimetable>(
-                predicate: #Predicate { $0.key == "timetable" }
-            )
-            return try context.fetch(descriptor).first?.lastFetchTime
-        } catch {
-            return nil
+            return .empty
         }
     }
 
     // MARK: 時間情報
 
-    func getCurrentWeekday() -> String {
-        let weekday = Calendar.current.component(.weekday, from: Date())
+    /// 指定日時の曜日（1=月 〜 7=日）
+    func getCurrentWeekday(for date: Date) -> String {
+        let weekday = Calendar.current.component(.weekday, from: date)
         let japaneseWeekday = weekday == 1 ? 7 : weekday - 1
         return String(japaneseWeekday)
     }
 
-    func getCurrentPeriod() -> String? {
-        let now = Date()
+    /// 指定日時の時限（該当なしの場合は nil）
+    func getCurrentPeriod(at date: Date) -> String? {
         let calendar = Calendar.current
-        let currentTime = calendar.component(.hour, from: now) * 60
-            + calendar.component(.minute, from: now)
+        let currentTime = calendar.component(.hour, from: date) * 60
+            + calendar.component(.minute, from: date)
 
-        let periods: [(String, Int, Int)] = [
-            ("1", 540, 630),
-            ("2", 640, 730),
-            ("3", 780, 870),
-            ("4", 880, 970),
-            ("5", 980, 1070),
-            ("6", 1080, 1170),
-            ("7", 1180, 1270),
-        ]
-
-        for (periodNumber, startMinutes, endMinutes) in periods
+        for (periodNumber, startMinutes, endMinutes) in Self.periodMinutes
         where currentTime >= startMinutes && currentTime <= endMinutes {
             return periodNumber
         }
@@ -277,12 +223,24 @@ class TimetableWidgetDataProvider {
         return nil
     }
 
+    /// 時限の開始・終了（分単位）
+    static let periodMinutes: [(String, Int, Int)] = [
+        ("1", 540, 630),
+        ("2", 640, 730),
+        ("3", 780, 870),
+        ("4", 880, 970),
+        ("5", 980, 1_070),
+        ("6", 1_080, 1_170),
+        ("7", 1_180, 1_270),
+    ]
+
     // MARK: 表示用データ
 
-    func getWeekdays() -> [String] {
+    /// 読み込み済みデータから表示する曜日を決定する
+    func getWeekdays(from courses: [String: [String: CourseModel]]?) -> [String] {
         let baseWeekdays = ["1", "2", "3", "4", "5"]
 
-        if let saturdayCourses = getTimetableData()?["6"], !saturdayCourses.isEmpty {
+        if let saturdayCourses = courses?["6"], !saturdayCourses.isEmpty {
             return baseWeekdays + ["6"]
         }
 
@@ -303,7 +261,8 @@ class TimetableWidgetDataProvider {
         return weekdays[idx - 1]
     }
 
-    func getPeriods() -> [(String, String, String)] {
+    /// 読み込み済みデータから表示する時限を決定する
+    func getPeriods(from courses: [String: [String: CourseModel]]?) -> [(String, String, String)] {
         let basePeriods = [
             ("1", "9:00", "10:30"),
             ("2", "10:40", "12:10"),
@@ -314,21 +273,20 @@ class TimetableWidgetDataProvider {
             ("7", "19:40", "21:10"),
         ]
 
-        let has7thPeriod = hasSpecificPeriod("7")
-        let has6thPeriod = hasSpecificPeriod("6")
-
-        if has7thPeriod {
+        if hasSpecificPeriod("7", in: courses) {
             return basePeriods
-        } else if has6thPeriod {
+        } else if hasSpecificPeriod("6", in: courses) {
             return Array(basePeriods.prefix(6))
         } else {
             return Array(basePeriods.prefix(5))
         }
     }
 
-    private func hasSpecificPeriod(_ period: String) -> Bool {
-        guard let timetableData = getTimetableData() else { return false }
-        return timetableData.values.contains { $0.keys.contains(period) }
+    private func hasSpecificPeriod(
+        _ period: String, in courses: [String: [String: CourseModel]]?
+    ) -> Bool {
+        guard let courses = courses else { return false }
+        return courses.values.contains { $0.keys.contains(period) }
     }
 }
 

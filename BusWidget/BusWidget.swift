@@ -54,6 +54,9 @@ enum RouteTheme {
 
 struct Provider: AppIntentTimelineProvider {
 
+    /// 1回のタイムラインで生成する最大エントリ数（安全弁）
+    private let maxEntryCount = 120
+
     func placeholder(in context: Context) -> SimpleEntry {
         SimpleEntry(
             date: .now,
@@ -84,71 +87,104 @@ struct Provider: AppIntentTimelineProvider {
             )
         }
 
-        let times = fetchNextBusTimes(for: configuration.routeType, from: now)
-        return SimpleEntry(date: now, configuration: configuration, nextBusTimes: times, scheduleType: scheduleType)
+        // ModelContext は呼び出しスレッド上で生成する
+        let data = BusWidgetDataProvider.loadSnapshot()
+        let times = BusWidgetDataProvider.getNextBusTimes(
+            routeType: configuration.routeType.rawValue,
+            scheduleType: scheduleType,
+            from: now,
+            snapshot: data
+        )
+        return SimpleEntry(
+            date: now, configuration: configuration, nextBusTimes: times,
+            scheduleType: scheduleType, hasScheduleData: data.isAvailable)
     }
 
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
         let now = Date()
         let calendar = Calendar.current
-        var entries: [SimpleEntry] = []
+        // 時刻表は1回だけ読み込み、以降はローカルデータのみでエントリを生成する
+        let data = BusWidgetDataProvider.loadSnapshot()
 
-        let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(now)
-        let busTimes = fetchNextBusTimes(for: configuration.routeType, from: now)
+        // エントリ時刻 -> バスリスト取得の基準時刻
+        var points: [Date: Date] = [now: now]
 
-        // 現在のエントリー（カウントダウンはText(date, style: .relative)で自動更新）
-        entries.append(SimpleEntry(date: now, configuration: configuration, nextBusTimes: busTimes, scheduleType: scheduleType))
+        addDeparturePoints(
+            to: &points, on: now, after: now,
+            route: configuration.routeType, snapshot: data, calendar: calendar)
 
-        // バス出発時にバスリストをローテーションするためのエントリー
-        for bus in busTimes {
-            guard let busDate = bus.date(relativeTo: now),
-                  busDate > now else { continue }
-
-            // 緊急度の色の境界線（各時点のバスリストを再取得して、出発済みのバスを除外する）
-            let fiveMinBefore = busDate.addingTimeInterval(-5 * 60)
-            if fiveMinBefore > now {
-                let timesAtDate = fetchNextBusTimes(for: configuration.routeType, from: fiveMinBefore)
-                entries.append(SimpleEntry(date: fiveMinBefore, configuration: configuration, nextBusTimes: timesAtDate, scheduleType: scheduleType))
-            }
-            let oneMinBefore = busDate.addingTimeInterval(-60)
-            if oneMinBefore > now {
-                let timesAtDate = fetchNextBusTimes(for: configuration.routeType, from: oneMinBefore)
-                entries.append(SimpleEntry(date: oneMinBefore, configuration: configuration, nextBusTimes: timesAtDate, scheduleType: scheduleType))
-            }
-
-            // 出発時刻に即時切り替え（+60秒で取得して分レベルフィルターで出発済みを除外、entryはbusDateに発火）
-            let shiftDate = busDate.addingTimeInterval(60)
-            let updatedType = BusWidgetDataProvider.getScheduleTypeForDate(shiftDate)
-            let updatedTimes = fetchNextBusTimes(for: configuration.routeType, from: shiftDate)
-            entries.append(SimpleEntry(date: busDate, configuration: configuration, nextBusTimes: updatedTimes, scheduleType: updatedType))
-        }
-
-        // 明日の真夜中
+        // 翌日0時（曜日・ダイヤの切り替え）と翌日の出発時刻
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) {
-            let midnightType = BusWidgetDataProvider.getScheduleTypeForDate(tomorrow)
-            let midnightTimes = fetchNextBusTimes(for: configuration.routeType, from: tomorrow)
-            entries.append(SimpleEntry(date: tomorrow, configuration: configuration, nextBusTimes: midnightTimes, scheduleType: midnightType))
+            points[tomorrow] = tomorrow
+            addDeparturePoints(
+                to: &points, on: tomorrow, after: now,
+                route: configuration.routeType, snapshot: data, calendar: calendar)
         }
 
-        let reloadDate: Date = {
-            if let lastBus = busTimes.last,
-               let lastDate = lastBus.date(relativeTo: now),
-               lastDate > now {
-                return lastDate.addingTimeInterval(60)
+        let entries = points.keys.sorted()
+            .prefix(maxEntryCount)
+            .map { date in
+                makeEntry(
+                    at: date, fetchFrom: points[date] ?? date,
+                    configuration: configuration, snapshot: data)
             }
-            return now.addingTimeInterval(1800)
-        }()
 
-        return Timeline(entries: entries, policy: .after(reloadDate))
+        return Timeline(entries: Array(entries), policy: .atEnd)
     }
 
-    private func fetchNextBusTimes(for routeType: RouteTypeEnum, from date: Date) -> [BusWidgetSchedule.TimeEntry] {
+    // MARK: - エントリ生成
+
+    private func makeEntry(
+        at date: Date,
+        fetchFrom: Date,
+        configuration: ConfigurationAppIntent,
+        snapshot: BusWidgetDataProvider.Snapshot
+    ) -> SimpleEntry {
         let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(date)
-        return BusWidgetDataProvider.getNextBusTimes(
-            routeType: routeType.rawValue,
+        let times = BusWidgetDataProvider.getNextBusTimes(
+            routeType: configuration.routeType.rawValue,
             scheduleType: scheduleType,
-            from: date
+            from: fetchFrom,
+            snapshot: snapshot
         )
+        return SimpleEntry(
+            date: date, configuration: configuration, nextBusTimes: times,
+            scheduleType: scheduleType, hasScheduleData: snapshot.isAvailable)
+    }
+
+    /// 指定日の全ての出発について「5分前」と「出発時刻」のエントリ時刻を追加する
+    private func addDeparturePoints(
+        to points: inout [Date: Date],
+        on day: Date,
+        after now: Date,
+        route: RouteTypeEnum,
+        snapshot: BusWidgetDataProvider.Snapshot,
+        calendar: Calendar
+    ) {
+        let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(day)
+        let buses = BusWidgetDataProvider.getAllRemainingBusTimes(
+            routeType: route.rawValue,
+            scheduleType: scheduleType,
+            from: day,
+            snapshot: snapshot
+        )
+
+        for bus in buses {
+            guard let departure = calendar.date(
+                bySettingHour: bus.hour, minute: bus.minute, second: 0, of: day)
+            else { continue }
+
+            // 緊急度表示が変わる5分前
+            let fiveMinBefore = departure.addingTimeInterval(-5 * 60)
+            if fiveMinBefore > now, points[fiveMinBefore] == nil {
+                points[fiveMinBefore] = fiveMinBefore
+            }
+
+            // 出発時刻（出発済みのバスを除外するため、取得基準は+60秒）
+            if departure > now {
+                points[departure] = departure.addingTimeInterval(60)
+            }
+        }
     }
 }
 
@@ -159,6 +195,8 @@ struct SimpleEntry: TimelineEntry {
     let configuration: ConfigurationAppIntent
     let nextBusTimes: [BusWidgetSchedule.TimeEntry]
     let scheduleType: String
+    /// 時刻表データを読み込めたかどうか（false ならアプリを開くよう促す）
+    var hasScheduleData: Bool = true
 
     var deepLinkURL: URL {
         var components = URLComponents()
@@ -220,7 +258,6 @@ struct BusWidgetEntryView: View {
 
     private func urgencyColor(minutes: Int?) -> Color {
         guard let m = minutes else { return .secondary }
-        if m <= 1 { return .red }
         if m <= 5 { return .orange }
         return accent
     }
@@ -281,6 +318,19 @@ struct BusWidgetEntryView: View {
         }
     }
 
+    private var noDataView: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "arrow.down.circle")
+                .font(.title3)
+                .foregroundStyle(.tertiary)
+            Text("アプリを開いてバス時刻表を取得してください")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     private var serviceEndedView: some View {
         VStack(spacing: 4) {
             Image(systemName: "moon.zzz.fill")
@@ -299,7 +349,11 @@ struct BusWidgetEntryView: View {
         VStack(alignment: .leading, spacing: 0) {
             headerView(titleSize: 13)
 
-            if entry.isServiceEnded {
+            if !entry.hasScheduleData {
+                Spacer()
+                noDataView
+                Spacer()
+            } else if entry.isServiceEnded {
                 Spacer()
                 serviceEndedView
                 Spacer()
@@ -330,7 +384,11 @@ struct BusWidgetEntryView: View {
             VStack(alignment: .leading, spacing: 0) {
                 headerView(titleSize: 14)
 
-                if entry.isServiceEnded {
+                if !entry.hasScheduleData {
+                    Spacer()
+                    noDataView
+                    Spacer()
+                } else if entry.isServiceEnded {
                     Spacer()
                     serviceEndedView
                     Spacer()

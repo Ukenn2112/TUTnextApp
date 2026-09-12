@@ -74,6 +74,7 @@
       }
     },
     "0:00" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -135,6 +136,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "还有 "
+          }
+        }
+      }
+    },
+    "アプリを開いてバス時刻表を取得してください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the app to load the bus schedule"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱을 열어 버스 시간표를 불러오세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请打开 App 获取巴士时刻表"
           }
         }
       }

@@ -21,15 +21,25 @@ enum SharedModelContainer {
         return containerURL.appendingPathComponent("shared.store")
     }()
 
-    /// シングルトン ModelContainer（一度だけ作成し、全ターゲットで共有）
-    static let shared: ModelContainer = {
-        let config = ModelConfiguration(
+    /// 共有ストアの ModelConfiguration
+    private static var configuration: ModelConfiguration {
+        ModelConfiguration(
             schema: schema,
             url: storeURL,
             cloudKitDatabase: .none
         )
+    }
+
+    /// ModelContainer を作成する（ストアの削除などの副作用なし）
+    static func makeContainer() throws -> ModelContainer {
+        try ModelContainer(for: schema, configurations: [configuration])
+    }
+
+    /// シングルトン ModelContainer（アプリ本体用・一度だけ作成）
+    /// 互換性がない場合はストアを再作成する。Widget 拡張からは使用しないこと。
+    static let shared: ModelContainer = {
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            return try makeContainer()
         } catch {
             // スキーマ変更などで既存データと互換性がない場合、ストアを削除して再作成
             print("【SharedModelContainer】ModelContainer 作成失敗、ストアを再作成します: \(error)")
@@ -40,10 +50,23 @@ enum SharedModelContainer {
             try? FileManager.default.removeItem(at: shmURL)
             try? FileManager.default.removeItem(at: walURL)
             do {
-                return try ModelContainer(for: schema, configurations: [config])
+                return try makeContainer()
             } catch {
                 fatalError("Failed to create ModelContainer after store reset: \(error)")
             }
+        }
+    }()
+
+    /// Widget 拡張用の安全なアクセサ
+    /// ストアの削除や fatalError を行わず、失敗時は nil を返す
+    static let sharedForExtension: ModelContainer? = {
+        do {
+            return try makeContainer()
+        } catch {
+            #if DEBUG
+            print("【SharedModelContainer】拡張用 ModelContainer の作成に失敗しました: \(error)")
+            #endif
+            return nil
         }
     }()
 }

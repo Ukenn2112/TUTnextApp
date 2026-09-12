@@ -53,7 +53,14 @@ private struct BusSchedule: Codable {
 }
 
 struct BusWidgetDataProvider {
-    private static let modelContext = ModelContext(SharedModelContainer.shared)
+
+    /// 一度デコードした時刻表のスナップショット
+    /// タイムライン生成時に1回だけ読み込み、以降はローカル計算のみで使用する
+    struct Snapshot {
+        fileprivate let schedule: BusSchedule?
+
+        var isAvailable: Bool { schedule != nil }
+    }
 
     static func getScheduleTypeForDate(_ date: Date) -> String {
         let weekday = Calendar.current.component(.weekday, from: date)
@@ -73,12 +80,32 @@ struct BusWidgetDataProvider {
         }
     }
 
+    /// SwiftData から時刻表を読み込む（呼び出しスレッド上で ModelContext を生成）
+    static func loadSnapshot() -> Snapshot {
+        Snapshot(schedule: fetchBusSchedule())
+    }
+
+    /// 指定時刻以降の次のバス（最大3本）
     static func getNextBusTimes(
         routeType: String,
         scheduleType: String,
-        from date: Date
+        from date: Date,
+        snapshot: Snapshot? = nil
     ) -> [BusWidgetSchedule.TimeEntry] {
-        guard let schedule = decodeBusSchedule() else { return [] }
+        let all = getAllRemainingBusTimes(
+            routeType: routeType, scheduleType: scheduleType, from: date, snapshot: snapshot)
+        return Array(all.prefix(3))
+    }
+
+    /// 指定時刻以降に残っているその日の全てのバス
+    static func getAllRemainingBusTimes(
+        routeType: String,
+        scheduleType: String,
+        from date: Date,
+        snapshot: Snapshot? = nil
+    ) -> [BusWidgetSchedule.TimeEntry] {
+        let schedule = snapshot?.schedule ?? fetchBusSchedule()
+        guard let schedule else { return [] }
 
         let daySchedule = schedule.schedules(for: scheduleType)
             .first { $0.routeType == routeType }
@@ -87,35 +114,32 @@ struct BusWidgetDataProvider {
         let currentHour = Calendar.current.component(.hour, from: date)
         let currentMinute = Calendar.current.component(.minute, from: date)
 
-        let upcoming = daySchedule.flatTimes
+        return daySchedule.flatTimes
             .filter { $0.hour > currentHour || ($0.hour == currentHour && $0.minute >= currentMinute) }
-            .prefix(3)
-            .map { BusWidgetSchedule.TimeEntry(hour: $0.hour, minute: $0.minute, isSpecial: $0.isSpecial, specialNote: $0.specialNote) }
-
-        return Array(upcoming)
+            .map {
+                BusWidgetSchedule.TimeEntry(
+                    hour: $0.hour, minute: $0.minute,
+                    isSpecial: $0.isSpecial, specialNote: $0.specialNote)
+            }
     }
 
     // MARK: - Private
 
-    private static func decodeBusSchedule() -> BusSchedule? {
-        // ModelContext はメインスレッドで作成されたため、メインスレッドで同期的に実行
-        var schedule: BusSchedule?
-        if Thread.isMainThread {
-            schedule = fetchBusScheduleFromContext()
-        } else {
-            DispatchQueue.main.sync {
-                schedule = fetchBusScheduleFromContext()
-            }
+    /// ModelContext は呼び出しごとに生成する（SwiftData はスレッド間で共有できない）
+    private static func fetchBusSchedule() -> BusSchedule? {
+        guard let container = SharedModelContainer.sharedForExtension else {
+            #if DEBUG
+            print("BusWidgetDataProvider: ModelContainer が利用できません")
+            #endif
+            return nil
         }
-        return schedule
-    }
-    
-    private static func fetchBusScheduleFromContext() -> BusSchedule? {
+
+        let context = ModelContext(container)
         do {
             let descriptor = FetchDescriptor<CachedBusSchedule>(
                 predicate: #Predicate { $0.key == "busSchedule" }
             )
-            guard let cached = try modelContext.fetch(descriptor).first else {
+            guard let cached = try context.fetch(descriptor).first else {
                 #if DEBUG
                 print("BusWidgetDataProvider: SwiftData からデータが見つかりませんでした")
                 #endif
