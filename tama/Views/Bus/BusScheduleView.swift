@@ -85,6 +85,10 @@ struct BusScheduleView: View {
 struct BusTemporaryMessagesView: View {
     let messages: [BusSchedule.TemporaryMessage]
 
+    /// メッセージ本文2行分の高さ（フォントの行高から算出）
+    private static let twoLineTextHeight: CGFloat =
+        ceil(UIFont.systemFont(ofSize: 13, weight: .medium).lineHeight * 2)
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -119,11 +123,13 @@ struct BusTemporaryMessagesView: View {
                 .foregroundColor(.orange)
                 .font(.system(size: 14))
 
+            // 1行のメッセージでも2行分の高さを確保し、カードの高さを揃える（文字は縦中央）
             Text(message.title)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
+                .frame(minHeight: Self.twoLineTextHeight, alignment: .leading)
 
             if showChevron, let url = url {
                 Link(destination: url) {
