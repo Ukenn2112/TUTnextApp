@@ -917,6 +917,9 @@
         }
       }
     },
+    "お知らせはまだありません" : {
+
+    },
     "カードが見つかりませんでした。" : {
       "localizations" : {
         "en" : {
@@ -935,6 +938,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未检测到卡片"
+          }
+        }
+      }
+    },
+    "カレンダーAppが開き、「多摩大スケジュール」の照会を登録するか確認されます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Calendar app will open and ask you to subscribe to “Tama University Schedule”."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "캘린더 앱이 열리고 “다마대 스케줄” 구독 여부를 확인합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将打开“日历”App，并询问是否订阅“多摩大课程表”。"
+          }
+        }
+      }
+    },
+    "カレンダーに登録" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to Calendar"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "캘린더에 등록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加到日历"
           }
         }
       }
@@ -3391,6 +3438,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "发车时刻"
+          }
+        }
+      }
+    },
+    "登録する" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "등록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加"
           }
         }
       }

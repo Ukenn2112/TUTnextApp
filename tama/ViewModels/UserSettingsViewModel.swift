@@ -13,6 +13,7 @@ final class UserSettingsViewModel: ObservableObject {
     @Published var urlToOpen: URL?
     @Published var showMailComposer = false
     @Published var showingDarkModeSheet = false
+    @Published var showCalendarSubscriptionAlert = false
 
     // MARK: - パブリックメソッド
 
@@ -35,6 +36,27 @@ final class UserSettingsViewModel: ObservableObject {
     func openPasswordChangeURL() {
         urlToOpen = URL(string: "https://google.tama.ac.jp/unicornidm/user/tama/password/")
         showSafari = true
+    }
+
+    /// 時間割カレンダー登録を開始
+    /// パスワードが保存されている場合は確認アラートを表示し、
+    /// そうでない場合は従来通り Web ページを開く
+    func startCalendarSubscription() {
+        if CalendarSubscriptionService.shared.canSubscribeDirectly {
+            showCalendarSubscriptionAlert = true
+        } else {
+            openURL(CalendarSubscriptionService.shared.fallbackWebPageURL)
+        }
+    }
+
+    /// カレンダー購読を実行（失敗時は Web ページにフォールバック）
+    func confirmCalendarSubscription() {
+        CalendarSubscriptionService.shared.subscribe { [weak self] success in
+            guard let self = self else { return }
+            if !success {
+                self.openURL(CalendarSubscriptionService.shared.fallbackWebPageURL)
+            }
+        }
     }
 
     /// Safari で URL を開く

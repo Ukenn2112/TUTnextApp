@@ -115,6 +115,9 @@ final class LoginViewModel: ObservableObject {
                     "サーバーからのレスポンスが不完全です。\n遅入りますが、admin@ukenn.top に取り合わせいてください。"
                 return
             }
+            // サーバーが認証を確認した後にのみパスワードを保存する
+            // （カレンダー購読で T-NEXT へ再ログインするために必要）
+            UserService.shared.savePassword(password)
             saveUserData(userData, onSuccess: onSuccess)
         } else {
             if let messageList = statusDto["messageList"] as? [String], !messageList.isEmpty {
@@ -135,6 +138,8 @@ final class LoginViewModel: ObservableObject {
 
     private func saveUserData(_ userData: [String: Any], onSuccess: @escaping () -> Void) {
         if let user = UserService.shared.createUser(from: userData) {
+            // メモリ上のパスワードをクリア（Keychain に保存済み）
+            password = ""
             UserService.shared.saveUser(user) {
                 // ログイン後に初期設定を取得（maxJigenNo など）
                 AuthService.shared.firstSetting { result in

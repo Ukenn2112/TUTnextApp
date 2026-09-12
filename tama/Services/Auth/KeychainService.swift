@@ -99,7 +99,8 @@ final class KeychainService {
     func clearAllKeychainData() {
         let keysToDelete = [
             "currentUser",
-            "deviceToken"
+            "deviceToken",
+            "userPassword"
         ]
 
         for key in keysToDelete {
@@ -118,6 +119,7 @@ final class KeychainService {
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: "currentUser")
         defaults.removeObject(forKey: "deviceToken")
+        defaults.removeObject(forKey: "userPassword")
         defaults.removeObject(forKey: "savedCookies")
         defaults.removeObject(forKey: "oauth_state")
 

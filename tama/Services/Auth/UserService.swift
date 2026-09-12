@@ -46,10 +46,30 @@ final class UserService {
         return nil
     }
 
+    // パスワードを保存（カレンダー購読などの再認証用）
+    func savePassword(_ password: String) {
+        DispatchQueue.main.async {
+            self.keychain.save(password, forKey: "userPassword")
+        }
+    }
+
+    // パスワードを取得
+    func getPassword() -> String? {
+        return keychain.loadString(forKey: "userPassword")
+    }
+
+    // パスワードを削除
+    func clearPassword() {
+        DispatchQueue.main.async {
+            self.keychain.delete(forKey: "userPassword")
+        }
+    }
+
     // ユーザーデータを削除（ログアウト時）
     func clearCurrentUser() {
         DispatchQueue.main.async {
             self.keychain.delete(forKey: "currentUser")
+            self.keychain.delete(forKey: "userPassword")
         }
     }
 

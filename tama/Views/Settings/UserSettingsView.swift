@@ -55,6 +55,22 @@ struct UserSettingsView: View {
                 DarkModeSettingsView()
                     .environmentObject(appearanceManager)
             }
+            .alert(
+                NSLocalizedString("カレンダーに登録", comment: ""),
+                isPresented: $viewModel.showCalendarSubscriptionAlert
+            ) {
+                Button(NSLocalizedString("キャンセル", comment: ""), role: .cancel) {}
+                Button(NSLocalizedString("登録する", comment: "")) {
+                    viewModel.confirmCalendarSubscription()
+                }
+            } message: {
+                Text(
+                    NSLocalizedString(
+                        "カレンダーAppが開き、「多摩大スケジュール」の照会を登録するか確認されます。",
+                        comment: ""
+                    )
+                )
+            }
         }
     }
 
@@ -110,7 +126,7 @@ struct UserSettingsView: View {
                 icon: "calendar.badge.plus",
                 color: .orange
             ) {
-                viewModel.openURL("https://tama.qaq.tw/")
+                viewModel.startCalendarSubscription()
             }
 
             settingsButton(
