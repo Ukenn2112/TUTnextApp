@@ -13,6 +13,7 @@ final class TimetableViewModel: ObservableObject {
     // MARK: - プライベートプロパティ
     private var cancellables = Set<AnyCancellable>()
     private let timetableService = TimetableService.shared
+    private var hasLoadedOnce = false
 
     // MARK: - 初期化
     init() {
@@ -39,7 +40,8 @@ final class TimetableViewModel: ObservableObject {
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             return
         }
-        isLoading = true
+        // 一度取得した後はバックグラウンドで更新し、読み込み表示への切り替えによるちらつきを防ぐ
+        isLoading = !hasLoadedOnce
         errorMessage = nil
 
         TimetableService.shared.fetchTimetableData(year: year, termNo: termNo) {
@@ -47,6 +49,7 @@ final class TimetableViewModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isLoading = false
+                self.hasLoadedOnce = true
 
                 switch result {
                 case .success(let timetableData):

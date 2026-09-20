@@ -9,6 +9,7 @@ final class AssignmentViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let assignmentService = AssignmentService.shared
+    private var hasLoadedOnce = false
 
     // タイマーを使って残り時間を更新
     nonisolated(unsafe) private var timer: Timer?
@@ -53,7 +54,8 @@ final class AssignmentViewModel: ObservableObject {
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             return
         }
-        isLoading = true
+        // 一度取得した後はバックグラウンドで更新し、読み込み表示への切り替えによるちらつきを防ぐ
+        isLoading = !hasLoadedOnce
         errorMessage = nil
 
         // すべての環境で実際のAPIを呼び出す
@@ -61,6 +63,7 @@ final class AssignmentViewModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isLoading = false
+                self.hasLoadedOnce = true
 
                 switch result {
                 case .success(let assignments):
