@@ -220,6 +220,7 @@ struct TeacherEmailListView: View {
                     }
                 }
                 .padding(.top, 16)
+                .readableWidth()
             }
             .onChange(of: selectedSection) { _, newSection in
                 scrollToSection(newSection, proxy: scrollProxy)

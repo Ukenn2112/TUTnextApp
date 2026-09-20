@@ -29,6 +29,7 @@ struct LoginView: View {
             Spacer()
 
             loginFormContent
+                .readableWidth(ReadableWidth.form)
 
             Spacer()
 

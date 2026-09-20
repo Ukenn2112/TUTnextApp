@@ -3,6 +3,7 @@ import SwiftUI
 struct CourseDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var ratingService: RatingService
     @StateObject private var viewModel: CourseDetailViewModel
 
@@ -57,6 +58,7 @@ struct CourseDetailView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                     .padding(.bottom, 24)
+                    .readableWidth()
                 }
                 .simultaneousGesture(TapGesture().onEnded {
                     isMemoFocused = false
@@ -495,15 +497,20 @@ struct CourseDetailView: View {
 
     // MARK: - 色選択
 
+    /// 色見本のカラム。
+    /// 通常のiPhone（コンパクト幅）は従来どおり5等分、レギュラー幅では見本の間隔が広がりすぎないように列数を増やす
+    private var colorColumns: [GridItem] {
+        if horizontalSizeClass == .regular {
+            return [GridItem(.adaptive(minimum: 40, maximum: 72), spacing: 12)]
+        }
+        return Array(repeating: GridItem(.flexible(), spacing: 12), count: 5)
+    }
+
     private var colorPickerCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(icon: "paintpalette", title: "色を選択")
 
-            LazyVGrid(
-                columns: Array(
-                    repeating: GridItem(.flexible(), spacing: 12), count: 5),
-                spacing: 12
-            ) {
+            LazyVGrid(columns: colorColumns, spacing: 12) {
                 ForEach(1..<presetColors.count, id: \.self) { index in
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {

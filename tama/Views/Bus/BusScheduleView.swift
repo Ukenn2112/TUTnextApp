@@ -6,6 +6,12 @@ struct BusScheduleView: View {
     @StateObject private var viewModel = BusScheduleViewModel()
     @EnvironmentObject private var ratingService: RatingService
 
+    /// 浮動現在時刻カードの実測の高さ（時刻表をその分だけ下げる）
+    @State private var timeCardHeight: CGFloat = 0
+
+    /// 浮動現在時刻カードの上端の余白
+    private static let timeCardTopInset: CGFloat = 10
+
     // MARK: - ボディ
     var body: some View {
         VStack(spacing: 0) {
@@ -29,16 +35,18 @@ struct BusScheduleView: View {
 
                 // 時刻表コンテンツ（浮動時間カードを含む）
                 ZStack(alignment: .top) {
-                    let basePadding: CGFloat = viewModel.selectedTimeEntry == nil ? 90 : 110
-                    let pinExtraPadding: CGFloat = viewModel.busSchedule?.pin != nil ? 60 : 0
-                    let topPadding: CGFloat = basePadding + pinExtraPadding
                     BusTimeTableContent(viewModel: viewModel)
-                        .padding(.top, topPadding)
+                        .padding(.top, Self.timeCardTopInset + timeCardHeight)
 
                     // 浮動現在時刻表示カード
                     BusTimeCardView(viewModel: viewModel)
                         .padding(.horizontal)
-                        .padding(.top, 10)
+                        .onGeometryChange(for: CGFloat.self) { proxy in
+                            proxy.size.height
+                        } action: { newHeight in
+                            timeCardHeight = newHeight
+                        }
+                        .padding(.top, Self.timeCardTopInset)
                 }
             } else if let errorMessage = viewModel.errorMessage {
                 VStack(spacing: 16) {
@@ -431,6 +439,16 @@ private struct PinMessageRowView: View {
 
 struct BusTimeTableContent: View {
     @ObservedObject var viewModel: BusScheduleViewModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    /// 分チップのカラム。
+    /// 通常のiPhone（コンパクト幅）は従来どおり5列固定、レギュラー幅ではチップ幅を保ったまま横幅いっぱいに並べる
+    private var minuteColumns: [GridItem] {
+        if horizontalSizeClass == .regular {
+            return [GridItem(.adaptive(minimum: 50, maximum: 50), spacing: 8)]
+        }
+        return Array(repeating: GridItem(.fixed(50), spacing: 8), count: 5)
+    }
 
     var body: some View {
         ScrollViewReader { scrollProxy in
@@ -546,11 +564,7 @@ struct BusTimeTableContent: View {
                     .background(Color.gray.opacity(0.3))
 
                 VStack(alignment: .center) {
-                    LazyVGrid(
-                        columns: Array(
-                            repeating: GridItem(.fixed(50), spacing: 8), count: 5),
-                        alignment: .center, spacing: 12
-                    ) {
+                    LazyVGrid(columns: minuteColumns, alignment: .center, spacing: 12) {
                         ForEach(hourSchedule.times, id: \.minute) { time in
                             timeEntryView(time)
                         }
@@ -642,7 +656,8 @@ struct BusTimeTableContent: View {
             }
         }
         .padding()
-        .frame(width: UIScreen.main.bounds.width - 32)
+        // 画面幅ではなく、親（左右16ポイントのパディングを持つScrollView内のVStack）の幅に合わせる
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(UIColor.systemBackground))

@@ -32,6 +32,7 @@ struct PrintSystemView: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
+                .readableWidth()
             }
             .navigationTitle("印刷システム")
             .navigationBarTitleDisplayMode(.inline)
