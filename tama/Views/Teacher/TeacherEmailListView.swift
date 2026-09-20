@@ -15,22 +15,26 @@ struct TeacherEmailListView: View {
     
     // 表示用の五十音行（「その他」を「#」に置換）
     private let displaySections = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "#"]
-    
+
+    // 見出し位置の基準にする座標空間（画面全体ではなく、この画面自身を基準にする）
+    private static let coordinateSpaceName = "teacherEmailList"
+
     // MARK: - ボディ
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack(alignment: .top) {
                 backgroundView
-                
+
                 VStack(spacing: 0) {
                     headerView
                     contentView
                 }
             }
+            .coordinateSpace(.named(Self.coordinateSpaceName))
             .overlay(
                 TeacherCopyConfirmationView(showing: showingCopyConfirmation)
             )
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear(perform: loadInitialData)
         }
     }
@@ -198,7 +202,7 @@ struct TeacherEmailListView: View {
                                                 .onAppear {
                                                     updateVisibleSection(section: section, geometry: geometry)
                                                 }
-                                                .onChange(of: geometry.frame(in: .global).minY) { _, _ in
+                                                .onChange(of: geometry.frame(in: .named(Self.coordinateSpaceName)).minY) { _, _ in
                                                     updateVisibleSection(section: section, geometry: geometry)
                                                 }
                                         }
@@ -308,7 +312,7 @@ struct TeacherEmailListView: View {
     
     /// 表示中のグループを更新（見出し位置に基づく）
     private func updateVisibleSection(section: String, geometry: GeometryProxy) {
-        let headerY = geometry.frame(in: .global).minY
+        let headerY = geometry.frame(in: .named(Self.coordinateSpaceName)).minY
         // 見出し位置が画面上部150px以内にある場合、そのグループが表示中と判断
         if headerY <= 150 && headerY >= -50 {
             if visibleSection != section {

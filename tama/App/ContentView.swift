@@ -26,6 +26,9 @@ struct ContentView: View {
     /// タブバーの差し替えがUIKit側に反映されるまで、アニメーションを止めておく時間
     private static let tabSwapSettleTime: TimeInterval = 0.1
 
+    /// 表示中のシートを閉じてから、別のシートを開き直すまで待つ時間
+    private static let sheetSwapSettleTime: TimeInterval = 0.4
+
     /// アニメーション抑止の世代番号（連続して切り替えた場合に、古いタイマーが途中で抑止を解除しないようにする）
     private static var animationSuppressionToken = 0
 
@@ -397,9 +400,7 @@ struct ContentView: View {
             select(tab: 0)
             sendBusParameters()
         case "print":
-            // SwiftUI管理のシートをUIKit側から閉じると状態が残るため、先に閉じておく
-            activeMenuSheet = nil
-            presentPrintSystemView()
+            presentPrintSystemSheet()
         default:
             break
         }
@@ -426,23 +427,17 @@ struct ContentView: View {
         )
     }
 
-    /// 印刷システム画面をモーダルで表示する
-    private func presentPrintSystemView() {
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootController = scene.windows.first?.rootViewController
-        else {
-            return
-        }
-
-        // 既に表示中のモーダルがあれば閉じてから新しく表示（共有ファイルの上書き対応）
-        if let presented = rootController.presentedViewController {
-            presented.dismiss(animated: false) {
-                let hostingController = UIHostingController(rootView: PrintSystemView())
-                rootController.present(hostingController, animated: true)
-            }
-        } else {
-            let hostingController = UIHostingController(rootView: PrintSystemView())
-            rootController.present(hostingController, animated: true)
+    /// 印刷システム画面をシートで表示する。
+    ///
+    /// 共有ファイルはPrintSystemViewModelの初期化時に読み込まれるため、既にシートを表示中の場合は
+    /// 一度閉じてから開き直して、上書きされた共有ファイルを取り込み直す。
+    /// 表示状態の更新を次のループに回すのは、起動直後のディープリンクでも
+    /// ログイン状態の反映（`resetMoreMenuState()`）に打ち消されないようにするため
+    private func presentPrintSystemSheet() {
+        let settleTime: TimeInterval = activeMenuSheet == nil ? 0 : Self.sheetSwapSettleTime
+        activeMenuSheet = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + settleTime) {
+            activeMenuSheet = MoreMenuItem.printSystem.makeSheet()
         }
     }
 }

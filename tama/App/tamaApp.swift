@@ -28,6 +28,8 @@ struct TamaApp: App {
     var body: some Scene {
         WindowGroup {
             rootView
+                .appearanceOverride(appearanceManager)
+                .appStoreReviewRequest(ratingService)
                 .modelContainer(modelContainer)
                 .environmentObject(appearanceManager)
                 .environmentObject(notificationService)
@@ -35,7 +37,6 @@ struct TamaApp: App {
                 .environmentObject(ratingService)
                 .environmentObject(GoogleOAuthService.shared)
                 .onAppear {
-                    appearanceManager.applyAppearance()
                     notificationService.checkAuthorizationStatus()
                     ratingService.onAppLaunch()
                 }

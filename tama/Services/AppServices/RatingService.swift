@@ -11,6 +11,11 @@ final class RatingService: ObservableObject {
     private let minimumDaysSinceLastRequest = 30 // 最小間隔日数
     private let significantEventsThreshold = 5 // 重要操作回数の閾値
 
+    /// 評価ダイアログの表示要求カウンタ。
+    /// 表示するかどうかの判断はこのサービスが行い、実際の表示は
+    /// `appStoreReviewRequest(_:)` を付けたビューが `RequestReviewAction` で行う
+    @Published private(set) var reviewRequestCount = 0
+
     private init() {}
 
     // MARK: - パブリックメソッド
@@ -99,11 +104,9 @@ final class RatingService: ObservableObject {
 
         print("RatingService: App Store評価をリクエスト中")
 
-        // メインスレッドでUI操作を実行
+        // 表示要求をビュー側へ通知する（@Published の更新はメインスレッドで行う）
         DispatchQueue.main.async {
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                SKStoreReviewController.requestReview(in: windowScene)
-            }
+            self.reviewRequestCount += 1
         }
     }
 
@@ -124,6 +127,28 @@ final class RatingService: ObservableObject {
             "lastRatingRequestDate": AppDefaults.lastRatingRequestDate as Any,
             "shouldRequestRating": shouldRequestRating()
         ]
+    }
+}
+
+// MARK: - 評価ダイアログの表示
+
+extension View {
+    /// サービスからの表示要求を受けて、App Storeの評価ダイアログを表示する。
+    /// 表示先のシーンは `RequestReviewAction` が環境から解決するため、ルートビューに付ける
+    func appStoreReviewRequest(_ service: RatingService) -> some View {
+        modifier(AppStoreReviewRequestModifier(service: service))
+    }
+}
+
+private struct AppStoreReviewRequestModifier: ViewModifier {
+    @ObservedObject var service: RatingService
+    @Environment(\.requestReview) private var requestReview
+
+    func body(content: Content) -> some View {
+        content.onChange(of: service.reviewRequestCount) { _, newCount in
+            guard newCount > 0 else { return }
+            requestReview()
+        }
     }
 }
 
