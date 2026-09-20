@@ -119,57 +119,67 @@ struct ContentView: View {
 
     /// メインタブビュー（ログイン後に表示）
     private var mainTabView: some View {
-        VStack(spacing: 0) {
-            // 時間割タブはシステムツールバー（`mainToolbar`）へ移行済みのため、独自ヘッダーを出さない。
-            // 「その他」モード中もコンテンツは切り替わらないので、`selectedTab` で判定してよい
-            if !usesSystemToolbar(selectedTab) {
-                HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+        tabView
+            .tint(.appPrimary)
+            .sensoryFeedback(.selection, trigger: isMoreMode)
+            .sheet(item: $activeMenuSheet) { sheet in
+                sheet.content
             }
-
-            tabView
-                .tint(.appPrimary)
-        }
-        .sensoryFeedback(.selection, trigger: isMoreMode)
-        .sheet(item: $activeMenuSheet) { sheet in
-            sheet.content
-        }
-        .onChange(of: selectedTab) {
-            // 通常は select(tab:) で同時に解除されるが、念のためのセーフティネット
-            setMoreMode(false)
-        }
-        .onAppear {
-            fetchAssignmentCount()
-            #if DEBUG
-            if let tab = Self.debugInitialTab {
-                selectedTab = tab
+            // Google OAuthのWebViewはアプリ全体で1つ。
+            // 共通ツールバー（`mainToolbar`）はタブごとに生成されるため、
+            // 共有シングルトンの状態に紐づくこのシートは必ずここ（タブの外側）で1回だけ出す
+            .sheet(
+                isPresented: $oauthService.showOAuthWebView,
+                onDismiss: {
+                    // OAuth WebViewが閉じられた時の処理
+                    oauthService.cancelOAuth()
+                    NotificationCenter.default.post(name: .googleOAuthWebViewDismissed, object: nil)
+                }
+            ) {
+                if let url = oauthService.oauthURL {
+                    SafariWebView(
+                        url: url,
+                        dismissNotification: .googleOAuthWebViewDismissed
+                    )
+                }
             }
-            #endif
-        }
-        .onReceive(
-            NotificationCenter.default.publisher(for: .assignmentsUpdated)
-        ) { notification in
-            if let count = notification.userInfo?["count"] as? Int {
-                assignmentCount = count
+            .onReceive(
+                NotificationCenter.default.publisher(for: .googleOAuthCallbackReceived)
+            ) { _ in
+                // OAuthコールバック受信時にWebViewを閉じる
+                oauthService.showOAuthWebView = false
             }
-        }
-        .onReceive(TimetableService.shared.$currentSemester) { updatedSemester in
-            semester = updatedSemester
-        }
-        .onVerticalBarEdgeChange { isVerticalBar in
-            guard isVerticalBarPose != isVerticalBar else { return }
-            // 起動直後は必ず「縦バーではない」から切り替わるため、アニメーションを付けない
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                isVerticalBarPose = isVerticalBar
+            .onChange(of: selectedTab) {
+                // 通常は select(tab:) で同時に解除されるが、念のためのセーフティネット
+                setMoreMode(false)
             }
-        }
-    }
-
-    /// そのタブがシステムツールバー（`NavigationStack` + `mainToolbar`）へ移行済みかどうか。
-    /// 移行済みのタブでは独自ヘッダー（`HeaderView`）を出さない
-    private func usesSystemToolbar(_ tab: Int) -> Bool {
-        Self.mainTabs.contains(tab)
+            .onAppear {
+                fetchAssignmentCount()
+                #if DEBUG
+                if let tab = Self.debugInitialTab {
+                    selectedTab = tab
+                }
+                #endif
+            }
+            .onReceive(
+                NotificationCenter.default.publisher(for: .assignmentsUpdated)
+            ) { notification in
+                if let count = notification.userInfo?["count"] as? Int {
+                    assignmentCount = count
+                }
+            }
+            .onReceive(TimetableService.shared.$currentSemester) { updatedSemester in
+                semester = updatedSemester
+            }
+            .onVerticalBarEdgeChange { isVerticalBar in
+                guard isVerticalBarPose != isVerticalBar else { return }
+                // 起動直後は必ず「縦バーではない」から切り替わるため、アニメーションを付けない
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    isVerticalBarPose = isVerticalBar
+                }
+            }
     }
 
     /// 課題タブのコンテンツ。
@@ -571,4 +581,5 @@ struct ContentView: View {
         .environmentObject(AppearanceManager())
         .environmentObject(NotificationService.shared)
         .environmentObject(RatingService.shared)
+        .environmentObject(GoogleOAuthService.shared)
 }

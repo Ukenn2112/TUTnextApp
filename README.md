@@ -106,8 +106,9 @@ TUTnextApp/
 │   ├── Views/                    # UI画面（SwiftUI View）
 │   │   ├── Components/           #   再利用可能なUI部品
 │   │   │   ├── AssignmentCardView.swift  # 課題カードコンポーネント
-│   │   │   ├── HeaderView.swift         # ヘッダーコンポーネント
 │   │   │   ├── MailComposerView.swift   # メール作成コンポーネント
+│   │   │   ├── MainToolbar.swift        # 各タブ共通のシステムツールバー
+│   │   │   ├── VerticalBarPageTitle.swift # 縦バーのポーズ用ページタイトル
 │   │   │   ├── SafariWebView.swift      # アプリ内ブラウザ
 │   │   │   └── TabBarView.swift         # タブバーコンポーネント
 │   │   ├── Timetable/            #   時間割関連画面
