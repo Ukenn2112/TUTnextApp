@@ -20,6 +20,9 @@ struct ContentView: View {
     /// 判定はここ一箇所だけで行い、各タブのツールバーとページ内容へ同じ値を渡す。
     /// 起動直後の数フレームは判定できないため、横バーと同じ表示から始める
     @State private var isVerticalBarPose = false
+    /// Classroom認証の取り消し確認を出すかどうか（課題タブのツールバー項目から立てられる）
+    @State private var showRevokeConfirmation = false
+    @EnvironmentObject private var oauthService: GoogleOAuthService
     @Environment(\.scenePhase) private var scenePhase
 
     /// 「その他」タブの値
@@ -166,7 +169,52 @@ struct ContentView: View {
     /// そのタブがシステムツールバー（`NavigationStack` + `mainToolbar`）へ移行済みかどうか。
     /// 移行済みのタブでは独自ヘッダー（`HeaderView`）を出さない
     private func usesSystemToolbar(_ tab: Int) -> Bool {
-        tab == 0 || tab == 1
+        Self.mainTabs.contains(tab)
+    }
+
+    /// 課題タブのコンテンツ。
+    /// 共通のツールバー項目に加えて、Classroom認証のボタンを先頭に置く。
+    /// 取り消し確認のアラートは、項目がオーバーフローメニューへ送られても確実に出せるようここでホストする
+    private var assignmentTabContent: some View {
+        let title = NSLocalizedString("課題", comment: "ヘッダータイトル")
+
+        return NavigationStack {
+            probed("assignment") {
+                AssignmentView(
+                    isLoggedIn: $isLoggedIn,
+                    title: title,
+                    isVerticalBarPose: isVerticalBarPose
+                )
+            }
+                .navigationTitle(title)
+                .toolbarTitleDisplayMode(.inline)
+                .mainToolbar(
+                    title: title,
+                    isVerticalBarPose: isVerticalBarPose,
+                    isLoggedIn: $isLoggedIn
+                ) {
+                    ClassroomAuthToolbarButton(showRevokeConfirmation: $showRevokeConfirmation)
+                }
+                .alert(
+                    NSLocalizedString("認証取り消し確認", comment: "認証取り消し確認ダイアログタイトル"),
+                    isPresented: $showRevokeConfirmation
+                ) {
+                    Button(NSLocalizedString("キャンセル", comment: "キャンセルボタン"), role: .cancel) { }
+                    Button(
+                        NSLocalizedString("認証取り消し", comment: "認証取り消しボタン"),
+                        role: .destructive
+                    ) {
+                        oauthService.clearAuthorization()
+                    }
+                } message: {
+                    Text(
+                        NSLocalizedString(
+                            "認証を取り消しますか？\n取り消し後は Classroom の課題が表示されなくなります。",
+                            comment: "認証取り消し確認メッセージ"
+                        )
+                    )
+                }
+        }
     }
 
     /// バスタブのコンテンツ。
@@ -357,7 +405,7 @@ struct ContentView: View {
                     value: 2,
                     role: tabRole(2)
                 ) {
-                    probed("assignment") { AssignmentView(isLoggedIn: $isLoggedIn) }
+                    assignmentTabContent
                 }
                 .badge(isMoreMode ? 0 : assignmentCount)
 
@@ -400,7 +448,7 @@ struct ContentView: View {
                 }
                 .tag(1)
 
-            probed("assignment") { AssignmentView(isLoggedIn: $isLoggedIn) }
+            assignmentTabContent
                 .tabItem {
                     Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
                 }

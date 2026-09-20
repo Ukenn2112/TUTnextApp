@@ -42,19 +42,22 @@ extension View {
     }
 
     /// 共通のツールバー項目に加えて、タブ固有の項目を追加する。
-    /// `extra` は `.topBarTrailing` の共通項目より前（先頭側）に置かれる
+    ///
+    /// `trailingExtra` は共通項目（掲示情報・設定）より後ろ（末尾側）に、
+    /// `ToolbarSpacer` を挟んで別のグループとして置かれる。
+    /// 横バーでは右端の独立したガラスのカプセル、縦バーでは共通項目の下の独立したグループになる
     func mainToolbar<Extra: View>(
         title: String,
         isVerticalBarPose: Bool,
         isLoggedIn: Binding<Bool>,
-        @ViewBuilder extra: @escaping () -> Extra
+        @ViewBuilder trailingExtra: @escaping () -> Extra
     ) -> some View {
         modifier(
             MainToolbarModifier(
                 title: title,
                 isVerticalBarPose: isVerticalBarPose,
                 isLoggedIn: isLoggedIn,
-                extraItems: extra
+                extraItems: trailingExtra
             )
         )
     }
@@ -93,7 +96,7 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
 
     @Binding var isLoggedIn: Bool
 
-    /// タブ固有の追加項目（無い場合は nil）
+    /// タブ固有の追加項目（無い場合は nil）。共通項目より後ろに、別グループとして置く
     let extraItems: (() -> Extra)?
 
     @State private var user: User?
@@ -140,18 +143,19 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
 
     /// ツールバーの中身。
     ///
-    /// 並び順は「タブ固有の項目 → 掲示情報 → 設定」（縦バーでは上から、横バーでは左から）。
-    /// 縦バーに収まらない項目はオーバーフローメニューへ送られるため、掲示情報（未読バッジを持つ）を
-    /// 設定より優先して残す。`visibilityPriority(_:)` はiOS 27以降のAPIなので分岐する
+    /// 並び順は「掲示情報 → 設定 →（区切り）→ タブ固有の項目」（縦バーでは上から、横バーでは左から）。
+    /// タブ固有の項目は共通項目とは別の物だと分かるよう、`ToolbarSpacer` で切り離して
+    /// 独立したグループにする（iOS 26以降。それ以前はグループのガラス自体が無いのでそのまま並べる）。
+    /// 収まらない項目は末尾からオーバーフローメニューへ送られるため、末尾に来るタブ固有の項目と
+    /// 掲示情報（未読バッジを持つ）を優先して残す。`visibilityPriority(_:)` はiOS 27以降のAPIなので分岐する
     @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
         titleItem
+        commonItems
+        trailingExtraItem
+    }
 
-        if let extraItems {
-            ToolbarItem(placement: .topBarTrailing) {
-                extraItems()
-            }
-        }
-
+    /// どのタブにもある共通項目（掲示情報・設定）
+    @ToolbarContentBuilder private var commonItems: some ToolbarContent {
         if #available(iOS 27.0, *) {
             ToolbarItem(placement: .topBarTrailing) {
                 announcementsButton
@@ -169,6 +173,30 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
 
             ToolbarItem(placement: .topBarTrailing) {
                 settingsButton
+            }
+        }
+    }
+
+    /// 共通項目の後ろに、区切りを挟んで置くタブ固有の項目
+    @ToolbarContentBuilder private var trailingExtraItem: some ToolbarContent {
+        if let extraItems {
+            if #available(iOS 27.0, *) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    extraItems()
+                }
+                .visibilityPriority(.high)
+            } else if #available(iOS 26.0, *) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    extraItems()
+                }
+            } else {
+                ToolbarItem(placement: .topBarTrailing) {
+                    extraItems()
+                }
             }
         }
     }

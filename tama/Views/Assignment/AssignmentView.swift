@@ -2,12 +2,20 @@ import SwiftUI
 
 struct AssignmentView: View {
     @Binding var isLoggedIn: Bool
+    /// ページのタイトル（システムのナビゲーションタイトルと同じ値）。
+    /// 縦バーのポーズではバーのタイトルを消して、この文字列をページ内容の先頭に描く
+    let title: String
+    /// システムのバーが縦バーとして表示されているか（判定は `ContentView` が一箇所で行う）
+    let isVerticalBarPose: Bool
     @StateObject private var viewModel = AssignmentViewModel()
     @State private var selectedFilter: AssignmentFilter = .all
     @EnvironmentObject private var ratingService: RatingService
     @EnvironmentObject private var oauthService: GoogleOAuthService
     // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol?
+
+    /// 縦バーのポーズで、ページ内タイトルの下に空ける余白
+    private static let verticalBarTitleBottomSpacing: CGFloat = 8
 
     enum AssignmentFilter {
         case all, today, thisWeek, thisMonth, overdue
@@ -18,6 +26,68 @@ struct AssignmentView: View {
             Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea()
 
+            VStack(spacing: 0) {
+                if isVerticalBarPose {
+                    // 縦バーのポーズではバーのタイトル帯を無視して上を詰め、
+                    // グリフ上端がウィンドウ上端から VerticalBarLayout.edgeMargin の位置に来るように描く
+                    VerticalBarPageTitle(title: title)
+                        .padding(.bottom, Self.verticalBarTitleBottomSpacing)
+                }
+
+                contentView
+            }
+        }
+        // 縦バーのポーズでは空のナビゲーションバー帯の分だけ上が空くため、ウィンドウ上端まで広げる。
+        // 下端はスクロールする内容なのでシステムに任せる（横バーのポーズでは何もしない）
+        .ignoresSafeArea(.container, edges: isVerticalBarPose ? .top : [])
+        .onAppear {
+            viewModel.loadAssignments()
+            // 課題表示の重要イベントを記録
+            ratingService.recordSignificantEvent()
+
+            // Google OAuth認証状態をチェック
+            Task {
+                await oauthService.loadAuthorizationStatus()
+            }
+
+            // アプリがフォアグラウンドに復帰した時にページを更新
+            willEnterForegroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    print("AssignmentView: アプリがフォアグラウンドに復帰しました")
+                    viewModel.loadAssignments()
+                    // フォアグラウンド復帰時にも認証状態をチェック
+                    await oauthService.loadAuthorizationStatus()
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthSuccess)) { _ in
+            // Google OAuth認証成功時に課題リストを更新
+            print("AssignmentView: Google OAuth認証成功、課題リストを更新")
+            viewModel.loadAssignments()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthStatusChanged)) { _ in
+            // Google OAuthステータス変化時に課題リストを更新（認証取り消しを含む）
+            print("AssignmentView: Google OAuthステータス変化、課題リストを更新")
+            viewModel.loadAssignments()
+        }
+        .onDisappear {
+            // 通知オブザーバーを削除
+            if let observer = willEnterForegroundObserver {
+                NotificationCenter.default.removeObserver(observer)
+                willEnterForegroundObserver = nil
+            }
+        }
+    }
+
+    // MARK: - サブビュー
+
+    /// タイトルの下に置く本体（読み込み中・エラー・空・課題リスト）
+    @ViewBuilder private var contentView: some View {
+        Group {
             if viewModel.isLoading {
                 ProgressView("読み込み中...")
                     .progressViewStyle(CircularProgressViewStyle())
@@ -99,47 +169,7 @@ struct AssignmentView: View {
                 }
             }
         }
-        .onAppear {
-            viewModel.loadAssignments()
-            // 課題表示の重要イベントを記録
-            ratingService.recordSignificantEvent()
-            
-            // Google OAuth認証状態をチェック
-            Task {
-                await oauthService.loadAuthorizationStatus()
-            }
-            
-            // アプリがフォアグラウンドに復帰した時にページを更新
-            willEnterForegroundObserver = NotificationCenter.default.addObserver(
-                forName: UIApplication.willEnterForegroundNotification,
-                object: nil,
-                queue: .main
-            ) { _ in
-                Task { @MainActor in
-                    print("AssignmentView: アプリがフォアグラウンドに復帰しました")
-                    viewModel.loadAssignments()
-                    // フォアグラウンド復帰時にも認証状態をチェック
-                    await oauthService.loadAuthorizationStatus()
-                }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthSuccess)) { _ in
-            // Google OAuth認証成功時に課題リストを更新
-            print("AssignmentView: Google OAuth認証成功、課題リストを更新")
-            viewModel.loadAssignments()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .googleOAuthStatusChanged)) { _ in
-            // Google OAuthステータス変化時に課題リストを更新（認証取り消しを含む）
-            print("AssignmentView: Google OAuthステータス変化、課題リストを更新")
-            viewModel.loadAssignments()
-        }
-        .onDisappear {
-            // 通知オブザーバーを削除
-            if let observer = willEnterForegroundObserver {
-                NotificationCenter.default.removeObserver(observer)
-                willEnterForegroundObserver = nil
-            }
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var filteredAssignments: [Assignment] {
@@ -193,38 +223,44 @@ struct AssignmentView: View {
 private struct AssignmentViewPreviewHost: View {
     @State private var selectedTab = 2
     @State private var isLoggedIn = true
+    @State private var showRevokeConfirmation = false
+
+    private let title = NSLocalizedString("課題", comment: "ヘッダータイトル")
 
     var body: some View {
-        VStack(spacing: 0) {
-            HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+        TabView(selection: $selectedTab) {
+            Color.clear
+                .tabItem {
+                    Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
+                }
+                .tag(0)
 
-            TabView(selection: $selectedTab) {
-                Color.clear
-                    .tabItem {
-                        Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
-                    }
-                    .tag(0)
+            Color.clear
+                .tabItem {
+                    Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
+                }
+                .tag(1)
 
-                Color.clear
-                    .tabItem {
-                        Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
+            NavigationStack {
+                AssignmentView(isLoggedIn: $isLoggedIn, title: title, isVerticalBarPose: false)
+                    .navigationTitle(title)
+                    .toolbarTitleDisplayMode(.inline)
+                    .mainToolbar(title: title, isVerticalBarPose: false, isLoggedIn: $isLoggedIn) {
+                        ClassroomAuthToolbarButton(showRevokeConfirmation: $showRevokeConfirmation)
                     }
-                    .tag(1)
-
-                AssignmentView(isLoggedIn: $isLoggedIn)
-                    .tabItem {
-                        Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
-                    }
-                    .badge(Assignment.previewAssignments.count)
-                    .tag(2)
-
-                Color.clear
-                    .tabItem {
-                        Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis.circle")
-                    }
-                    .tag(3)
             }
-            .tint(.appPrimary)
+            .tabItem {
+                Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
+            }
+            .badge(Assignment.previewAssignments.count)
+            .tag(2)
+
+            Color.clear
+                .tabItem {
+                    Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis.circle")
+                }
+                .tag(3)
         }
+        .tint(.appPrimary)
     }
 }
