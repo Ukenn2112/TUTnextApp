@@ -1,5 +1,15 @@
 import SwiftUI
 
+// MARK: - レイアウト定数
+
+/// 課題ページの共通のレイアウト値
+enum AssignmentLayout {
+    /// ページ内容の列の横の余白。
+    /// 課題カードと横スクロールのフィルター行が同じ線に揃うように、
+    /// どちらもこの値を使う（`.padding(.horizontal)` の既定値と同じ）
+    static let horizontalPadding: CGFloat = 16
+}
+
 struct AssignmentView: View {
     @Binding var isLoggedIn: Bool
     /// ページのタイトル（システムのナビゲーションタイトルと同じ値）。
@@ -146,9 +156,10 @@ struct AssignmentView: View {
                             filterButton(
                                 title: NSLocalizedString("期限切れ", comment: ""), filter: .overdue)
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, AssignmentLayout.horizontalPadding)
                         .padding(.vertical, 5)
                     }
+                    .clippedToHorizontalSafeArea(contentInset: AssignmentLayout.horizontalPadding)
                     .padding(.vertical, 8)
                     .background(Color(UIColor.systemBackground))
 
@@ -161,7 +172,7 @@ struct AssignmentView: View {
                                         UIApplication.shared.open(url)
                                     }
                                 }
-                                .padding(.horizontal)
+                                .padding(.horizontal, AssignmentLayout.horizontalPadding)
                             }
                         }
                         .padding(.vertical)

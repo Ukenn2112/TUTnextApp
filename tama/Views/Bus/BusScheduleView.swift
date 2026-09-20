@@ -1,6 +1,16 @@
 import CoreLocation
 import SwiftUI
 
+// MARK: - レイアウト定数
+
+/// バス時刻表ページの共通のレイアウト値
+enum BusLayout {
+    /// ページ内容の列の横の余白。
+    /// 時刻表・セグメント・浮動現在時刻カード・横スクロールの行が同じ線に揃うように、
+    /// すべてこの値を使う（`.padding(.horizontal)` の既定値と同じ）
+    static let horizontalPadding: CGFloat = 16
+}
+
 struct BusScheduleView: View {
     // MARK: - プロパティ
     @StateObject private var viewModel = BusScheduleViewModel()
@@ -57,7 +67,7 @@ struct BusScheduleView: View {
 
                     // 浮動現在時刻表示カード
                     BusTimeCardView(viewModel: viewModel)
-                        .padding(.horizontal)
+                        .padding(.horizontal, BusLayout.horizontalPadding)
                         .onGeometryChange(for: CGFloat.self) { proxy in
                             proxy.size.height
                         } action: { newHeight in
@@ -125,10 +135,11 @@ struct BusTemporaryMessagesView: View {
                         messageCard(message)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, BusLayout.horizontalPadding)
                 .padding(.bottom, 8)
                 .padding(.top, 4)
             }
+            .clippedToHorizontalSafeArea(contentInset: BusLayout.horizontalPadding)
         }
         .background(Color(UIColor.systemBackground))
     }
@@ -200,7 +211,7 @@ struct BusScheduleTypeSelector: View {
                 Text("土曜日").tag(BusSchedule.ScheduleType.saturday)
             }
             .pickerStyle(SegmentedPickerStyle())
-            .padding(.horizontal)
+            .padding(.horizontal, BusLayout.horizontalPadding)
             .onChange(of: selectedScheduleType) { _, _ in
                 onChanged()
             }
@@ -246,9 +257,10 @@ struct BusRouteTypeSelector: View {
                     )
                     .id("fromSchoolToNagayama")
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, BusLayout.horizontalPadding)
                 .padding(.vertical, 5)
             }
+            .clippedToHorizontalSafeArea(contentInset: BusLayout.horizontalPadding)
             .onChange(of: selectedRouteType) { _, newValue in
                 withAnimation {
                     scrollProxy.scrollTo(newValue.rawValue, anchor: .center)
@@ -486,7 +498,7 @@ struct BusTimeTableContent: View {
 
                     specialNotesView
                 }
-                .padding()
+                .padding(BusLayout.horizontalPadding)
             }
             .background(Color(UIColor.systemBackground))
             .onAppear {
