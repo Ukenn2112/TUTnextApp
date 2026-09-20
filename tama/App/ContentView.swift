@@ -166,7 +166,26 @@ struct ContentView: View {
     /// そのタブがシステムツールバー（`NavigationStack` + `mainToolbar`）へ移行済みかどうか。
     /// 移行済みのタブでは独自ヘッダー（`HeaderView`）を出さない
     private func usesSystemToolbar(_ tab: Int) -> Bool {
-        tab == 1
+        tab == 0 || tab == 1
+    }
+
+    /// バスタブのコンテンツ。
+    /// システムのナビゲーションバー（Duoでは縦バー）にタイトルと共通ツールバー項目を載せる
+    private var busTabContent: some View {
+        let title = NSLocalizedString("スクールバス", comment: "ヘッダータイトル")
+
+        return NavigationStack {
+            probed("bus") {
+                BusScheduleView(title: title, isVerticalBarPose: isVerticalBarPose)
+            }
+                .navigationTitle(title)
+                .toolbarTitleDisplayMode(.inline)
+                .mainToolbar(
+                    title: title,
+                    isVerticalBarPose: isVerticalBarPose,
+                    isLoggedIn: $isLoggedIn
+                )
+        }
     }
 
     /// 時間割タブのコンテンツ。
@@ -320,7 +339,7 @@ struct ContentView: View {
                     value: 0,
                     role: tabRole(0)
                 ) {
-                    probed("bus") { BusScheduleView() }
+                    busTabContent
                 }
 
                 Tab(
@@ -369,7 +388,7 @@ struct ContentView: View {
     /// iOS 26以前向けのタブビュー（タブバーの独立表示ができないため、その他の機能は確認ダイアログで表示）
     private var legacyTabView: some View {
         TabView(selection: tabSelection) {
-            probed("bus") { BusScheduleView() }
+            busTabContent
                 .tabItem {
                     Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
                 }

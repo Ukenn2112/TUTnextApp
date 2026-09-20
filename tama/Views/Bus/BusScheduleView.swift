@@ -6,15 +6,32 @@ struct BusScheduleView: View {
     @StateObject private var viewModel = BusScheduleViewModel()
     @EnvironmentObject private var ratingService: RatingService
 
+    /// ページのタイトル（システムのナビゲーションタイトルと同じ値）。
+    /// 縦バーのポーズではバーのタイトルを消して、この文字列をページ内容の先頭に描く
+    let title: String
+
+    /// システムのバーが縦バーとして表示されているか（判定は `ContentView` が一箇所で行う）
+    let isVerticalBarPose: Bool
+
     /// 浮動現在時刻カードの実測の高さ（時刻表をその分だけ下げる）
     @State private var timeCardHeight: CGFloat = 0
 
     /// 浮動現在時刻カードの上端の余白
     private static let timeCardTopInset: CGFloat = 10
 
+    /// 縦バーのポーズで、ページ内タイトルの下に空ける余白
+    private static let verticalBarTitleBottomSpacing: CGFloat = 8
+
     // MARK: - ボディ
     var body: some View {
         VStack(spacing: 0) {
+            if isVerticalBarPose {
+                // 縦バーのポーズではバーのタイトル帯を無視して上を詰め、
+                // グリフ上端がウィンドウ上端から VerticalBarLayout.edgeMargin の位置に来るように描く
+                VerticalBarPageTitle(title: title)
+                    .padding(.bottom, Self.verticalBarTitleBottomSpacing)
+            }
+
             if let busSchedule = viewModel.busSchedule {
                 // 臨時ダイヤメッセージがある場合は表示
                 if let messages = busSchedule.temporaryMessages, !messages.isEmpty {
@@ -78,6 +95,9 @@ struct BusScheduleView: View {
         )
         .background(Color(UIColor.systemBackground))
         .edgesIgnoringSafeArea(.bottom)
+        // 縦バーのポーズでは空のナビゲーションバー帯の分だけ上が空くため、ウィンドウ上端まで広げる。
+        // 下端はスクロールする内容なのでシステムに任せる（横バーのポーズでは何もしない）
+        .ignoresSafeArea(.container, edges: isVerticalBarPose ? .top : [])
         .onAppear {
             viewModel.setupOnAppear()
             ratingService.recordSignificantEvent()
@@ -771,36 +791,39 @@ private struct BusScheduleViewPreviewHost: View {
     @State private var selectedTab = 0
     @State private var isLoggedIn = true
 
+    private let title = NSLocalizedString("スクールバス", comment: "ヘッダータイトル")
+
     var body: some View {
-        VStack(spacing: 0) {
-            HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
-
-            TabView(selection: $selectedTab) {
-                BusScheduleView()
-                    .tabItem {
-                        Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
-                    }
-                    .tag(0)
-
-                Color.clear
-                    .tabItem {
-                        Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
-                    }
-                    .tag(1)
-
-                Color.clear
-                    .tabItem {
-                        Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
-                    }
-                    .tag(2)
-
-                Color.clear
-                    .tabItem {
-                        Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis.circle")
-                    }
-                    .tag(3)
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                BusScheduleView(title: title, isVerticalBarPose: false)
+                    .navigationTitle(title)
+                    .toolbarTitleDisplayMode(.inline)
+                    .mainToolbar(title: title, isVerticalBarPose: false, isLoggedIn: $isLoggedIn)
             }
-            .tint(.appPrimary)
+            .tabItem {
+                Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
+            }
+            .tag(0)
+
+            Color.clear
+                .tabItem {
+                    Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
+                }
+                .tag(1)
+
+            Color.clear
+                .tabItem {
+                    Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
+                }
+                .tag(2)
+
+            Color.clear
+                .tabItem {
+                    Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis.circle")
+                }
+                .tag(3)
         }
+        .tint(.appPrimary)
     }
 }
