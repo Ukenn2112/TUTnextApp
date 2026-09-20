@@ -35,6 +35,22 @@ struct ContentView: View {
         if #available(iOS 27.0, *) { true } else { false }
     }
 
+    #if DEBUG
+    /// 起動引数（UserDefaultsの同名キーでも可）で指定された初期タブ。
+    ///
+    /// `-DuoInitialTab bus|timetable|assignment` を付けて起動すると、そのタブを選んだ状態で始まる。
+    /// `simctl openurl` によるディープリンクはシステムの確認ダイアログが出てCLIから抜けられないため、
+    /// ポーズごとのスクリーンショットをタブ別に撮るための検証用の入口
+    private static var debugInitialTab: Int? {
+        switch UserDefaults.standard.string(forKey: "DuoInitialTab") {
+        case "bus": return 0
+        case "timetable": return 1
+        case "assignment": return 2
+        default: return nil
+        }
+    }
+    #endif
+
     // MARK: - ボディ
 
     var body: some View {
@@ -105,6 +121,11 @@ struct ContentView: View {
         }
         .onAppear {
             fetchAssignmentCount()
+            #if DEBUG
+            if let tab = Self.debugInitialTab {
+                selectedTab = tab
+            }
+            #endif
         }
         .onReceive(
             NotificationCenter.default.publisher(for: .assignmentsUpdated)
@@ -219,6 +240,17 @@ struct ContentView: View {
         return tab == prominentTab ? .prominent : nil
     }
 
+    /// タブのコンテンツに計測用プローブを付ける（DEBUGビルドかつ起動引数が指定されたときのみ動作する）
+    private func probed<Content: View>(
+        _ label: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        #if DEBUG
+        return content().duoMetricsProbe(label)
+        #else
+        return content()
+        #endif
+    }
+
     /// タブビュー本体
     @ViewBuilder private var tabView: some View {
         if #available(iOS 27.0, *) {
@@ -230,7 +262,7 @@ struct ContentView: View {
                     value: 0,
                     role: tabRole(0)
                 ) {
-                    BusScheduleView()
+                    probed("bus") { BusScheduleView() }
                 }
 
                 Tab(
@@ -239,7 +271,7 @@ struct ContentView: View {
                     value: 1,
                     role: tabRole(1)
                 ) {
-                    TimetableView(isLoggedIn: $isLoggedIn)
+                    probed("timetable") { TimetableView(isLoggedIn: $isLoggedIn) }
                 }
 
                 Tab(
@@ -248,7 +280,7 @@ struct ContentView: View {
                     value: 2,
                     role: tabRole(2)
                 ) {
-                    AssignmentView(isLoggedIn: $isLoggedIn)
+                    probed("assignment") { AssignmentView(isLoggedIn: $isLoggedIn) }
                 }
                 .badge(isMoreMode ? 0 : assignmentCount)
 
@@ -279,19 +311,19 @@ struct ContentView: View {
     /// iOS 26以前向けのタブビュー（タブバーの独立表示ができないため、その他の機能は確認ダイアログで表示）
     private var legacyTabView: some View {
         TabView(selection: tabSelection) {
-            BusScheduleView()
+            probed("bus") { BusScheduleView() }
                 .tabItem {
                     Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
                 }
                 .tag(0)
 
-            TimetableView(isLoggedIn: $isLoggedIn)
+            probed("timetable") { TimetableView(isLoggedIn: $isLoggedIn) }
                 .tabItem {
                     Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
                 }
                 .tag(1)
 
-            AssignmentView(isLoggedIn: $isLoggedIn)
+            probed("assignment") { AssignmentView(isLoggedIn: $isLoggedIn) }
                 .tabItem {
                     Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
                 }

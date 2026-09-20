@@ -27,7 +27,7 @@ struct TamaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            rootView
                 .modelContainer(modelContainer)
                 .environmentObject(appearanceManager)
                 .environmentObject(notificationService)
@@ -55,5 +55,16 @@ struct TamaApp: App {
                     }
                 }
         }
+    }
+
+    // MARK: - サブビュー
+
+    /// ルートビュー（DEBUGビルドでは計測用オーバーレイを重ねられるようにする）
+    private var rootView: some View {
+        #if DEBUG
+        ContentView().duoMetricsOverlay()
+        #else
+        ContentView()
+        #endif
     }
 }
