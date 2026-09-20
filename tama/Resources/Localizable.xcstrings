@@ -2615,6 +2615,7 @@
     },
     "年間予定" : {
       "comment" : "タブバー",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

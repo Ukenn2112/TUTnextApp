@@ -9,6 +9,31 @@ struct ContentView: View {
     @State private var selectedTab = 1
     @State private var isLoggedIn = false
     @State private var assignmentCount: Int = 0
+    @State private var isMoreMode = false
+    @State private var isMoreDialogPresented = false
+    @State private var activeMenuSheet: MoreMenuSheet?
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// 「その他」タブの値
+    private static let moreTab = 3
+
+    /// メインタブの値
+    private static let mainTabs = [0, 1, 2]
+
+    /// 「その他」モード専用の追加タブの値
+    private static let extraTabs = [4, 5]
+
+    /// タブバーの差し替えがUIKit側に反映されるまで、アニメーションを止めておく時間
+    private static let tabSwapSettleTime: TimeInterval = 0.1
+
+    /// アニメーション抑止の世代番号（連続して切り替えた場合に、古いタイマーが途中で抑止を解除しないようにする）
+    private static var animationSuppressionToken = 0
+
+    /// タブバー自体を差し替える方式を使うかどうか。
+    /// 独立表示（prominentロール）が使えるiOS 27以降のみ対応し、それ未満は確認ダイアログで表示する
+    private static var usesSwappableTabBar: Bool {
+        if #available(iOS 27.0, *) { true } else { false }
+    }
 
     // MARK: - ボディ
 
@@ -23,6 +48,15 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.5), value: isLoggedIn)
+        .onChange(of: isLoggedIn) {
+            // ログアウト・セッション切れ後に「その他」モードやシートの状態を持ち越さない
+            resetMoreMenuState()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                resetMoreMenuState()
+            }
+        }
         .onAppear {
             checkLoginStatus()
             processInitialURL()
@@ -58,41 +92,16 @@ struct ContentView: View {
         VStack(spacing: 0) {
             HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
 
-            TabView(selection: $selectedTab) {
-                BusScheduleView()
-                    .tabItem {
-                        Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
-                    }
-                    .tag(0)
-
-                TimetableView(isLoggedIn: $isLoggedIn)
-                    .tabItem {
-                        Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
-                    }
-                    .tag(1)
-
-                AssignmentView(isLoggedIn: $isLoggedIn)
-                    .tabItem {
-                        Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
-                    }
-                    .badge(assignmentCount)
-                    .tag(2)
-
-                Color.clear
-                    .tabItem {
-                        Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis.circle")
-                    }
-                    .tag(3)
-            }
-            .tint(.appPrimary)
-            .onChange(of: selectedTab) { oldValue, newValue in
-                if newValue == 3 {
-                    selectedTab = oldValue
-                }
-            }
+            tabView
+                .tint(.appPrimary)
         }
-        .overlay(alignment: .bottom) {
-            moreMenuOverlay
+        .sensoryFeedback(.selection, trigger: isMoreMode)
+        .sheet(item: $activeMenuSheet) { sheet in
+            sheet.content
+        }
+        .onChange(of: selectedTab) {
+            // 通常は select(tab:) で同時に解除されるが、念のためのセーフティネット
+            setMoreMode(false)
         }
         .onAppear {
             fetchAssignmentCount()
@@ -106,21 +115,205 @@ struct ContentView: View {
         }
     }
 
-    /// タブバー上の「その他」メニューオーバーレイ
-    private var moreMenuOverlay: some View {
-        HStack(spacing: 0) {
-            ForEach(0..<3, id: \.self) { _ in
-                Color.clear
-                    .allowsHitTesting(false)
-                    .frame(maxWidth: .infinity)
+    /// TabViewの選択バインディング。
+    /// 選択状態になるのはメインタブのみで、コンテンツは「その他」モード中も切り替わらない
+    private var tabSelection: Binding<Int> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == Self.moreTab {
+                    if Self.usesSwappableTabBar {
+                        setMoreMode(true)
+                    } else {
+                        isMoreDialogPresented = true
+                    }
+                } else if !isMoreMode {
+                    selectedTab = newValue
+                } else if newValue == selectedTab {
+                    // 「その他」モード中は選択中のタブが「その他」ボタンの役割を引き継いでいる
+                    setMoreMode(false)
+                } else {
+                    // 切り替え直後のタップでも、シートはアニメーション付きで表示する
+                    UIView.setAnimationsEnabled(true)
+                    activeMenuSheet = moreItem(forTab: newValue)?.makeSheet()
+                }
             }
-            MoreMenuButton {
-                Color.clear
-                    .contentShape(Rectangle())
+        )
+    }
+
+    /// 「その他」モードを切り替える。`tab` を指定すると、同じ更新の中でそのメインタブを選択する。
+    ///
+    /// タブの増減やロールの移動をシステムがアニメーションすると表示が乱れる（選択インジケーターが
+    /// カプセルの外へ滑り出る、隣のタブが一瞬ハイライトされる等）ため、アニメーションなしで切り替える。
+    /// SwiftUIはロール変更のアニメーション有無を指定できず、UIKitへの反映も状態変更の後になるため、
+    /// 反映が終わるまでの短時間だけUIKit側のアニメーションも止めている
+    private func setMoreMode(_ isOn: Bool, selecting tab: Int? = nil) {
+        guard isOn != isMoreMode else {
+            if let tab {
+                selectedTab = tab
             }
-            .frame(maxWidth: .infinity)
+            return
         }
-        .frame(height: 50)
+
+        Self.animationSuppressionToken += 1
+        let token = Self.animationSuppressionToken
+        UIView.setAnimationsEnabled(false)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.tabSwapSettleTime) {
+            if token == Self.animationSuppressionToken {
+                UIView.setAnimationsEnabled(true)
+            }
+        }
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isMoreMode = isOn
+            if let tab {
+                selectedTab = tab
+            }
+        }
+    }
+
+    /// 「その他」メニュー関連の状態を初期化する
+    private func resetMoreMenuState() {
+        setMoreMode(false)
+        isMoreDialogPresented = false
+        activeMenuSheet = nil
+    }
+
+    /// 「その他」モード中にタブへ割り当てられる項目。
+    /// 選択中のタブ（「その他」ボタンの役割を引き継ぐ）を除いた残りのタブに、並び順で割り当てる
+    private func moreItem(forTab tab: Int) -> MoreMenuItem? {
+        let slots = (Self.mainTabs + Self.extraTabs).filter { $0 != selectedTab }
+        guard let index = slots.firstIndex(of: tab), MoreMenuItem.allCases.indices.contains(index) else {
+            return nil
+        }
+        return MoreMenuItem.allCases[index]
+    }
+
+    /// タブのタイトル（「その他」モード中は差し替える）。`main` にはローカライズ済みの文字列を渡す
+    private func tabTitle(_ tab: Int, main: String) -> String {
+        guard isMoreMode else { return main }
+        if tab == selectedTab {
+            return NSLocalizedString("その他", comment: "タブバー")
+        }
+        return moreItem(forTab: tab)?.title ?? ""
+    }
+
+    /// タブのアイコン（「その他」モード中は差し替える）
+    private func tabImage(_ tab: Int, main: String) -> String {
+        guard isMoreMode else { return main }
+        if tab == selectedTab {
+            return "ellipsis"
+        }
+        return moreItem(forTab: tab)?.systemImage ?? main
+    }
+
+    /// タブバー右側に独立表示するタブのロール。
+    /// 通常時は「その他」タブが、「その他」モード中は選択中のタブが同じ見た目で独立表示されるため、
+    /// 「その他」ボタンがハイライトされたように見える。
+    /// （iOS 27では検索フィールドを持たない search ロールのタブは独立表示されないため、prominent を使う）
+    @available(iOS 27.0, *)
+    private func tabRole(_ tab: Int) -> TabRole? {
+        let prominentTab = isMoreMode ? selectedTab : Self.moreTab
+        return tab == prominentTab ? .prominent : nil
+    }
+
+    /// タブビュー本体
+    @ViewBuilder private var tabView: some View {
+        if #available(iOS 27.0, *) {
+            TabView(selection: tabSelection) {
+                // 選択中のタブを隠すとUIKit側でクラッシュするため、メインタブは隠さずラベルとロールだけを差し替える
+                Tab(
+                    tabTitle(0, main: NSLocalizedString("バス", comment: "タブバー")),
+                    systemImage: tabImage(0, main: "bus"),
+                    value: 0,
+                    role: tabRole(0)
+                ) {
+                    BusScheduleView()
+                }
+
+                Tab(
+                    tabTitle(1, main: NSLocalizedString("時間割", comment: "タブバー")),
+                    systemImage: tabImage(1, main: "calendar"),
+                    value: 1,
+                    role: tabRole(1)
+                ) {
+                    TimetableView(isLoggedIn: $isLoggedIn)
+                }
+
+                Tab(
+                    tabTitle(2, main: NSLocalizedString("課題", comment: "タブバー")),
+                    systemImage: tabImage(2, main: "pencil.line"),
+                    value: 2,
+                    role: tabRole(2)
+                ) {
+                    AssignmentView(isLoggedIn: $isLoggedIn)
+                }
+                .badge(isMoreMode ? 0 : assignmentCount)
+
+                // 「その他」モード専用の追加枠（選択されることはないため隠しても安全）
+                ForEach(Self.extraTabs, id: \.self) { tab in
+                    Tab(tabTitle(tab, main: ""), systemImage: tabImage(tab, main: "ellipsis"), value: tab) {
+                        Color.clear
+                    }
+                    .hidden(!isMoreMode)
+                }
+
+                // 「その他」モードへ切り替えるボタン（選択されることはない）
+                Tab(
+                    NSLocalizedString("その他", comment: "タブバー"),
+                    systemImage: "ellipsis",
+                    value: Self.moreTab,
+                    role: tabRole(Self.moreTab)
+                ) {
+                    Color.clear
+                }
+                .hidden(isMoreMode)
+            }
+        } else {
+            legacyTabView
+        }
+    }
+
+    /// iOS 26以前向けのタブビュー（タブバーの独立表示ができないため、その他の機能は確認ダイアログで表示）
+    private var legacyTabView: some View {
+        TabView(selection: tabSelection) {
+            BusScheduleView()
+                .tabItem {
+                    Label(NSLocalizedString("バス", comment: "タブバー"), systemImage: "bus")
+                }
+                .tag(0)
+
+            TimetableView(isLoggedIn: $isLoggedIn)
+                .tabItem {
+                    Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
+                }
+                .tag(1)
+
+            AssignmentView(isLoggedIn: $isLoggedIn)
+                .tabItem {
+                    Label(NSLocalizedString("課題", comment: "タブバー"), systemImage: "pencil.line")
+                }
+                .badge(assignmentCount)
+                .tag(2)
+
+            Color.clear
+                .tabItem {
+                    Label(NSLocalizedString("その他", comment: "タブバー"), systemImage: "ellipsis")
+                }
+                .tag(Self.moreTab)
+        }
+        .confirmationDialog(
+            NSLocalizedString("その他", comment: "タブバー"),
+            isPresented: $isMoreDialogPresented
+        ) {
+            ForEach(MoreMenuItem.allCases) { item in
+                Button(item.title) {
+                    activeMenuSheet = item.makeSheet()
+                }
+            }
+        }
     }
 
     // MARK: - プライベートメソッド
@@ -165,17 +358,25 @@ struct ContentView: View {
     private func navigateToTab(for path: String) {
         switch path {
         case "timetable":
-            selectedTab = 1
+            select(tab: 1)
         case "assignment":
-            selectedTab = 2
+            select(tab: 2)
         case "bus":
-            selectedTab = 0
+            select(tab: 0)
             sendBusParameters()
         case "print":
+            // SwiftUI管理のシートをUIKit側から閉じると状態が残るため、先に閉じておく
+            activeMenuSheet = nil
             presentPrintSystemView()
         default:
             break
         }
+    }
+
+    /// メインタブへ遷移する（「その他」モード中であれば同じ更新の中で解除する）
+    private func select(tab: Int) {
+        isMoreDialogPresented = false
+        setMoreMode(false, selecting: tab)
     }
 
     /// バスパラメータをBusScheduleViewに送信する
