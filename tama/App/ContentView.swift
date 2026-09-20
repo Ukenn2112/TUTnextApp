@@ -12,6 +12,14 @@ struct ContentView: View {
     @State private var isMoreMode = false
     @State private var isMoreDialogPresented = false
     @State private var activeMenuSheet: MoreMenuSheet?
+    /// 時間割タブのタイトルに使う学期（システムツールバーのタイトルとして表示する）
+    @State private var semester: Semester = .current
+    /// システムのバーが縦バーとして表示されているか（Duoの外側ディスプレイ・内側横向き・Split View）。
+    ///
+    /// タイトルの描き方（バーの先頭の項目／ページ内容の先頭）はこの値で切り替わるため、
+    /// 判定はここ一箇所だけで行い、各タブのツールバーとページ内容へ同じ値を渡す。
+    /// 起動直後の数フレームは判定できないため、横バーと同じ表示から始める
+    @State private var isVerticalBarPose = false
     @Environment(\.scenePhase) private var scenePhase
 
     /// 「その他」タブの値
@@ -109,7 +117,11 @@ struct ContentView: View {
     /// メインタブビュー（ログイン後に表示）
     private var mainTabView: some View {
         VStack(spacing: 0) {
-            HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+            // 時間割タブはシステムツールバー（`mainToolbar`）へ移行済みのため、独自ヘッダーを出さない。
+            // 「その他」モード中もコンテンツは切り替わらないので、`selectedTab` で判定してよい
+            if !usesSystemToolbar(selectedTab) {
+                HeaderView(selectedTab: $selectedTab, isLoggedIn: $isLoggedIn)
+            }
 
             tabView
                 .tint(.appPrimary)
@@ -136,6 +148,49 @@ struct ContentView: View {
             if let count = notification.userInfo?["count"] as? Int {
                 assignmentCount = count
             }
+        }
+        .onReceive(TimetableService.shared.$currentSemester) { updatedSemester in
+            semester = updatedSemester
+        }
+        .onVerticalBarEdgeChange { isVerticalBar in
+            guard isVerticalBarPose != isVerticalBar else { return }
+            // 起動直後は必ず「縦バーではない」から切り替わるため、アニメーションを付けない
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                isVerticalBarPose = isVerticalBar
+            }
+        }
+    }
+
+    /// そのタブがシステムツールバー（`NavigationStack` + `mainToolbar`）へ移行済みかどうか。
+    /// 移行済みのタブでは独自ヘッダー（`HeaderView`）を出さない
+    private func usesSystemToolbar(_ tab: Int) -> Bool {
+        tab == 1
+    }
+
+    /// 時間割タブのコンテンツ。
+    /// システムのナビゲーションバー（Duoでは縦バー）にタイトルと共通ツールバー項目を載せる
+    private var timetableTabContent: some View {
+        let title = semester.fullDisplayName
+
+        return NavigationStack {
+            probed("timetable") {
+                TimetableView(
+                    isLoggedIn: $isLoggedIn,
+                    title: title,
+                    isVerticalBarPose: isVerticalBarPose
+                )
+            }
+                // タイトルは横バーではバーの先頭の項目として、縦バーではページ内容の先頭に描く。
+                // navigationTitle は見た目としては使わないが、アクセシビリティのために設定しておく
+                .navigationTitle(title)
+                .toolbarTitleDisplayMode(.inline)
+                .mainToolbar(
+                    title: title,
+                    isVerticalBarPose: isVerticalBarPose,
+                    isLoggedIn: $isLoggedIn
+                )
         }
     }
 
@@ -274,7 +329,7 @@ struct ContentView: View {
                     value: 1,
                     role: tabRole(1)
                 ) {
-                    probed("timetable") { TimetableView(isLoggedIn: $isLoggedIn) }
+                    timetableTabContent
                 }
 
                 Tab(
@@ -320,7 +375,7 @@ struct ContentView: View {
                 }
                 .tag(0)
 
-            probed("timetable") { TimetableView(isLoggedIn: $isLoggedIn) }
+            timetableTabContent
                 .tabItem {
                     Label(NSLocalizedString("時間割", comment: "タブバー"), systemImage: "calendar")
                 }
