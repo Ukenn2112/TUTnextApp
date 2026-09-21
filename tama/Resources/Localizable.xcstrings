@@ -2503,6 +2503,29 @@
         }
       }
     },
+    "学校から駅へ" : {
+      "comment" : "バスの向き",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Campus to station"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학교에서 역으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从学校到车站"
+          }
+        }
+      }
+    },
     "学生証スキャン" : {
       "localizations" : {
         "en" : {
@@ -3277,6 +3300,29 @@
         }
       }
     },
+    "永山" : {
+      "comment" : "バスの駅",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nagayama"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나가야마"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永山"
+          }
+        }
+      }
+    },
     "永山駅発" : {
       "localizations" : {
         "en" : {
@@ -3483,6 +3529,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "点击登录将表示您已阅读并同意此"
+          }
+        }
+      }
+    },
+    "聖蹟桜ヶ丘" : {
+      "comment" : "バスの駅",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seiseki-Sakuragaoka"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "세이세키사쿠라가오카"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聖蹟樱丘"
           }
         }
       }
@@ -4015,6 +4084,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "起始页"
+          }
+        }
+      }
+    },
+    "駅" : {
+      "comment" : "バスの駅を選ぶピッカー",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Station"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "역"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "车站"
+          }
+        }
+      }
+    },
+    "駅から学校へ" : {
+      "comment" : "バスの向き",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Station to campus"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "역에서 학교로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从车站到学校"
           }
         }
       }
