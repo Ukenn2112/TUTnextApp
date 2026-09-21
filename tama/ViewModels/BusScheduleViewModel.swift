@@ -1,4 +1,4 @@
-import CoreLocation
+import Combine
 import Foundation
 import SwiftUI
 
@@ -24,12 +24,8 @@ final class BusScheduleViewModel: ObservableObject {
     private var secondsTimer: Timer?
     private let busScheduleService = BusScheduleService.shared
 
-    // 位置情報関連
-    private var locationManager: CLLocationManager?
-    private var locationDelegate: LocationManagerDelegate?
-    private let schoolLocation = CLLocationCoordinate2D(
-        latitude: 35.630604, longitude: 139.464382)
-    private let geofenceRadius: CLLocationDistance = 400
+    // 位置情報関連（判定は CampusPresenceService が一箇所で持つ）
+    private var presenceCancellable: AnyCancellable?
 
     // 通知オブザーバー
     private var willEnterForegroundObserver: NSObjectProtocol?
@@ -112,15 +108,9 @@ final class BusScheduleViewModel: ObservableObject {
         secondsTimer?.invalidate()
         secondsTimer = nil
 
-        if let locationManager = locationManager {
-            locationManager.stopUpdatingLocation()
-            locationManager.monitoredRegions.forEach { region in
-                locationManager.stopMonitoring(for: region)
-            }
-            locationManager.delegate = nil
-        }
-        locationDelegate = nil
-        locationManager = nil
+        presenceCancellable?.cancel()
+        presenceCancellable = nil
+        CampusPresenceService.shared.stop()
 
         if let observer = willEnterForegroundObserver {
             NotificationCenter.default.removeObserver(observer)
@@ -351,75 +341,25 @@ final class BusScheduleViewModel: ObservableObject {
 
     // MARK: - 位置情報関連
 
+    /// 学内かどうかの判定を購読する。
+    ///
+    /// ジオフェンスと `CLLocationManager` は `CampusPresenceService` が一箇所で持っており、
+    /// 時間割タブの「今日」ペインも同じ判定を使う。
+    /// ここでの振る舞い（学内なら学校発の路線へ、学外なら駅発の路線へ切り替える）は以前のまま
     func setupLocationManager() {
-        if locationManager != nil {
-            locationManager?.delegate = nil
-            locationManager = nil
-            locationDelegate = nil
-        }
-
-        locationManager = CLLocationManager()
-
-        locationDelegate = LocationManagerDelegate(
-            didUpdateLocation: { [weak self] location in
+        CampusPresenceService.shared.start()
+        presenceCancellable = CampusPresenceService.shared.$isOnCampus
+            .sink { [weak self] isOnCampus in
                 Task { @MainActor in
-                    self?.checkIfUserInSchoolArea(location)
-                }
-            },
-            didEnterRegion: { [weak self] in
-                Task { @MainActor in
-                    self?.userInSchoolArea = true
-                    self?.updateRouteBasedOnLocation()
-                }
-            },
-            didExitRegion: { [weak self] in
-                Task { @MainActor in
-                    self?.userInSchoolArea = false
-                    self?.updateRouteBasedOnLocation()
+                    self?.applyPresence(isOnCampus)
                 }
             }
-        )
-
-        guard let locationManager = locationManager, let locationDelegate = locationDelegate else {
-            return
-        }
-
-        locationManager.delegate = locationDelegate
-        locationManager.requestWhenInUseAuthorization()
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        setupGeofence()
-        locationManager.startUpdatingLocation()
     }
 
-    private func setupGeofence() {
-        guard let locationManager = locationManager else { return }
-
-        locationManager.monitoredRegions.forEach { region in
-            if region is CLCircularRegion {
-                locationManager.stopMonitoring(for: region)
-            }
-        }
-
-        let schoolRegion = CLCircularRegion(
-            center: schoolLocation,
-            radius: geofenceRadius,
-            identifier: "SchoolArea"
-        )
-        schoolRegion.notifyOnEntry = true
-        schoolRegion.notifyOnExit = true
-        locationManager.startMonitoring(for: schoolRegion)
-    }
-
-    private func checkIfUserInSchoolArea(_ location: CLLocation) {
-        let schoolRegionCenter = CLLocation(
-            latitude: schoolLocation.latitude, longitude: schoolLocation.longitude)
-        let distance = location.distance(from: schoolRegionCenter)
-        let isInSchoolArea = distance <= geofenceRadius
-
-        if isInSchoolArea != userInSchoolArea {
-            userInSchoolArea = isInSchoolArea
-            updateRouteBasedOnLocation()
-        }
+    private func applyPresence(_ isOnCampus: Bool?) {
+        guard let isOnCampus, isOnCampus != userInSchoolArea else { return }
+        userInSchoolArea = isOnCampus
+        updateRouteBasedOnLocation()
     }
 
     private func updateRouteBasedOnLocation() {

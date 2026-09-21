@@ -1,4 +1,3 @@
-import CoreLocation
 import SwiftUI
 
 // MARK: - レイアウト定数
@@ -716,78 +715,6 @@ struct BusTimeTableContent: View {
         .padding(.horizontal, 12)
         .background(Color.red.opacity(0.1))
         .cornerRadius(8)
-    }
-}
-
-// MARK: - 位置情報デリゲート
-
-final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
-    private let didUpdateLocation: (CLLocation) -> Void
-    private let didEnterRegion: () -> Void
-    private let didExitRegion: () -> Void
-
-    init(
-        didUpdateLocation: @escaping (CLLocation) -> Void,
-        didEnterRegion: @escaping () -> Void,
-        didExitRegion: @escaping () -> Void
-    ) {
-        self.didUpdateLocation = didUpdateLocation
-        self.didEnterRegion = didEnterRegion
-        self.didExitRegion = didExitRegion
-        super.init()
-    }
-
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let location = locations.last {
-            didUpdateLocation(location)
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-        if region.identifier == "SchoolArea" {
-            didEnterRegion()
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-        if region.identifier == "SchoolArea" {
-            didExitRegion()
-        }
-    }
-
-    func locationManager(
-        _ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus
-    ) {
-        switch status {
-        case .authorizedWhenInUse, .authorizedAlways:
-            manager.startUpdatingLocation()
-            if let location = manager.location {
-                didUpdateLocation(location)
-            }
-        case .denied, .restricted:
-            print("位置情報の使用が拒否または制限されました")
-        case .notDetermined:
-            manager.requestWhenInUseAuthorization()
-        @unknown default:
-            break
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        if let error = error as? CLError {
-            switch error.code {
-            case .denied:
-                print("位置情報の使用が拒否されました")
-            case .network:
-                print("位置情報の取得中にネットワークエラーが発生しました")
-            case .locationUnknown:
-                print("位置を特定できません")
-            default:
-                print("位置情報の取得に失敗しました: \(error.localizedDescription)")
-            }
-        } else {
-            print("位置情報の取得に失敗しました: \(error.localizedDescription)")
-        }
     }
 }
 
