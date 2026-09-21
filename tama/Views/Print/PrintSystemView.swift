@@ -105,8 +105,7 @@ struct PrintSystemView: View {
                     .font(.subheadline.weight(.medium))
                     .tint(Color.appPrimary)
                 }
-                .padding()
-                .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                .outlinedCard()
             } else {
                 fileSelectButton
             }
@@ -200,8 +199,7 @@ struct PrintSystemView: View {
                 }
             }
         }
-        .padding()
-        .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+        .outlinedCard()
     }
 
     private func settingRow<Content: View>(
@@ -251,8 +249,7 @@ struct PrintSystemView: View {
                 .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
             }
         }
-        .padding()
-        .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+        .outlinedCard()
     }
 
     // MARK: - Upload Button
@@ -346,8 +343,7 @@ struct PrintResultView: View {
                     resultRow(title: "サイズ", value: result.fileSize)
                     resultRow(title: "まとめて1枚", value: result.nUp)
                 }
-                .padding()
-                .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+                .outlinedCard()
                 .padding(.horizontal)
 
                 Spacer()

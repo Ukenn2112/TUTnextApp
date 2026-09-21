@@ -41,15 +41,10 @@ struct TeacherEmailListView: View {
     
     // MARK: - 背景ビュー
     private var backgroundView: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                Color.teacherGradientTop,
-                Color(UIColor.systemBackground)
-            ]),
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .edgesIgnoringSafeArea(.all)
+        // 地の色はどのページも同じ白（暗い外観では黒）。
+        // 以前はここだけ上から下へのグラデーションだったが、ページごとに地の色が変わって見えるため揃えた
+        CardSurface.pageFill
+            .edgesIgnoringSafeArea(.all)
     }
     
     // MARK: - ヘッダービュー
@@ -627,11 +622,11 @@ struct TeacherSelectionBar: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+        // 輪郭はアプリ共通のカードと同じ（地の色＋1ptの枠）で取る
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.thickMaterial)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+            RoundedRectangle(cornerRadius: CardSurface.cornerRadius)
+                .fill(CardSurface.pageFill)
+                .stroke(CardSurface.outlineStroke, lineWidth: CardSurface.outlineWidth)
         )
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
@@ -702,16 +697,12 @@ struct TeacherIndexView: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 6)
+        // 一覧の上に浮くが、輪郭はアプリ共通のカードと同じ（地の色＋1ptの枠）で取る。
+        // 塗りが地の色そのものなので、下を行が流れていても読み違えない
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(.ultraThickMaterial)
-                .stroke(Color.primary.opacity(isDragging ? 0.2 : 0.1), lineWidth: 1)
-                .shadow(
-                    color: Color.black.opacity(isDragging ? 0.12 : 0.08), 
-                    radius: isDragging ? 12 : 8, 
-                    x: 0, 
-                    y: isDragging ? 6 : 4
-                )
+                .fill(CardSurface.pageFill)
+                .stroke(CardSurface.outlineStroke, lineWidth: CardSurface.outlineWidth)
         )
         .scaleEffect(isDragging ? 1.05 : 1.0)
         .padding(.trailing, 12)
@@ -886,15 +877,10 @@ struct TeacherRow: View {
                     LinearGradient(colors: [Color.appPrimary.opacity(0.10), Color.appPrimary.opacity(0.07)], startPoint: .topLeading, endPoint: .bottomTrailing) :
                     LinearGradient(colors: [Color.clear, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
+                // 選ばれている行は色の付いた塗りと枠だけで示す（影では浮かせない）
                 .stroke(
-                    isSelected ? Color.appPrimary.opacity(0.3) : Color.clear, 
+                    isSelected ? Color.appPrimary.opacity(0.3) : Color.clear,
                     lineWidth: isSelected ? 1 : 0
-                )
-                .shadow(
-                    color: isSelected ? Color.appPrimary.opacity(0.15) : .clear, 
-                    radius: isSelected ? 6 : 0, 
-                    x: 0, 
-                    y: isSelected ? 3 : 0
                 )
         )
         .scaleEffect(isSelected ? 1.02 : 1.0)

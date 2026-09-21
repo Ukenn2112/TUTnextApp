@@ -77,25 +77,8 @@ struct AssignmentCardView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .padding()
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.cardGlow)
-                        .blur(radius: 1)
-                        .padding(-2)
-
-                    // カードの背景
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(UIColor.systemBackground))
-                }
-            )
-            .shadow(
-                color: Color.cardShadow,
-                radius: 6,
-                x: 0,
-                y: 1
-            )
+            // 輪郭はアプリ共通の1ptの枠で取る（影で浮かせるカードはアプリ全体で作らない）
+            .outlinedCard()
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -161,6 +144,6 @@ struct AssignmentCardView: View {
         }
         .padding()
     }
-    .background(Color(UIColor.systemGroupedBackground))
+    .background(CardSurface.pageFill)
     .preferredColorScheme(.dark)
 }
