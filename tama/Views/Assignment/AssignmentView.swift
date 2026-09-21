@@ -8,6 +8,25 @@ enum AssignmentLayout {
     /// 課題カードと横スクロールのフィルター行が同じ線に揃うように、
     /// どちらもこの値を使う（`.padding(.horizontal)` の既定値と同じ）
     static let horizontalPadding: CGFloat = 16
+
+    /// 4ptを基本にした1本だけの余白の目盛り。
+    /// カードの間隔はすべてこの段から選び、ビューに数値を直接書かない
+    enum Spacing {
+
+        /// 8pt
+        static let xs: CGFloat = 8
+
+        /// 16pt（カードとカードの間・ページの横の余白）
+        static let m: CGFloat = 16
+    }
+
+    /// 1列のときのカードとカードの縦の間隔
+    static let cardSpacing = Spacing.m
+
+    /// 2列のときのカードどうしの間（縦も横も同じ値）。
+    /// カードの輪郭は枠で取るので隣り合う影を気にする必要がなく、
+    /// 1列のときと同じページ共通の間隔にして、他のページと同じ密度に揃える
+    static let gridSpacing = Spacing.m
 }
 
 struct AssignmentView: View {
@@ -21,8 +40,13 @@ struct AssignmentView: View {
     @State private var selectedFilter: AssignmentFilter = .all
     @EnvironmentObject private var ratingService: RatingService
     @EnvironmentObject private var oauthService: GoogleOAuthService
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol?
+    /// ページに与えられている大きさ（2列にするかの判定に使う）
+    @State private var containerSize: CGSize = .zero
+    /// 折り目が有効なときの2つの列の幅（平らなときは nil＝等幅）
+    @State private var columnSplit: DuoColumnSplit?
 
     /// 縦バーのポーズで、ページ内タイトルの下に空ける余白
     private static let verticalBarTitleBottomSpacing: CGFloat = 8
@@ -33,7 +57,9 @@ struct AssignmentView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground)
+            // ページの地はどの画面も同じ白（暗い外観では黒）。
+            // 課題カードはこの上に、アプリ共通の1ptの枠だけで輪郭を取って並べる
+            CardSurface.pageFill
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -50,6 +76,8 @@ struct AssignmentView: View {
         // 縦バーのポーズでは空のナビゲーションバー帯の分だけ上が空くため、ウィンドウ上端まで広げる。
         // 下端はスクロールする内容なのでシステムに任せる（横バーのポーズでは何もしない）
         .ignoresSafeArea(.container, edges: isVerticalBarPose ? .top : [])
+        // セーフエリアを無視した後の大きさ＝このポーズでのページの実寸を読む
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { containerSize = $0 }
         .onAppear {
             viewModel.loadAssignments()
             // 課題表示の重要イベントを記録
@@ -165,22 +193,74 @@ struct AssignmentView: View {
 
                     // 課題リスト
                     ScrollView {
-                        LazyVStack(spacing: 16) {
-                            ForEach(filteredAssignments) { assignment in
-                                AssignmentCardView(assignment: assignment) {
-                                    if let url = URL(string: assignment.url) {
-                                        UIApplication.shared.open(url)
-                                    }
+                        if isTwoPane {
+                            twoColumnGrid
+                        } else {
+                            LazyVStack(spacing: AssignmentLayout.cardSpacing) {
+                                ForEach(filteredAssignments) { assignment in
+                                    card(for: assignment)
+                                        .padding(.horizontal, AssignmentLayout.horizontalPadding)
                                 }
-                                .padding(.horizontal, AssignmentLayout.horizontalPadding)
                             }
+                            .padding(.vertical)
                         }
-                        .padding(.vertical)
                     }
+                    // 折り目はスクロールしない入れ物（＝このスクロールビューの枠）の座標で読む
+                    .onGeometryChange(for: DuoColumnSplit?.self) { proxy in
+                        DuoColumnSplit.make(
+                            proxy: proxy, padding: AssignmentLayout.horizontalPadding)
+                    } action: { columnSplit = $0 }
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// 課題カード1枚（1列でも2列でも同じ部品・同じ動き）
+    private func card(for assignment: Assignment) -> some View {
+        AssignmentCardView(assignment: assignment) {
+            if let url = URL(string: assignment.url) {
+                UIApplication.shared.open(url)
+            }
+        }
+    }
+
+    // MARK: - 2列のグリッド
+
+    /// 課題カードを左右に並べるかどうか（判定は時間割タブ・バスタブと同じ `DuoTwoPane`）
+    private var isTwoPane: Bool {
+        DuoTwoPane.isEnabled(
+            containerSize: containerSize, horizontalSizeClass: horizontalSizeClass)
+    }
+
+    /// 2列のグリッド。
+    ///
+    /// 読む順は左→右→次の行。同じ行のカードは上端で揃え、高さは中身なりにする
+    /// （引き伸ばして高さを合わせると、短い課題のカードに空白が溜まってしまう）。
+    /// 折りたたんでいないときは等幅、折り目が有効なときは左右の領域そのものの幅にして、
+    /// 列と列の間（＝折り目の帯とその余白）にはカードを1枚も置かない
+    private var twoColumnGrid: some View {
+        LazyVGrid(columns: gridColumns, spacing: AssignmentLayout.gridSpacing) {
+            ForEach(filteredAssignments) { assignment in
+                card(for: assignment)
+            }
+        }
+        .padding(.horizontal, AssignmentLayout.horizontalPadding)
+        .padding(.vertical)
+    }
+
+    /// 2つの列（HIGに従い、折り目が列と列の間に落ちるよう必ず偶数の列にする）
+    private var gridColumns: [GridItem] {
+        guard let columnSplit else {
+            return Array(
+                repeating: GridItem(
+                    .flexible(), spacing: AssignmentLayout.gridSpacing, alignment: .top),
+                count: 2)
+        }
+        return [
+            GridItem(.fixed(columnSplit.leadingWidth), spacing: columnSplit.gutter, alignment: .top),
+            GridItem(.fixed(columnSplit.trailingWidth), spacing: 0, alignment: .top)
+        ]
     }
 
     private var filteredAssignments: [Assignment] {
