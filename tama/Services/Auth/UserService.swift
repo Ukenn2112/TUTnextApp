@@ -67,6 +67,8 @@ final class UserService {
 
     // ユーザーデータを削除（ログアウト時）
     func clearCurrentUser() {
+        // 前のユーザーの課題一覧が残らないように、共用の控えも捨てる
+        Task { @MainActor in AssignmentStore.shared.clear() }
         DispatchQueue.main.async {
             self.keychain.delete(forKey: "currentUser")
             self.keychain.delete(forKey: "userPassword")

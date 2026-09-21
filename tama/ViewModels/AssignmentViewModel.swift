@@ -1,25 +1,39 @@
+import Combine
 import Foundation
 import SwiftUI
 
 /// 課題一覧ViewModel
+///
+/// 課題そのものは `AssignmentStore` が1つだけ控えている（時間割タブの「今日」ペインと共用）。
+/// ここはその控えを写して、課題タブの絞り込みと残り時間の更新だけを受け持つ
 @MainActor
 final class AssignmentViewModel: ObservableObject {
     @Published var assignments: [Assignment] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
 
-    private let assignmentService = AssignmentService.shared
-    private var hasLoadedOnce = false
+    private let store = AssignmentStore.shared
+    private var cancellables: Set<AnyCancellable> = []
 
     // タイマーを使って残り時間を更新
     nonisolated(unsafe) private var timer: Timer?
 
     init() {
         setupTimer()
-        // Xcode Preview ではモックデータを初期値にする
-        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
-            self.assignments = Assignment.previewAssignments.sorted { $0.dueDate < $1.dueDate }
-        }
+        bindStore()
+    }
+
+    /// 共用の控えを写す（`assign(to:on:)` は自分を強く持ってしまうので `sink` を使う）
+    private func bindStore() {
+        store.$assignments
+            .sink { [weak self] in self?.assignments = $0 }
+            .store(in: &cancellables)
+        store.$isLoading
+            .sink { [weak self] in self?.isLoading = $0 }
+            .store(in: &cancellables)
+        store.$errorMessage
+            .sink { [weak self] in self?.errorMessage = $0 }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -49,41 +63,9 @@ final class AssignmentViewModel: ObservableObject {
         timer = nil
     }
 
+    /// 課題一覧を取り直す（プレビュー・モック・ちらつき防止の扱いは `AssignmentStore` が持つ）
     func loadAssignments() {
-        // プレビュー環境ではネットワーク取得をスキップ（`previewAssignments` をそのまま表示）
-        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
-            return
-        }
-        #if DEBUG
-        // 検証用のアカウントには課題が無いため、起動引数が指定されたときはモックデータを流し込む
-        if DuoDebugAssignments.usesMock {
-            assignments = DuoDebugAssignments.mockAssignments.sorted { $0.dueDate < $1.dueDate }
-            isLoading = false
-            errorMessage = nil
-            hasLoadedOnce = true
-            return
-        }
-        #endif
-        // 一度取得した後はバックグラウンドで更新し、読み込み表示への切り替えによるちらつきを防ぐ
-        isLoading = !hasLoadedOnce
-        errorMessage = nil
-
-        // すべての環境で実際のAPIを呼び出す
-        assignmentService.getAssignments { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoading = false
-                self.hasLoadedOnce = true
-
-                switch result {
-                case .success(let assignments):
-                    // 締切日が近い順にソート
-                    self.assignments = assignments.sorted { $0.dueDate < $1.dueDate }
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                }
-            }
-        }
+        store.reload()
     }
 
     // 期限切れの課題をフィルタリング
