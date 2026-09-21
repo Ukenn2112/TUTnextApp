@@ -54,6 +54,16 @@ final class AssignmentViewModel: ObservableObject {
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             return
         }
+        #if DEBUG
+        // 検証用のアカウントには課題が無いため、起動引数が指定されたときはモックデータを流し込む
+        if DuoDebugAssignments.usesMock {
+            assignments = DuoDebugAssignments.mockAssignments.sorted { $0.dueDate < $1.dueDate }
+            isLoading = false
+            errorMessage = nil
+            hasLoadedOnce = true
+            return
+        }
+        #endif
         // 一度取得した後はバックグラウンドで更新し、読み込み表示への切り替えによるちらつきを防ぐ
         isLoading = !hasLoadedOnce
         errorMessage = nil
