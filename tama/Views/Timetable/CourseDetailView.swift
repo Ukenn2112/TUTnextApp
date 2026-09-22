@@ -12,17 +12,26 @@ struct CourseDetailView: View {
     @State var selectedColorIndex: Int
     let onColorChange: (Int) -> Void
 
+    /// ページの中に直接置かれている場合の「閉じる」処理。
+    /// シートとして出す場合は nil で、そのときだけシート用の表示（つまみ・detent・角丸）を付ける
+    private let onInlineClose: (() -> Void)?
+
     @FocusState private var isMemoFocused: Bool
     @State private var safariDestination: SafariDestination?
 
+    /// ページの中に直接置かれているかどうか
+    private var isInline: Bool { onInlineClose != nil }
+
     init(
         course: CourseModel, presetColors: [Color], selectedColorIndex: Int,
-        onColorChange: @escaping (Int) -> Void
+        onColorChange: @escaping (Int) -> Void,
+        onInlineClose: (() -> Void)? = nil
     ) {
         self.course = course
         self.presetColors = presetColors
         self._selectedColorIndex = State(initialValue: selectedColorIndex)
         self.onColorChange = onColorChange
+        self.onInlineClose = onInlineClose
         self._viewModel = StateObject(wrappedValue: CourseDetailViewModel(course: course))
     }
 
@@ -36,6 +45,7 @@ struct CourseDetailView: View {
         self.presetColors = presetColors
         self._selectedColorIndex = State(initialValue: selectedColorIndex)
         self.onColorChange = onColorChange
+        self.onInlineClose = nil
         self._viewModel = StateObject(wrappedValue: CourseDetailViewModel(course: course, previewDetail: previewDetail))
     }
 
@@ -65,10 +75,10 @@ struct CourseDetailView: View {
                 })
             }
         }
-        .background(Color(UIColor.secondarySystemBackground))
-        .presentationDragIndicator(.visible)
-        .presentationDetents([.large])
-        .presentationCornerRadius(20)
+        // ページの中に直接置くときは、地の色は右ペイン側（`TimetableDetailPane`）が塗る。
+        // シートで出すときも他のページと同じ白い地にする
+        .background(isInline ? Color.clear : CardSurface.pageFill)
+        .modifier(SheetPresentationStyle(isEnabled: !isInline))
         .sheet(item: $safariDestination) { destination in
             if let notification = destination.dismissNotification {
                 SafariWebView(url: destination.url, dismissNotification: notification)
@@ -85,6 +95,15 @@ struct CourseDetailView: View {
                 viewModel.saveMemo()
                 viewModel.isMemoChanged = false
             }
+        }
+    }
+
+    /// 閉じる操作（シートなら閉じ、ページの中に直接置かれているなら呼び出し側へ返す）
+    private func close() {
+        if let onInlineClose {
+            onInlineClose()
+        } else {
+            dismiss()
         }
     }
 
@@ -160,20 +179,9 @@ struct CourseDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private func cardBackground() -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.cardGlow)
-                .blur(radius: 1)
-                .padding(-2)
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(UIColor.systemBackground))
-        }
-    }
-
-    private var cardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        (Color.cardShadow, 6, 0, 1)
+    /// 閉じるボタンの読み上げ名
+    private var closeLabel: String {
+        NSLocalizedString("閉じる", comment: "科目詳細を閉じる")
     }
 
     // MARK: - Hero Header
@@ -192,7 +200,7 @@ struct CourseDetailView: View {
 
                         Spacer()
 
-                        Button(action: { dismiss() }) {
+                        Button(action: close) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.secondary)
@@ -200,6 +208,7 @@ struct CourseDetailView: View {
                         }
                         .buttonStyle(.glass)
                         .buttonBorderShape(.circle)
+                        .accessibilityLabel(Text(closeLabel))
                     }
                 }
             } else {
@@ -218,7 +227,7 @@ struct CourseDetailView: View {
 
                     Spacer()
 
-                    Button(action: { dismiss() }) {
+                    Button(action: close) {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.secondary)
@@ -226,6 +235,7 @@ struct CourseDetailView: View {
                             .background(Color(UIColor.tertiarySystemFill))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel(Text(closeLabel))
                 }
             }
 
@@ -298,11 +308,7 @@ struct CourseDetailView: View {
                     .padding(.vertical, 4)
             }
         }
-        .padding(16)
-        .background(cardBackground())
-        .shadow(
-            color: cardShadow.color, radius: cardShadow.radius,
-            x: cardShadow.x, y: cardShadow.y)
+        .cardSurface(fill: CardSurface.raisedFill, outlined: true)
     }
 
     // MARK: - 出欠情報
@@ -380,11 +386,7 @@ struct CourseDetailView: View {
                     .padding(.vertical, 4)
             }
         }
-        .padding(16)
-        .background(cardBackground())
-        .shadow(
-            color: cardShadow.color, radius: cardShadow.radius,
-            x: cardShadow.x, y: cardShadow.y)
+        .cardSurface(fill: CardSurface.raisedFill, outlined: true)
     }
 
     // MARK: - メモ
@@ -450,11 +452,7 @@ struct CourseDetailView: View {
                     .fill(Color(UIColor.secondarySystemBackground))
             )
         }
-        .padding(16)
-        .background(cardBackground())
-        .shadow(
-            color: cardShadow.color, radius: cardShadow.radius,
-            x: cardShadow.x, y: cardShadow.y)
+        .cardSurface(fill: CardSurface.raisedFill, outlined: true)
     }
 
     // MARK: - リンク
@@ -488,11 +486,7 @@ struct CourseDetailView: View {
                 }
             }
         }
-        .padding(16)
-        .background(cardBackground())
-        .shadow(
-            color: cardShadow.color, radius: cardShadow.radius,
-            x: cardShadow.x, y: cardShadow.y)
+        .cardSurface(fill: CardSurface.raisedFill, outlined: true)
     }
 
     // MARK: - 色選択
@@ -551,11 +545,7 @@ struct CourseDetailView: View {
             }
             .padding(.vertical, 4)
         }
-        .padding(16)
-        .background(cardBackground())
-        .shadow(
-            color: cardShadow.color, radius: cardShadow.radius,
-            x: cardShadow.x, y: cardShadow.y)
+        .cardSurface(fill: CardSurface.raisedFill, outlined: true)
     }
 
     // MARK: - ローディング・エラー
@@ -593,6 +583,26 @@ struct CourseDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - シート用の表示
+
+/// シートとして出すときだけ付ける表示（つまみ・detent・角丸）。
+/// ページの中に直接置く場合はどれも当てはまらないので、まとめて外せるようにしてある
+private struct SheetPresentationStyle: ViewModifier {
+
+    let isEnabled: Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if isEnabled {
+            content
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
+                .presentationCornerRadius(20)
+        } else {
+            content
+        }
     }
 }
 

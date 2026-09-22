@@ -45,6 +45,29 @@
         }
       }
     },
+    "〜%@" : {
+      "comment" : "「今日」ペインの終了時刻",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "until %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "~%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "至%@"
+          }
+        }
+      }
+    },
     "「システムに従う」を選択すると、デバイスの設定に合わせて自動的に切り替わります。" : {
       "localizations" : {
         "en" : {
@@ -306,6 +329,29 @@
         }
       }
     },
+    "%@に間に合います" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gets you to %@ on time"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 늦지 않게 도착합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可赶上%@"
+          }
+        }
+      }
+    },
     "%@曜日 %d限" : {
       "localizations" : {
         "en" : {
@@ -330,6 +376,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "星期%1$@ 第%2$d节"
+          }
+        }
+      }
+    },
+    "%d件" : {
+      "comment" : "「今日」ペインの課題の件数",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d items"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d건"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d项"
           }
         }
       }
@@ -380,6 +449,29 @@
         }
       }
     },
+    "%d分後" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "in %d min"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d분 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d分钟后"
+          }
+        }
+      }
+    },
     "%d日" : {
       "comment" : "课题卡片",
       "localizations" : {
@@ -422,6 +514,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%d小时"
+          }
+        }
+      }
+    },
+    "%d限" : {
+      "comment" : "時限",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Period %d"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d교시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第%d节"
           }
         }
       }
@@ -785,6 +900,75 @@
         }
       }
     },
+    "あと" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앞으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还有"
+          }
+        }
+      }
+    },
+    "あと %@" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앞으로 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还有 %@"
+          }
+        }
+      }
+    },
+    "あと%dコマ" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d to go"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d개 남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还有%d节"
+          }
+        }
+      }
+    },
     "アプリを評価" : {
       "localizations" : {
         "en" : {
@@ -1005,6 +1189,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取消"
+          }
+        }
+      }
+    },
+    "このあとの授業" : {
+      "comment" : "「今日」ペインのタイルの見出し",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later today"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이후 수업"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接下来的课"
           }
         }
       }
@@ -1395,6 +1602,29 @@
         }
       }
     },
+    "バスの情報がありません" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No bus information"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "버스 정보가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无巴士信息"
+          }
+        }
+      }
+    },
     "パスワード" : {
       "localizations" : {
         "en" : {
@@ -1589,6 +1819,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "页数"
+          }
+        }
+      }
+    },
+    "ほか%dコマ" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d more"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "외 %d개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另有%d节"
           }
         }
       }
@@ -1925,6 +2178,7 @@
       }
     },
     "今日" : {
+      "comment" : "「今日」ペインの見出し\n「今日」ペインの課題の数の名札",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2122,6 +2376,29 @@
         }
       }
     },
+    "最終授業のあと" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After your last class"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마지막 수업 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后一节课后"
+          }
+        }
+      }
+    },
     "最近のアップロード" : {
       "localizations" : {
         "en" : {
@@ -2228,6 +2505,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无出席信息"
+          }
+        }
+      }
+    },
+    "分" : {
+      "comment" : "「今日」ペインの大きな数字の単位",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "min"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分钟"
           }
         }
       }
@@ -2614,6 +2914,29 @@
         }
       }
     },
+    "帰りのバス" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bus home"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "귀가 버스"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返程巴士"
+          }
+        }
+      }
+    },
     "平日（水曜日を除く）" : {
       "localizations" : {
         "en" : {
@@ -2704,6 +3027,29 @@
         }
       }
     },
+    "授業" : {
+      "comment" : "「今日」ペインのタイルの見出し",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Class"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "课程"
+          }
+        }
+      }
+    },
     "授業「%@」に新しい課題が追加されました。\n締め切り: %@" : {
       "comment" : "new assignment body",
       "localizations" : {
@@ -2762,6 +3108,52 @@
         }
       }
     },
+    "授業中" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In class"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上课中"
+          }
+        }
+      }
+    },
+    "掲示" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notices"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "게시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公告"
+          }
+        }
+      }
+    },
     "掲示はありません" : {
       "localizations" : {
         "en" : {
@@ -2785,6 +3177,7 @@
       }
     },
     "掲示情報" : {
+      "comment" : "ツールバー",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2802,6 +3195,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "课程通知"
+          }
+        }
+      }
+    },
+    "教員" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instructor"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교원"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教师"
+          }
+        }
+      }
+    },
+    "教室" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "강의실"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教室"
+          }
+        }
+      }
+    },
+    "教室 · 変更あり" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room · changed"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "강의실 · 변경됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教室 · 已变更"
+          }
+        }
+      }
+    },
+    "教室 %@" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "강의실 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教室 %@"
+          }
+        }
+      }
+    },
+    "教室・変更" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room changed"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "강의실 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教室变更"
+          }
+        }
+      }
+    },
+    "教室変更 %@ から %@" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room changed from %1$@ to %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "강의실 변경 %1$@에서 %2$@(으)로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教室变更 从%1$@到%2$@"
           }
         }
       }
@@ -2940,6 +3471,29 @@
         }
       }
     },
+    "明日" : {
+      "comment" : "「今日」ペインの課題の数の名札",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tomorrow"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明天"
+          }
+        }
+      }
+    },
     "時刻表の読み込みに失敗しました。\nネットワーク接続を確認してください。" : {
       "localizations" : {
         "en" : {
@@ -2963,6 +3517,7 @@
       }
     },
     "時間" : {
+      "comment" : "「今日」ペインの大きな数字の単位",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3117,6 +3672,29 @@
         }
       }
     },
+    "期限の近い課題はありません" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing due soon"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마감이 임박한 과제가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无临近截止的作业"
+          }
+        }
+      }
+    },
     "期限切れ" : {
       "comment" : "课题卡片",
       "localizations" : {
@@ -3162,7 +3740,31 @@
         }
       }
     },
+    "本日の授業は終了しました" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No more classes today"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 수업이 모두 끝났습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天的课程已结束"
+          }
+        }
+      }
+    },
     "本日の運行は終了しました" : {
+      "comment" : "「今日」ペイン",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3180,6 +3782,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天的运营已经结束"
+          }
+        }
+      }
+    },
+    "本日は授業がありません" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No classes today"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 수업이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天没有课"
           }
         }
       }
@@ -3224,6 +3849,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下一辆巴士将于"
+          }
+        }
+      }
+    },
+    "次の授業" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next class"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 수업"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下节课"
+          }
+        }
+      }
+    },
+    "残り" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ends in"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "남은 시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩余"
           }
         }
       }
@@ -3324,6 +3995,7 @@
       }
     },
     "永山駅発" : {
+      "comment" : "バス路線",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3352,6 +4024,7 @@
       }
     },
     "永山駅行" : {
+      "comment" : "バス路線",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3557,6 +4230,7 @@
       }
     },
     "聖蹟桜ヶ丘駅発" : {
+      "comment" : "バス路線",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3585,6 +4259,7 @@
       }
     },
     "聖蹟桜ヶ丘駅行" : {
+      "comment" : "バス路線",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3634,6 +4309,29 @@
         }
       }
     },
+    "行きのバス" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bus to campus"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "등교 버스"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "去程巴士"
+          }
+        }
+      }
+    },
     "言語" : {
       "localizations" : {
         "en" : {
@@ -3657,6 +4355,7 @@
       }
     },
     "設定" : {
+      "comment" : "ツールバー",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3701,6 +4400,7 @@
       }
     },
     "詳細" : {
+      "comment" : "「今日」ペイン",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3912,7 +4612,7 @@
       }
     },
     "課題" : {
-      "comment" : "タブバー\nヘッダータイトル",
+      "comment" : "「今日」ペインのタイルの見出し\nタブバー\nヘッダータイトル",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3974,6 +4674,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通知设定"
+          }
+        }
+      }
+    },
+    "遅刻の可能性" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You may be late"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지각할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可能会迟到"
           }
         }
       }
@@ -4045,6 +4768,7 @@
       }
     },
     "閉じる" : {
+      "comment" : "科目詳細を閉じる",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4084,6 +4808,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "起始页"
+          }
+        }
+      }
+    },
+    "開始まで" : {
+      "comment" : "「今日」ペイン",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts in"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시작까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "距开始"
           }
         }
       }

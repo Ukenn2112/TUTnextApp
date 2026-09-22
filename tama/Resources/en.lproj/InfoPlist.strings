@@ -6,4 +6,4 @@
   
 */
 "NFCReaderUsageDescription" = "Reading student ID card.";
-"NSLocationWhenInUseUsageDescription" = "Automatically selects the display order of bus schedules based on the current location.";
+"NSLocationWhenInUseUsageDescription" = "Your location is used to order the bus timetable and to tell whether you have arrived on campus for the Today pane on the timetable tab.";

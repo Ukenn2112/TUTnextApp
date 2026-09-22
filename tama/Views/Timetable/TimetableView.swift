@@ -1,5 +1,15 @@
 import SwiftUI
 
+// MARK: - 選択中の授業
+
+/// 2ペイン表示で右側に出している授業の位置（曜日キーと時限キー）
+struct CourseSelection: Hashable {
+    let day: String
+    let period: String
+}
+
+// MARK: - 時間割ページ
+
 struct TimetableView: View {
     // MARK: - プロパティ
     @StateObject private var viewModel = TimetableViewModel()
@@ -10,11 +20,23 @@ struct TimetableView: View {
     /// システムのバーが縦バーとして表示されているか（Duoの外側ディスプレイ・内側横向き・Split View）。
     /// 判定は `ContentView` が一箇所で行い、ツールバー側と同じ値をここへ渡す
     let isVerticalBarPose: Bool
+    /// バスタブへ切り替える（「今日」ペインのバスを押したときに使う。路線も一緒に切り替える）
+    var onOpenBus: (BusSchedule.RouteType) -> Void = { _ in }
+    /// 課題タブへ切り替える（「今日」ペインの「課題をすべて見る」を押したときに使う）
+    var onOpenAssignments: () -> Void = {}
     @EnvironmentObject private var ratingService: RatingService
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol?
     // 掲示リストSafariView閉じる通知オブザーバー
     @State private var announcementSafariDismissObserver: NSObjectProtocol?
+    /// タブの内容に与えられている大きさ（2ペインにするかの判定に使う）
+    @State private var containerSize: CGSize = .zero
+    /// 右ペインに出している授業（nil なら「今日」ペイン）
+    @State private var selection: CourseSelection?
+    /// 左ペインが解いた時間割の縦の目盛り。
+    /// 右ペインはこれを受け取って、自分の寸法を計算し直さずに左の行に揃える
+    @State private var gridMetrics: TimetableGridMetrics = .unavailable
 
     // 曜日インデックスを表示用文字列に変換するヘルパー
     private func weekdayString(from index: String) -> String {
@@ -35,6 +57,133 @@ struct TimetableView: View {
 
     // MARK: - ボディ
     var body: some View {
+        Group {
+            if #available(iOS 27.1, *), isTwoPane {
+                twoPaneLayout
+            } else {
+                gridPane
+            }
+        }
+        // 縦バーのポーズではウィンドウの上端・下端まで内容を広げ、
+        // 上下とも VerticalBarLayout.edgeMargin だけ端から離した位置に内容を置く
+        // （バーのタイトル帯は mainToolbar 側で消してある）
+        .ignoresSafeArea(.container, edges: ignoredEdges)
+        // セーフエリアを無視した後の大きさ＝このポーズでのページの実寸を読む
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { containerSize = $0 }
+        .onChange(of: isTwoPane) { _, twoPane in
+            // 縦向き・外側ディスプレイ・Split Viewへ移ったら、行き場の無くなる選択は捨てる
+            if !twoPane {
+                selection = nil
+            }
+        }
+        #if DEBUG
+        // 起動引数で指定されたときだけ、読み込み後の時間割から最初の授業を選ぶ
+        .onChange(of: debugSelectionTrigger, initial: true) { _, _ in
+            applyDebugSelectionIfNeeded()
+        }
+        #endif
+        .onAppear {
+            viewModel.fetchTimetableData()
+            // 時間割表示の重要イベントを記録
+            ratingService.recordSignificantEvent()
+            // アプリがフォアグラウンドに復帰した時にページを更新
+            willEnterForegroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    print("TimetableView: アプリがフォアグラウンドに復帰しました")
+                    viewModel.fetchTimetableData()
+
+                    // 通知設定の状態を確認してサーバーと同期
+                    NotificationService.shared.checkAuthorizationStatus()
+                    NotificationService.shared.syncNotificationStatusWithServer()
+                }
+            }
+
+            // 掲示リストのSafariViewが閉じられた時の通知を受け取る
+            announcementSafariDismissObserver = NotificationCenter.default.addObserver(
+                forName: .announcementSafariDismissed,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    print("TimetableView: 掲示リストのSafariViewが閉じられました")
+                    viewModel.fetchTimetableData()
+                }
+            }
+        }
+        .onDisappear {
+            // 通知オブザーバーを削除
+            if let observer = willEnterForegroundObserver {
+                NotificationCenter.default.removeObserver(observer)
+                willEnterForegroundObserver = nil
+            }
+
+            // 掲示リストSafari閉じる通知観察者を削除
+            if let observer = announcementSafariDismissObserver {
+                NotificationCenter.default.removeObserver(observer)
+                announcementSafariDismissObserver = nil
+            }
+        }
+    }
+
+    /// セーフエリアを無視する辺（縦バーのポーズでのみ上下を無視し、ウィンドウの端を基準にする）
+    private var ignoredEdges: Edge.Set {
+        isVerticalBarPose ? [.top, .bottom] : []
+    }
+
+    // MARK: - 2ペインの判定
+
+    /// 時間割と「今日」を左右に並べるかどうか。
+    ///
+    /// 幅がレギュラーで、かつページが縦より横に長いとき（＝Duoの内側ディスプレイの横向き）だけ2ペインにする。
+    /// 内側の縦向き・外側ディスプレイ・Split View・通常のiPhoneは従来どおり1ペイン＋シート。
+    /// `ArrangementView` の内部状態は読めないので、判定はここで自分の大きさから行う
+    private var isTwoPane: Bool {
+        guard #available(iOS 27.1, *) else { return false }
+        guard horizontalSizeClass == .regular else { return false }
+        return containerSize.height > 0 && containerSize.width > containerSize.height
+    }
+
+    /// 右ペインの内容の上端に取る余白（縦バーのポーズではウィンドウ上端を基準にしているため必要）
+    private var paneTopMargin: CGFloat {
+        isVerticalBarPose ? VerticalBarLayout.edgeMargin : 0
+    }
+
+    // MARK: - サブビュー
+
+    /// 2ペイン（左＝時間割、右＝「今日」または科目詳細）。
+    ///
+    /// `ArrangementView` は折りたたみに合わせて継ぎ目をヒンジに揃えてくれる。
+    /// ナビゲーションの入れ物（`NavigationStack`）はこの外側（`ContentView`）にある
+    @available(iOS 27.1, *)
+    private var twoPaneLayout: some View {
+        ArrangementView {
+            gridPane
+        } secondary: {
+            detailPane
+        }
+        .arrangementViewStyle(.split.axes(.horizontal))
+    }
+
+    /// 右ペイン。授業を選んでいればその科目詳細を、選んでいなければ「今日」を出す
+    private var detailPane: some View {
+        TimetableDetailPane(
+            viewModel: viewModel,
+            selection: $selection,
+            presetColors: presetColors,
+            isVerticalBarPose: isVerticalBarPose,
+            paneTopMargin: paneTopMargin,
+            gridMetrics: gridMetrics,
+            onOpenBus: onOpenBus,
+            onOpenAssignments: onOpenAssignments
+        )
+    }
+
+    /// 左ペイン（1ペインのときはページ全体）。タイトルと時間割の表
+    private var gridPane: some View {
         GeometryReader { geometry in
             // Layout constants
             let layout = LayoutMetrics(
@@ -56,64 +205,13 @@ struct TimetableView: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             .edgesIgnoringSafeArea(.bottom)
-            .onAppear {
-                viewModel.fetchTimetableData()
-                // 時間割表示の重要イベントを記録
-                ratingService.recordSignificantEvent()
-                // アプリがフォアグラウンドに復帰した時にページを更新
-                willEnterForegroundObserver = NotificationCenter.default.addObserver(
-                    forName: UIApplication.willEnterForegroundNotification,
-                    object: nil,
-                    queue: .main
-                ) { _ in
-                    Task { @MainActor in
-                        print("TimetableView: アプリがフォアグラウンドに復帰しました")
-                        viewModel.fetchTimetableData()
-
-                        // 通知設定の状態を確認してサーバーと同期
-                        NotificationService.shared.checkAuthorizationStatus()
-                        NotificationService.shared.syncNotificationStatusWithServer()
-                    }
-                }
-
-                // 掲示リストのSafariViewが閉じられた時の通知を受け取る
-                announcementSafariDismissObserver = NotificationCenter.default.addObserver(
-                    forName: .announcementSafariDismissed,
-                    object: nil,
-                    queue: .main
-                ) { _ in
-                    Task { @MainActor in
-                        print("TimetableView: 掲示リストのSafariViewが閉じられました")
-                        viewModel.fetchTimetableData()
-                    }
-                }
-            }
-            .onDisappear {
-                // 通知オブザーバーを削除
-                if let observer = willEnterForegroundObserver {
-                    NotificationCenter.default.removeObserver(observer)
-                    willEnterForegroundObserver = nil
-                }
-
-                // 掲示リストSafari閉じる通知観察者を削除
-                if let observer = announcementSafariDismissObserver {
-                    NotificationCenter.default.removeObserver(observer)
-                    announcementSafariDismissObserver = nil
-                }
+            // 解けた行の寸法を右ペインへ渡す（右ペインで計算し直さないための唯一の経路）
+            .onChange(of: layout.gridMetrics, initial: true) {
+                _, metrics in
+                gridMetrics = metrics
             }
         }
-        // 縦バーのポーズではウィンドウの上端・下端まで内容を広げ、
-        // 上下とも VerticalBarLayout.edgeMargin だけ端から離した位置に内容を置く
-        // （バーのタイトル帯は mainToolbar 側で消してある）
-        .ignoresSafeArea(.container, edges: ignoredEdges)
     }
-
-    /// セーフエリアを無視する辺（縦バーのポーズでのみ上下を無視し、ウィンドウの端を基準にする）
-    private var ignoredEdges: Edge.Set {
-        isVerticalBarPose ? [.top, .bottom] : []
-    }
-
-    // MARK: - サブビュー
 
     /// タイトルの下に置く本体（読み込み中・エラー・時間割）
     @ViewBuilder private func contentView(layout: LayoutMetrics) -> some View {
@@ -151,7 +249,7 @@ struct TimetableView: View {
         .padding(.top, layout.topPadding)
     }
     private func weekdayHeaderView(layout: LayoutMetrics) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: LayoutMetrics.cellSpacing) {
             Text("")
                 .frame(width: layout.timeColumnWidth)
 
@@ -183,9 +281,9 @@ struct TimetableView: View {
     }
 
     private func timeTableGridView(layout: LayoutMetrics) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: LayoutMetrics.cellSpacing) {
             ForEach(viewModel.getPeriods(), id: \.0) { period, startTime, endTime in
-                HStack(spacing: 4) {
+                HStack(spacing: LayoutMetrics.cellSpacing) {
                     timeColumnView(
                         period: period, startTime: startTime, endTime: endTime, layout: layout)
                     periodRowView(period: period, layout: layout)
@@ -213,7 +311,7 @@ struct TimetableView: View {
     }
 
     private func periodRowView(period: String, layout: LayoutMetrics) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: LayoutMetrics.cellSpacing) {
             ForEach(viewModel.getWeekdays(), id: \.self) { day in
                 TimeSlotCell(
                     dayIndex: day,
@@ -228,11 +326,49 @@ struct TimetableView: View {
                             day: day, period: period, colorIndex: colorIndex)
                     },
                     isCurrentDay: day == viewModel.getCurrentWeekday(),
-                    isCurrentPeriod: period == viewModel.getCurrentPeriod()
+                    isCurrentPeriod: period == viewModel.getCurrentPeriod(),
+                    isSelected: selection == CourseSelection(day: day, period: period),
+                    // 2ペインのときは右ペインへ出すので、セルからシートは出さない
+                    onSelect: isTwoPane
+                        ? { selection = CourseSelection(day: day, period: period) }
+                        : nil
                 )
             }
         }
     }
+
+    // MARK: - DEBUG用の選択
+
+    #if DEBUG
+    /// 自動選択をやり直す必要があるかを見るための値
+    private var debugSelectionTrigger: DebugSelectionTrigger {
+        DebugSelectionTrigger(isTwoPane: isTwoPane, courseCount: viewModel.getTotalCourseCount())
+    }
+
+    private struct DebugSelectionTrigger: Equatable {
+        let isTwoPane: Bool
+        let courseCount: Int
+    }
+
+    /// 起動引数 `-DuoSelectFirstCourse YES` が指定されていれば、最初の授業を選んでおく。
+    /// CLIからはセルをタップできないため、科目詳細の状態を撮るための入口として用意している
+    private func applyDebugSelectionIfNeeded() {
+        guard isTwoPane, selection == nil else { return }
+        // `-DuoSelectTodayPeriod 2` …「今日」ペインの「詳細」を押したのと同じ選択をする
+        if let period = DuoDebugTimetable.selectedTodayPeriod {
+            let day = DuoDebugTimetable.todayWeekday ?? viewModel.getCurrentWeekday()
+            selection = CourseSelection(day: day, period: period)
+            return
+        }
+        guard DuoDebugTimetable.selectsFirstCourse else { return }
+        for period in viewModel.getPeriods().map({ $0.0 }) {
+            for day in viewModel.getWeekdays() where viewModel.courses[day]?[period] != nil {
+                selection = CourseSelection(day: day, period: period)
+                return
+            }
+        }
+    }
+    #endif
 }
 
 // MARK: - レイアウト定数
@@ -263,6 +399,12 @@ private struct LayoutMetrics {
     /// 差分がグリッド下端の余りになる（従来からの値で、横バーのポーズでは変更しない）
     private static let reservedHeight: CGFloat = 40
 
+    /// セルとセルの間隔（縦横とも同じ値）
+    static let cellSpacing: CGFloat = 4
+
+    /// 曜日の文字の大きさ
+    static let weekdayFontSize: CGFloat = 14
+
     let timeColumnWidth: CGFloat = 35
     let leftPadding: CGFloat = 8
     let rightPadding: CGFloat = 10
@@ -275,13 +417,41 @@ private struct LayoutMetrics {
     /// ページ内タイトルの下に空ける余白（横バーのポーズでは使わない）
     let titleBottomSpacing: CGFloat
 
+    /// ペインの上端から曜日の行の上端までの距離
+    let weekdayRowTop: CGFloat
+
+    /// ペインの上端から1行目のセルの上端までの距離
+    var gridTop: CGFloat { weekdayRowTop + weekdayRowHeight + weekdayBottomSpacing }
+
+    /// 表そのものの高さ（1行目のセルの上端から最終行のセルの下端まで）
+    let gridHeight: CGFloat
+
+    /// 右ペインへ渡す縦の目盛り（見出しの帯・1行目のセルの上端・セルどうしの間隔を共有する）
+    var gridMetrics: TimetableGridMetrics {
+        // ArrangementView がペインを組み替えている途中は GeometryReader が一時的に
+        // 0 に近い大きさを受け取る。その間の目盛りを右ペインへ渡すと、右側も
+        // 未確定の高さで組まれてしまうため、次の有効なレイアウトまで描画を待たせる
+        guard cellWidth > 0, cellHeight > 0, gridHeight > 0 else { return .unavailable }
+
+        return TimetableGridMetrics(
+            gridTop: gridTop,
+            weekdayRowTop: weekdayRowTop,
+            weekdayRowHeight: weekdayRowHeight,
+            weekdayFontSize: Self.weekdayFontSize,
+            rowGap: Self.cellSpacing,
+            gridHeight: gridHeight)
+    }
+
     init(geometry: GeometryProxy, columnCount: Int, rowCount: Int, isVerticalBarPose: Bool) {
         let safeColumnCount = max(1, columnCount)
         let safeRowCount = max(1, rowCount)
+        let columnGapWidth = CGFloat(safeColumnCount - 1) * Self.cellSpacing
+        let rowGapHeight = CGFloat(safeRowCount - 1) * Self.cellSpacing
 
-        cellWidth =
-            (geometry.size.width - timeColumnWidth - leftPadding - rightPadding - CGFloat(
-                safeColumnCount - 1) * 4) / CGFloat(safeColumnCount)
+        let proposedCellWidth =
+            (geometry.size.width - timeColumnWidth - leftPadding - rightPadding - columnGapWidth)
+            / CGFloat(safeColumnCount)
+        cellWidth = Self.validDimension(proposedCellWidth)
 
         if isVerticalBarPose {
             // 縦バーのポーズでは上下のセーフエリアを無視しているので、geometry の上下端＝ウィンドウの上下端。
@@ -298,25 +468,53 @@ private struct LayoutMetrics {
                 Self.verticalBarEdgeMargin - VerticalBarPageTitle.glyphTopInset
                 + VerticalBarPageTitle.lineHeight + titleBottomSpacing
 
-            let gridHeight =
+            let proposedGridHeight =
                 geometry.size.height - Self.verticalBarEdgeMargin - titleBlockHeight
                 - topPadding - weekdayRowHeight - weekdayBottomSpacing
-            cellHeight = (gridHeight - CGFloat(safeRowCount - 1) * 4) / CGFloat(safeRowCount)
+            let proposedCellHeight =
+                (proposedGridHeight - rowGapHeight) / CGFloat(safeRowCount)
+            cellHeight = Self.validDimension(proposedCellHeight)
+            weekdayRowTop = titleBlockHeight + topPadding
+            gridHeight = Self.resolvedGridHeight(
+                cellHeight: cellHeight, rowCount: safeRowCount, rowGapHeight: rowGapHeight)
         } else {
             // 横バーのポーズは従来どおり（式を変えない）
             weekdayBottomSpacing = Self.defaultWeekdayBottomSpacing
             topPadding = Self.defaultTopPadding
             titleBottomSpacing = 0
-            cellHeight =
-                (geometry.size.height - Self.reservedHeight - CGFloat(safeRowCount - 1) * 4)
-                / CGFloat(safeRowCount)
+            let proposedCellHeight =
+                (geometry.size.height - Self.reservedHeight
+                    - rowGapHeight) / CGFloat(safeRowCount)
+            cellHeight = Self.validDimension(proposedCellHeight)
+            weekdayRowTop = topPadding
+            gridHeight = Self.resolvedGridHeight(
+                cellHeight: cellHeight, rowCount: safeRowCount, rowGapHeight: rowGapHeight)
         }
+    }
+
+    /// SwiftUI の固定 frame に渡せる、有限かつ 0 以上の寸法にする。
+    /// ペイン切り替え中の一時的な負数は 0 として扱い、次のレイアウトで実寸に戻す
+    private static func validDimension(_ value: CGFloat) -> CGFloat {
+        guard value.isFinite else { return 0 }
+        return max(0, value)
+    }
+
+    /// セルの高さから実際に描かれる表全体の高さを戻す。
+    /// セルを置けない過渡状態では 0 にして、右ペインには未確定として伝える
+    private static func resolvedGridHeight(
+        cellHeight: CGFloat, rowCount: Int, rowGapHeight: CGFloat
+    ) -> CGFloat {
+        guard cellHeight > 0 else { return 0 }
+        return cellHeight * CGFloat(rowCount) + rowGapHeight
     }
 }
 
 // MARK: - 時限セル
 /// 授業セルビュー
 struct TimeSlotCell: View {
+    /// セルの角丸。右ペインのカードもこの値に揃える
+    static let cornerRadius: CGFloat = 8
+
     let dayIndex: String
     let displayDay: String
     let period: String
@@ -330,26 +528,46 @@ struct TimeSlotCell: View {
     let isCurrentDay: Bool
     let isCurrentPeriod: Bool
 
+    /// 右ペインに出している授業かどうか（2ペインのときだけ true になりうる）
+    var isSelected = false
+
+    /// セルを押したときの処理。nil なら従来どおりシートで科目詳細を出す
+    var onSelect: (() -> Void)?
+
     @State private var showingDetail = false
 
+    /// 科目に付けた色（セルの塗り）。
+    ///
+    /// 先頭のプリセット（＝色を付けていない状態）だけは、固定の白ではなくページの地の色にする。
+    /// 固定の白のままだと暗い外観で白地に白文字になり、セルが読めなくなるため
     private var courseBackgroundColor: Color {
-        guard let course = course else { return Color(UIColor.systemBackground) }
+        guard let course, course.colorIndex != 0,
+              presetColors.indices.contains(course.colorIndex)
+        else {
+            return Color(UIColor.systemBackground)
+        }
         return presetColors[course.colorIndex]
+    }
+
+    /// セルの枠線の色と太さ（選択中 → 現在の時限 → 通常の順に優先する）
+    private var border: (color: Color, width: CGFloat) {
+        if isSelected {
+            return (.appPrimary, 2)
+        }
+        if isCurrentDay && isCurrentPeriod {
+            return (.green, 1.5)
+        }
+        return (Color(UIColor.separator), 1)
     }
 
     var body: some View {
         ZStack {
             // 背景色
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: Self.cornerRadius)
                 .fill(courseBackgroundColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(
-                            (isCurrentDay && isCurrentPeriod)
-                                ? Color.green
-                                : Color(UIColor.separator),
-                            lineWidth: (isCurrentDay && isCurrentPeriod) ? 1.5 : 1
-                        )
+                    RoundedRectangle(cornerRadius: Self.cornerRadius)
+                        .stroke(border.color, lineWidth: border.width)
                 )
 
             if let course = course {
@@ -397,7 +615,10 @@ struct TimeSlotCell: View {
         }
         .frame(width: cellWidth, height: cellHeight)
         .onTapGesture {
-            if course != nil {
+            guard course != nil else { return }
+            if let onSelect {
+                onSelect()
+            } else {
                 showingDetail = true
             }
         }

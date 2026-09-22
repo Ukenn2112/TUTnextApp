@@ -6,4 +6,4 @@
   
 */
 "NFCReaderUsageDescription" = "学生証を読み取ります。";
-"NSLocationWhenInUseUsageDescription" = "現在地に基づいてバスの時刻表の表示順を最適化するために位置情報を使用します。";
+"NSLocationWhenInUseUsageDescription" = "バスの時刻表の表示順の切り替えと、学校に着いているかどうかの判定（時間割の「今日」の案内）に現在地を使用します。";

@@ -23,6 +23,28 @@ enum PageTitleStyle {
     static let minimumScaleFactor: CGFloat = 0.6
 }
 
+// MARK: - タイトルを寄せる辺
+
+/// ページタイトルをどちらの辺に寄せるか。
+///
+/// 既定は先頭寄せ（左から書く言語では左）。2ペイン表示の右ペインのように、
+/// 末尾側の辺に揃えたい場合だけ `.trailing` を使う。
+/// `leading` / `trailing` はどちらも書字方向に追従するので、RTLでも自動的に反転する
+enum PageTitleEdge {
+
+    case leading
+    case trailing
+
+    /// 枠の中での寄せ
+    var alignment: Alignment { self == .leading ? .leading : .trailing }
+
+    /// 余白を入れる辺
+    var edge: Edge.Set { self == .leading ? .leading : .trailing }
+
+    /// 折り返したときの行の寄せ
+    var textAlignment: TextAlignment { self == .leading ? .leading : .trailing }
+}
+
 // MARK: - ページ内タイトル
 
 /// 縦バーのポーズで、ページ内容の先頭に自前で描くページタイトル。
@@ -51,6 +73,12 @@ struct VerticalBarPageTitle: View {
     /// ウィンドウ上端からグリフ（文字の描画範囲）の上端までの距離
     var glyphTopMargin: CGFloat = VerticalBarLayout.edgeMargin
 
+    /// 寄せる辺（既定は先頭寄せ）
+    var edge: PageTitleEdge = .leading
+
+    /// 寄せた辺に取る余白（既定はナビゲーションバー標準の先頭マージン）
+    var sideMargin: CGFloat = PageTitleStyle.leadingMargin
+
     // MARK: - ボディ
 
     var body: some View {
@@ -59,9 +87,10 @@ struct VerticalBarPageTitle: View {
             .foregroundStyle(.primary)
             .lineLimit(1)
             .minimumScaleFactor(PageTitleStyle.minimumScaleFactor)
+            .multilineTextAlignment(edge.textAlignment)
             .accessibilityAddTraits(.isHeader)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, PageTitleStyle.leadingMargin)
+            .frame(maxWidth: .infinity, alignment: edge.alignment)
+            .padding(edge.edge, sideMargin)
             // Text の枠上端はグリフ上端より上にあるので、その分を戻してグリフ上端を合わせる
             .padding(.top, glyphTopMargin - Self.glyphTopInset)
     }

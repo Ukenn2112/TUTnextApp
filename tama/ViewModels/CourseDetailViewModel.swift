@@ -13,10 +13,25 @@ final class CourseDetailViewModel: ObservableObject {
     private let course: CourseModel
     private let isPreview: Bool
 
+    /// モックデータをそのまま出すかどうか（Xcode Preview、またはDEBUGの起動引数）。
+    ///
+    /// `-DuoPreviewCourseDetail YES` は `DuoDebugTimetable`（`TimetableView.swift`）の
+    /// 起動引数と同じ仕組みで、T-NEXTへ繋がらない環境でも2ペインの右側の見た目を
+    /// スクリーンショットで確認できるようにするためのもの
+    private static var usesMockDetail: Bool {
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" { return true }
+        #if DEBUG
+        // モックの1日（`-DuoTodayMock`）の授業は実在しないので、T-NEXTへは取りに行かない
+        return DuoDebugTimetable.usesMockCourseDetail
+        #else
+        return false
+        #endif
+    }
+
     init(course: CourseModel) {
         self.course = course
         // Xcode Preview ではモックデータを自動セット（時間割プレビューからのタップスルー対応）
-        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+        if Self.usesMockDetail {
             let mock = CourseDetailResponse.previewMock(for: course)
             self.isPreview = true
             self.courseDetail = mock
@@ -157,15 +172,40 @@ final class CourseDetailViewModel: ObservableObject {
 
     // 掲示URLを生成
     func createAnnouncementURL(announcement: AnnouncementModel) -> URL? {
+        TNextWebLink.announcementURL(
+            keijiNo: announcement.id, torkDate: announcement.torkDate)
+    }
+}
+
+// MARK: - T-NEXTのWebページへのリンク
+
+/// ログイン情報を載せてT-NEXTのWebページを開くためのURLを組み立てる。
+///
+/// 科目詳細（`CourseDetailView`）と時間割タブの「今日」ペインの両方から使うので、
+/// 組み立て方が2箇所に分かれないようここへまとめてある
+enum TNextWebLink {
+
+    /// 掲示（お知らせ）のURL
+    /// - Parameters:
+    ///   - keijiNo: 掲示番号（`AnnouncementModel.id`）
+    ///   - torkDate: 掲示の登録日（`AnnouncementModel.torkDate`）
+    static func announcementURL(keijiNo: Int, torkDate: String?) -> URL? {
+        var paramaterMap: [String: Any] = ["keijiNo": keijiNo]
+        if let torkDate {
+            paramaterMap["keijiTorkDate"] = torkDate
+        }
+
+        return url(formId: "Bsd50702", funcId: "Bsd507", paramaterMap: paramaterMap)
+    }
+
+    /// ログイン情報を載せたWebページのURL
+    private static func url(
+        formId: String, funcId: String, paramaterMap: Any
+    ) -> URL? {
         guard let user = UserService.shared.getCurrentUser(),
             let encryptedPassword = user.encryptedPassword
         else {
             return nil
-        }
-
-        var paramaterMap: [String: Any] = ["keijiNo": announcement.id]
-        if let torkDate = announcement.torkDate {
-            paramaterMap["keijiTorkDate"] = torkDate
         }
 
         let webApiLoginInfo: [String: Any] = [
@@ -173,9 +213,9 @@ final class CourseDetailViewModel: ObservableObject {
             "parameterMap": "",
             "paramaterMap": paramaterMap,
             "encryptedPassword": encryptedPassword,
-            "formId": "Bsd50702",
+            "formId": formId,
             "userId": user.username,
-            "funcId": "Bsd507",
+            "funcId": funcId,
             "password": ""
         ]
 
@@ -186,9 +226,10 @@ final class CourseDetailViewModel: ObservableObject {
         }
 
         let encodedLoginInfo = jsonString.webAPIEncoded
-        let urlString =
-            "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
-        return URL(string: urlString)
+        return URL(
+            string:
+                "https://next.tama.ac.jp/uprx/up/pk/pky501/Pky50101.xhtml?webApiLoginInfo=\(encodedLoginInfo)"
+        )
     }
 }
 

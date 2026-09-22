@@ -6,4 +6,4 @@
   
 */
 "NFCReaderUsageDescription" = "学生证读取";
-"NSLocationWhenInUseUsageDescription" = "根据当前位置，自动选择巴士时刻表的显示顺序。";
+"NSLocationWhenInUseUsageDescription" = "使用当前位置来切换巴士时刻表的显示顺序，并判断你是否已到校（课表标签页的“今日”提示）。";

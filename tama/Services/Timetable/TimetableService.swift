@@ -669,6 +669,16 @@ final class TimetableService {
         }
     }
 
+    /// 指定した授業に、いま有効な教室変更があればそれを返す。
+    ///
+    /// 教室そのものは `convertToTimetableData(_:)` の時点で差し替え済みなので、
+    /// 呼び出し側は「変更後の教室かどうか」を示すためだけにこれを使う。
+    /// 判定の条件（コース名をキーにする・期限内のみ有効）は保存側と同じものを使う
+    func roomChange(forCourseNamed courseName: String) -> RoomChange? {
+        guard let change = roomChanges[courseName], change.expiryDate > Date() else { return nil }
+        return change
+    }
+
     /// 期限切れの部屋変更情報をクリーンアップする
     func cleanupExpiredRoomChanges() {
         let now = Date()

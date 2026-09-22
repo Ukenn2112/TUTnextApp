@@ -256,7 +256,20 @@ struct ContentView: View {
                 TimetableView(
                     isLoggedIn: $isLoggedIn,
                     title: title,
-                    isVerticalBarPose: isVerticalBarPose
+                    isVerticalBarPose: isVerticalBarPose,
+                    // 「今日」ペインのバスからバスタブへ。
+                    // （タブの選択はここが持っているため、通知ではなく直接渡す）
+                    // 路線の切り替えは `tama://bus?route=` と同じ道（`busParametersFromURL`）を通す
+                    onOpenBus: { route in
+                        select(tab: 0)
+                        NotificationCenter.default.post(
+                            name: .busParametersFromURL,
+                            object: nil,
+                            userInfo: ["route": route.rawValue]
+                        )
+                    },
+                    // 「今日」ペインの「課題をすべて見る」から課題タブへ
+                    onOpenAssignments: { select(tab: 2) }
                 )
             }
                 // タイトルは横バーではバーの先頭の項目として、縦バーではページ内容の先頭に描く。

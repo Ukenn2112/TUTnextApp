@@ -25,11 +25,18 @@ final class BusSelectionStore: ObservableObject {
     /// その学生が使う駅（最後に自分で選んだ路線の駅。記録が無ければ聖蹟桜ヶ丘駅）
     @Published private(set) var preferredStation: BusStation = .seiseki
 
+    /// 最後に「発車済み」として捨てた学校行きの便の発車時刻。
+    ///
+    /// 選択を捨てるだけだと、もうバスに乗っている人に次の便を勧め直してしまう。
+    /// いつの便に乗ったかを覚えておき、その日のあいだは通学の案内を出さない合図にする
+    @Published private(set) var departedTowardSchoolAt: Date?
+
     // MARK: - 保存先
 
     private static let suiteName = "group.com.meikenn.tama"
     private static let stationKey = "TodayPane.preferredStation"
     private static let departureKey = "TodayPane.selectedDeparture"
+    private static let departedKey = "TodayPane.departedTowardSchoolAt"
 
     private let defaults: UserDefaults?
 
@@ -37,6 +44,7 @@ final class BusSelectionStore: ObservableObject {
         defaults = UserDefaults(suiteName: Self.suiteName)
         loadStation()
         loadDeparture()
+        departedTowardSchoolAt = defaults?.object(forKey: Self.departedKey) as? Date
     }
 
     // MARK: - 駅
@@ -77,10 +85,21 @@ final class BusSelectionStore: ObservableObject {
         defaults?.removeObject(forKey: Self.departureKey)
     }
 
-    /// 発車時刻を過ぎた選択を捨てる（「今日」ペインが時計を進めるたびに呼ぶ）
+    /// 発車時刻を過ぎた選択を捨てる（「今日」ペインが時計を進めるたびに呼ぶ）。
+    /// 学校行きの便だったときは、その発車時刻を覚えてから捨てる
     func pruneIfPassed(now: Date) {
         guard let departure = selectedDeparture, departure.date <= now else { return }
+        if departure.route.isTowardSchool {
+            departedTowardSchoolAt = departure.date
+            defaults?.set(departure.date, forKey: Self.departedKey)
+        }
         clear()
+    }
+
+    /// その日のうちに、自分で選んだ学校行きの便がもう発車したか
+    func hasDepartedTowardSchool(on day: Date) -> Bool {
+        guard let departed = departedTowardSchoolAt else { return false }
+        return Calendar.current.isDate(departed, inSameDayAs: day)
     }
 
     private func loadDeparture() {
