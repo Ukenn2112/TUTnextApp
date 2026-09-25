@@ -27,16 +27,11 @@ struct UserSettingsView: View {
                 otherSection
                 logoutSection
             }
-            .navigationBarTitle("設定", displayMode: .inline)
+            .navigationTitle("設定")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 30, height: 30)
-                            .clipShape(Circle())
-                    }
+                ToolbarItem(placement: .topBarLeading) {
+                    SheetCloseButton { dismiss() }
                 }
             }
             .onAppear {
@@ -56,22 +51,34 @@ struct UserSettingsView: View {
                     .environmentObject(appearanceManager)
             }
             .alert(
-                NSLocalizedString("カレンダーに登録", comment: ""),
+                NSLocalizedString("カレンダーに登録", comment: "時間割のカレンダー購読を確認するアラートのタイトル"),
                 isPresented: $viewModel.showCalendarSubscriptionAlert
             ) {
-                Button(NSLocalizedString("キャンセル", comment: ""), role: .cancel) {}
-                Button(NSLocalizedString("登録する", comment: "")) {
+                Button(NSLocalizedString("キャンセル", comment: "キャンセルボタン"), role: .cancel) {}
+                Button(NSLocalizedString("登録する", comment: "カレンダー購読の確認アラートで登録を実行するボタン")) {
                     viewModel.confirmCalendarSubscription()
                 }
             } message: {
                 Text(
                     NSLocalizedString(
                         "カレンダーAppが開き、「多摩大スケジュール」の照会を登録するか確認されます。",
-                        comment: ""
+                        comment: "カレンダー購読の確認アラートの本文。「多摩大スケジュール」は購読するカレンダーの名前"
                     )
                 )
             }
         }
+    }
+
+    // MARK: - アプリ情報
+
+    /// アプリのバージョン（CFBundleShortVersionString）
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    /// ビルド番号（CFBundleVersion）
+    private var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
     }
 
     // MARK: - セクション
@@ -107,9 +114,9 @@ struct UserSettingsView: View {
 
     /// アカウント設定セクション
     private var accountSettingsSection: some View {
-        Section(NSLocalizedString("アカウント設定", comment: "")) {
+        Section(NSLocalizedString("アカウント設定", comment: "設定画面のセクション見出し")) {
             settingsButton(
-                NSLocalizedString("パスワード変更", comment: ""),
+                NSLocalizedString("パスワード変更", comment: "設定画面の項目：大学アカウントのパスワード変更ページを開く"),
                 icon: "lock.fill",
                 color: .blue
             ) {
@@ -120,9 +127,9 @@ struct UserSettingsView: View {
 
     /// アプリ設定セクション
     private var appSettingsSection: some View {
-        Section(NSLocalizedString("アプリ設定", comment: "")) {
+        Section(NSLocalizedString("アプリ設定", comment: "設定画面のセクション見出し")) {
             settingsButton(
-                NSLocalizedString("時間割をカレンダーへ", comment: ""),
+                NSLocalizedString("時間割をカレンダーへ", comment: "設定画面の項目：時間割をカレンダーAppに購読登録する"),
                 icon: "calendar.badge.plus",
                 color: .orange
             ) {
@@ -130,7 +137,7 @@ struct UserSettingsView: View {
             }
 
             settingsButton(
-                NSLocalizedString("通知設定", comment: ""),
+                NSLocalizedString("通知設定", comment: "設定画面の項目：通知の許可状態"),
                 icon: notificationService.isAuthorized ? "bell.fill" : "bell.slash",
                 color: .red,
                 detail: notificationStatusText
@@ -139,7 +146,7 @@ struct UserSettingsView: View {
             }
 
             settingsButton(
-                NSLocalizedString("言語", comment: ""),
+                NSLocalizedString("言語", comment: "設定画面の項目：アプリの表示言語"),
                 icon: "globe",
                 color: .teal,
                 detail: languageService.currentLanguage
@@ -148,7 +155,7 @@ struct UserSettingsView: View {
             }
 
             settingsButton(
-                NSLocalizedString("ダークモード", comment: ""),
+                NSLocalizedString("ダークモード", comment: "設定画面の項目：外観モード（ライト／ダーク）の設定を開く"),
                 icon: "moon.fill",
                 color: .indigo,
                 detail: darkModeText
@@ -160,9 +167,9 @@ struct UserSettingsView: View {
 
     /// その他セクション
     private var otherSection: some View {
-        Section(NSLocalizedString("その他", comment: "")) {
+        Section(NSLocalizedString("その他", comment: "設定画面のセクション見出し")) {
             settingsButton(
-                NSLocalizedString("利用規約", comment: ""),
+                NSLocalizedString("利用規約", comment: "設定画面の項目：利用規約を開く"),
                 icon: "doc.text.fill",
                 color: .gray
             ) {
@@ -170,7 +177,7 @@ struct UserSettingsView: View {
             }
 
             settingsButton(
-                NSLocalizedString("プライバシーポリシー", comment: ""),
+                NSLocalizedString("プライバシーポリシー", comment: "設定画面の項目：プライバシーポリシーを開く"),
                 icon: "hand.raised.fill",
                 color: .blue
             ) {
@@ -178,7 +185,7 @@ struct UserSettingsView: View {
             }
 
             settingsButton(
-                NSLocalizedString("フィードバック", comment: ""),
+                NSLocalizedString("フィードバック", comment: "設定画面の項目：開発者へフィードバックのメールを送る"),
                 icon: "envelope.fill",
                 color: .mint
             ) {
@@ -186,7 +193,7 @@ struct UserSettingsView: View {
             }
 
             settingsButton(
-                NSLocalizedString("アプリを評価", comment: ""),
+                NSLocalizedString("アプリを評価", comment: "設定画面の項目：App Storeでアプリを評価する"),
                 icon: "star.fill",
                 color: .yellow
             ) {
@@ -207,7 +214,7 @@ struct UserSettingsView: View {
                         .background(Color.red.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                    Text(NSLocalizedString("ログアウト", comment: ""))
+                    Text(NSLocalizedString("ログアウト", comment: "設定画面のログアウトボタン"))
                         .foregroundStyle(.red)
                 }
             }
@@ -217,9 +224,7 @@ struct UserSettingsView: View {
                 Text("TUTnext")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
-                Text(
-                    "バージョン \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"))"
-                )
+                Text("バージョン \(appVersion) (\(buildNumber))")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
             }
@@ -266,21 +271,21 @@ struct UserSettingsView: View {
     private var notificationStatusText: String {
         if notificationService.isAuthorized {
             return notificationService.isRegistered
-                ? NSLocalizedString("オン", comment: "")
-                : NSLocalizedString("設定中...", comment: "")
+                ? NSLocalizedString("オン", comment: "設定画面の通知設定の状態：許可済み")
+                : NSLocalizedString("設定中...", comment: "設定画面の通知設定の状態：許可済みだが登録処理中")
         }
-        return NSLocalizedString("オフ", comment: "")
+        return NSLocalizedString("オフ", comment: "設定画面の通知設定の状態：未許可")
     }
 
     /// ダークモードのテキスト
     private var darkModeText: String {
         switch appearanceManager.mode {
         case .system:
-            return NSLocalizedString("システムに従う", comment: "")
+            return NSLocalizedString("システムに従う", comment: "設定画面の外観モードの状態：端末の設定に合わせる")
         case .light:
-            return NSLocalizedString("ライト", comment: "")
+            return NSLocalizedString("ライト", comment: "設定画面の外観モードの状態：ライトモード")
         case .dark:
-            return NSLocalizedString("ダーク", comment: "")
+            return NSLocalizedString("ダーク", comment: "設定画面の外観モードの状態：ダークモード")
         }
     }
 

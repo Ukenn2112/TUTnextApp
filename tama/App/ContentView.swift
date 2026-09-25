@@ -7,7 +7,9 @@ struct ContentView: View {
     // MARK: - プロパティ
 
     @State private var selectedTab = 1
-    @State private var isLoggedIn = false
+    /// ログイン済みか。起動時の値は `init()` で保存済みのユーザーから決める
+    /// （先にログイン画面を1フレーム描いてからクロスフェードで切り替わるのを防ぐ）
+    @State private var isLoggedIn: Bool
     @State private var assignmentCount: Int = 0
     @State private var isMoreMode = false
     @State private var isMoreDialogPresented = false
@@ -64,6 +66,12 @@ struct ContentView: View {
         }
     }
     #endif
+
+    // MARK: - 初期化
+
+    init() {
+        _isLoggedIn = State(initialValue: UserService.shared.getCurrentUser() != nil)
+    }
 
     // MARK: - ボディ
 
@@ -182,6 +190,108 @@ struct ContentView: View {
             }
     }
 
+    // MARK: - プライベートメソッド
+
+    /// ログイン状態を確認する。
+    /// 起動時の値は `init()` で決めてあるため、ここでは念のための再確認として、
+    /// 差があってもアニメーションなしで反映する（ログイン・ログアウト操作によるフェードとは区別する）
+    private func checkLoginStatus() {
+        let isUserStored = UserService.shared.getCurrentUser() != nil
+        guard isUserStored != isLoggedIn else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isLoggedIn = isUserStored
+        }
+    }
+
+    /// 課題数を取得する
+    private func fetchAssignmentCount() {
+        AssignmentService.shared.getAssignments { result in
+            switch result {
+            case .success(let assignments):
+                self.assignmentCount = assignments.count
+            case .failure:
+                self.assignmentCount = 0
+            }
+        }
+    }
+
+    /// アプリ起動時に初期URLを処理する
+    private func processInitialURL() {
+        guard let path = AppDelegate.shared.getPathComponent(),
+              isLoggedIn
+        else {
+            return
+        }
+        navigateToTab(for: path)
+        AppDelegate.shared.resetURLProcessing()
+    }
+
+    /// URLスキームのディープリンクを処理する
+    private func handleDeepLink(url: URL) {
+        guard isLoggedIn else { return }
+        let path = url.host ?? ""
+        navigateToTab(for: path)
+    }
+
+    /// パスに基づいて適切なタブに遷移する
+    private func navigateToTab(for path: String) {
+        switch path {
+        case "timetable":
+            select(tab: 1)
+        case "assignment":
+            select(tab: 2)
+        case "bus":
+            select(tab: 0)
+            sendBusParameters()
+        case "print":
+            presentPrintSystemSheet()
+        default:
+            break
+        }
+    }
+
+    /// メインタブへ遷移する（「その他」モード中であれば同じ更新の中で解除する）
+    private func select(tab: Int) {
+        isMoreDialogPresented = false
+        setMoreMode(false, selecting: tab)
+    }
+
+    /// バスパラメータをBusScheduleViewに送信する
+    private func sendBusParameters() {
+        let route = AppDelegate.shared.getQueryValue(for: "route")
+        let schedule = AppDelegate.shared.getQueryValue(for: "schedule")
+
+        guard route != nil || schedule != nil else { return }
+
+        let userInfo: [String: Any?] = ["route": route, "schedule": schedule]
+        NotificationCenter.default.post(
+            name: .busParametersFromURL,
+            object: nil,
+            userInfo: userInfo as [AnyHashable: Any]
+        )
+    }
+
+    /// 印刷システム画面をシートで表示する。
+    ///
+    /// 共有ファイルはPrintSystemViewModelの初期化時に読み込まれるため、既にシートを表示中の場合は
+    /// 一度閉じてから開き直して、上書きされた共有ファイルを取り込み直す。
+    /// 表示状態の更新を次のループに回すのは、起動直後のディープリンクでも
+    /// ログイン状態の反映（`resetMoreMenuState()`）に打ち消されないようにするため
+    private func presentPrintSystemSheet() {
+        let settleTime: TimeInterval = activeMenuSheet == nil ? 0 : Self.sheetSwapSettleTime
+        activeMenuSheet = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + settleTime) {
+            activeMenuSheet = MoreMenuItem.printSystem.makeSheet()
+        }
+    }
+}
+
+// MARK: - タブのコンテンツ
+
+extension ContentView {
+
     /// 課題タブのコンテンツ。
     /// 共通のツールバー項目に加えて、Classroom認証のボタンを先頭に置く。
     /// 取り消し確認のアラートは、項目がオーバーフローメニューへ送られても確実に出せるようここでホストする
@@ -284,110 +394,6 @@ struct ContentView: View {
         }
     }
 
-    /// TabViewの選択バインディング。
-    /// 選択状態になるのはメインタブのみで、コンテンツは「その他」モード中も切り替わらない
-    private var tabSelection: Binding<Int> {
-        Binding(
-            get: { selectedTab },
-            set: { newValue in
-                if newValue == Self.moreTab {
-                    if Self.usesSwappableTabBar {
-                        setMoreMode(true)
-                    } else {
-                        isMoreDialogPresented = true
-                    }
-                } else if !isMoreMode {
-                    selectedTab = newValue
-                } else if newValue == selectedTab {
-                    // 「その他」モード中は選択中のタブが「その他」ボタンの役割を引き継いでいる
-                    setMoreMode(false)
-                } else {
-                    // 切り替え直後のタップでも、シートはアニメーション付きで表示する
-                    UIView.setAnimationsEnabled(true)
-                    activeMenuSheet = moreItem(forTab: newValue)?.makeSheet()
-                }
-            }
-        )
-    }
-
-    /// 「その他」モードを切り替える。`tab` を指定すると、同じ更新の中でそのメインタブを選択する。
-    ///
-    /// タブの増減やロールの移動をシステムがアニメーションすると表示が乱れる（選択インジケーターが
-    /// カプセルの外へ滑り出る、隣のタブが一瞬ハイライトされる等）ため、アニメーションなしで切り替える。
-    /// SwiftUIはロール変更のアニメーション有無を指定できず、UIKitへの反映も状態変更の後になるため、
-    /// 反映が終わるまでの短時間だけUIKit側のアニメーションも止めている
-    private func setMoreMode(_ isOn: Bool, selecting tab: Int? = nil) {
-        guard isOn != isMoreMode else {
-            if let tab {
-                selectedTab = tab
-            }
-            return
-        }
-
-        Self.animationSuppressionToken += 1
-        let token = Self.animationSuppressionToken
-        UIView.setAnimationsEnabled(false)
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.tabSwapSettleTime) {
-            if token == Self.animationSuppressionToken {
-                UIView.setAnimationsEnabled(true)
-            }
-        }
-
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            isMoreMode = isOn
-            if let tab {
-                selectedTab = tab
-            }
-        }
-    }
-
-    /// 「その他」メニュー関連の状態を初期化する
-    private func resetMoreMenuState() {
-        setMoreMode(false)
-        isMoreDialogPresented = false
-        activeMenuSheet = nil
-    }
-
-    /// 「その他」モード中にタブへ割り当てられる項目。
-    /// 選択中のタブ（「その他」ボタンの役割を引き継ぐ）を除いた残りのタブに、並び順で割り当てる
-    private func moreItem(forTab tab: Int) -> MoreMenuItem? {
-        let slots = (Self.mainTabs + Self.extraTabs).filter { $0 != selectedTab }
-        guard let index = slots.firstIndex(of: tab), MoreMenuItem.allCases.indices.contains(index) else {
-            return nil
-        }
-        return MoreMenuItem.allCases[index]
-    }
-
-    /// タブのタイトル（「その他」モード中は差し替える）。`main` にはローカライズ済みの文字列を渡す
-    private func tabTitle(_ tab: Int, main: String) -> String {
-        guard isMoreMode else { return main }
-        if tab == selectedTab {
-            return NSLocalizedString("その他", comment: "タブバー")
-        }
-        return moreItem(forTab: tab)?.title ?? ""
-    }
-
-    /// タブのアイコン（「その他」モード中は差し替える）
-    private func tabImage(_ tab: Int, main: String) -> String {
-        guard isMoreMode else { return main }
-        if tab == selectedTab {
-            return "ellipsis"
-        }
-        return moreItem(forTab: tab)?.systemImage ?? main
-    }
-
-    /// タブバー右側に独立表示するタブのロール。
-    /// 通常時は「その他」タブが、「その他」モード中は選択中のタブが同じ見た目で独立表示されるため、
-    /// 「その他」ボタンがハイライトされたように見える。
-    /// （iOS 27では検索フィールドを持たない search ロールのタブは独立表示されないため、prominent を使う）
-    @available(iOS 27.0, *)
-    private func tabRole(_ tab: Int) -> TabRole? {
-        let prominentTab = isMoreMode ? selectedTab : Self.moreTab
-        return tab == prominentTab ? .prominent : nil
-    }
-
     /// タブのコンテンツに計測用プローブを付ける（DEBUGビルドかつ起動引数が指定されたときのみ動作する）
     private func probed<Content: View>(
         _ label: String, @ViewBuilder content: () -> Content
@@ -398,6 +404,11 @@ struct ContentView: View {
         return content()
         #endif
     }
+}
+
+// MARK: - タブビュー
+
+extension ContentView {
 
     /// タブビュー本体
     @ViewBuilder private var tabView: some View {
@@ -496,94 +507,126 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - プライベートメソッド
-
-    /// ログイン状態を確認する
-    private func checkLoginStatus() {
-        let user = UserService.shared.getCurrentUser()
-        isLoggedIn = user != nil
+    /// TabViewの選択バインディング。
+    /// 選択状態になるのはメインタブのみで、コンテンツは「その他」モード中も切り替わらない
+    private var tabSelection: Binding<Int> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == Self.moreTab {
+                    if Self.usesSwappableTabBar {
+                        setMoreMode(true)
+                    } else {
+                        isMoreDialogPresented = true
+                    }
+                } else if !isMoreMode {
+                    selectedTab = newValue
+                } else if newValue == selectedTab {
+                    // 「その他」モード中は選択中のタブが「その他」ボタンの役割を引き継いでいる
+                    setMoreMode(false)
+                } else {
+                    // 切り替え直後のタップでも、シートはアニメーション付きで表示する
+                    endUIKitAnimationSuppression()
+                    activeMenuSheet = moreItem(forTab: newValue)?.makeSheet()
+                }
+            }
+        )
     }
 
-    /// 課題数を取得する
-    private func fetchAssignmentCount() {
-        AssignmentService.shared.getAssignments { result in
-            switch result {
-            case .success(let assignments):
-                self.assignmentCount = assignments.count
-            case .failure:
-                self.assignmentCount = 0
+    /// タブのタイトル（「その他」モード中は差し替える）。`main` にはローカライズ済みの文字列を渡す
+    private func tabTitle(_ tab: Int, main: String) -> String {
+        guard isMoreMode else { return main }
+        if tab == selectedTab {
+            return NSLocalizedString("その他", comment: "タブバー")
+        }
+        return moreItem(forTab: tab)?.title ?? ""
+    }
+
+    /// タブのアイコン（「その他」モード中は差し替える）
+    private func tabImage(_ tab: Int, main: String) -> String {
+        guard isMoreMode else { return main }
+        if tab == selectedTab {
+            return "ellipsis"
+        }
+        return moreItem(forTab: tab)?.systemImage ?? main
+    }
+
+    /// タブバー右側に独立表示するタブのロール。
+    /// 通常時は「その他」タブが、「その他」モード中は選択中のタブが同じ見た目で独立表示されるため、
+    /// 「その他」ボタンがハイライトされたように見える。
+    /// （iOS 27では検索フィールドを持たない search ロールのタブは独立表示されないため、prominent を使う）
+    @available(iOS 27.0, *)
+    private func tabRole(_ tab: Int) -> TabRole? {
+        let prominentTab = isMoreMode ? selectedTab : Self.moreTab
+        return tab == prominentTab ? .prominent : nil
+    }
+}
+
+// MARK: - 「その他」モード
+
+extension ContentView {
+
+    /// 「その他」モードを切り替える。`tab` を指定すると、同じ更新の中でそのメインタブを選択する。
+    ///
+    /// タブの増減やロールの移動をシステムがアニメーションすると表示が乱れる（選択インジケーターが
+    /// カプセルの外へ滑り出る、隣のタブが一瞬ハイライトされる等）ため、アニメーションなしで切り替える。
+    /// SwiftUIはロール変更のアニメーション有無を指定できず、UIKitへの反映も状態変更の後になるため、
+    /// 反映が終わるまでの短時間だけUIKit側のアニメーションも止めている
+    private func setMoreMode(_ isOn: Bool, selecting tab: Int? = nil) {
+        guard isOn != isMoreMode else {
+            if let tab {
+                selectedTab = tab
+            }
+            return
+        }
+
+        suppressUIKitAnimations(for: Self.tabSwapSettleTime)
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isMoreMode = isOn
+            if let tab {
+                selectedTab = tab
             }
         }
     }
 
-    /// アプリ起動時に初期URLを処理する
-    private func processInitialURL() {
-        guard let path = AppDelegate.shared.getPathComponent(),
-              isLoggedIn
-        else {
-            return
-        }
-        navigateToTab(for: path)
-        AppDelegate.shared.resetURLProcessing()
-    }
-
-    /// URLスキームのディープリンクを処理する
-    private func handleDeepLink(url: URL) {
-        guard isLoggedIn else { return }
-        let path = url.host ?? ""
-        navigateToTab(for: path)
-    }
-
-    /// パスに基づいて適切なタブに遷移する
-    private func navigateToTab(for path: String) {
-        switch path {
-        case "timetable":
-            select(tab: 1)
-        case "assignment":
-            select(tab: 2)
-        case "bus":
-            select(tab: 0)
-            sendBusParameters()
-        case "print":
-            presentPrintSystemSheet()
-        default:
-            break
-        }
-    }
-
-    /// メインタブへ遷移する（「その他」モード中であれば同じ更新の中で解除する）
-    private func select(tab: Int) {
+    /// 「その他」メニュー関連の状態を初期化する
+    private func resetMoreMenuState() {
+        setMoreMode(false)
         isMoreDialogPresented = false
-        setMoreMode(false, selecting: tab)
-    }
-
-    /// バスパラメータをBusScheduleViewに送信する
-    private func sendBusParameters() {
-        let route = AppDelegate.shared.getQueryValue(for: "route")
-        let schedule = AppDelegate.shared.getQueryValue(for: "schedule")
-
-        guard route != nil || schedule != nil else { return }
-
-        let userInfo: [String: Any?] = ["route": route, "schedule": schedule]
-        NotificationCenter.default.post(
-            name: .busParametersFromURL,
-            object: nil,
-            userInfo: userInfo as [AnyHashable: Any]
-        )
-    }
-
-    /// 印刷システム画面をシートで表示する。
-    ///
-    /// 共有ファイルはPrintSystemViewModelの初期化時に読み込まれるため、既にシートを表示中の場合は
-    /// 一度閉じてから開き直して、上書きされた共有ファイルを取り込み直す。
-    /// 表示状態の更新を次のループに回すのは、起動直後のディープリンクでも
-    /// ログイン状態の反映（`resetMoreMenuState()`）に打ち消されないようにするため
-    private func presentPrintSystemSheet() {
-        let settleTime: TimeInterval = activeMenuSheet == nil ? 0 : Self.sheetSwapSettleTime
         activeMenuSheet = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + settleTime) {
-            activeMenuSheet = MoreMenuItem.printSystem.makeSheet()
+    }
+
+    /// 「その他」モード中にタブへ割り当てられる項目。
+    /// 選択中のタブ（「その他」ボタンの役割を引き継ぐ）を除いた残りのタブに、並び順で割り当てる
+    private func moreItem(forTab tab: Int) -> MoreMenuItem? {
+        let slots = (Self.mainTabs + Self.extraTabs).filter { $0 != selectedTab }
+        guard let index = slots.firstIndex(of: tab), MoreMenuItem.allCases.indices.contains(index) else {
+            return nil
         }
+        return MoreMenuItem.allCases[index]
+    }
+
+    /// UIKit側のアニメーションを止め、`duration` が過ぎたら戻す。
+    /// 途中で別の抑止が始まった場合は、古いタイマーでは戻さず新しいタイマーに任せる
+    private func suppressUIKitAnimations(for duration: TimeInterval) {
+        Self.animationSuppressionToken += 1
+        let token = Self.animationSuppressionToken
+        UIView.setAnimationsEnabled(false)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            if token == Self.animationSuppressionToken {
+                UIView.setAnimationsEnabled(true)
+            }
+        }
+    }
+
+    /// 抑止中でもすぐにUIKit側のアニメーションを戻す。
+    /// 世代番号を進めて、残っているタイマーが後から状態を触らないようにする
+    private func endUIKitAnimationSuppression() {
+        Self.animationSuppressionToken += 1
+        UIView.setAnimationsEnabled(true)
     }
 }
 

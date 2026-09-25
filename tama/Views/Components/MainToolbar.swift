@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// 各タブ共通のシステムツールバー（ページタイトル・掲示情報・設定）。
@@ -103,9 +104,8 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
     @State private var showSafariView = false
     @State private var showingUserSettings = false
 
-    /// UserDefaultsの変更を監視して、未読件数などを取り直す
-    private let userDefaultsObserver = NotificationCenter.default
-        .publisher(for: UserDefaults.didChangeNotification)
+    /// ページタイトルの文字サイズ（Dynamic Typeに追従する。既定の文字サイズでは `PageTitleStyle.baseFontSize`）
+    @ScaledMetric(relativeTo: PageTitleStyle.textStyle) private var titleFontSize = PageTitleStyle.baseFontSize
 
     // MARK: - ボディ
 
@@ -134,7 +134,7 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
             .onAppear {
                 loadUserData()
             }
-            .onReceive(userDefaultsObserver) { _ in
+            .onReceive(UserDataRefreshSignal.publisher) { _ in
                 loadUserData()
             }
     }
@@ -205,7 +205,9 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
     ///
     /// 縦バーのポーズではカスタムビューの項目がバーを横帯へ戻してしまうため、項目自体を作らない
     /// （その場合はページ側の `VerticalBarPageTitle` がタイトルを描く）。
-    /// iOS 26以降はツールバー項目にガラスの背景が付くので、タイトルでは打ち消してただの文字に見せる
+    /// iOS 26以降はツールバー項目にガラスの背景が付くので、タイトルでは打ち消してただの文字に見せる。
+    /// iOS 17はシステムのタイトルを取り除けない（`hidingSystemNavigationTitle(_:)` が何もしない）ため、
+    /// 項目を作らずにシステムの中央インラインタイトルだけを残す（タイトルが二重に出ないようにする）
     @ToolbarContentBuilder private var titleItem: some ToolbarContent {
         if !isVerticalBarPose {
             if #available(iOS 26.0, *) {
@@ -213,7 +215,7 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
                     titleText
                 }
                 .sharedBackgroundVisibility(.hidden)
-            } else {
+            } else if #available(iOS 18.0, *) {
                 ToolbarItem(placement: .topBarLeading) {
                     titleText
                 }
@@ -227,7 +229,7 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
     /// `fixedSize(horizontal:vertical:)` で文字の本来の幅を要求する
     private var titleText: some View {
         Text(title)
-            .font(PageTitleStyle.font)
+            .font(PageTitleStyle.font(size: titleFontSize))
             .foregroundStyle(.primary)
             .lineLimit(1)
             .minimumScaleFactor(PageTitleStyle.minimumScaleFactor)
@@ -251,7 +253,7 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
             .badge(unreadBadgeText.map { Text($0) })
             .toolbarItemTint()
         } else {
-            // iOS 25以前はツールバー項目のバッジが描画されないため、従来の自前バッジを使う
+            // iOS 26未満（iOS 17〜18）はツールバー項目のバッジが描画されないため、従来の自前バッジを使う
             Button(action: { showSafariView = true }) {
                 ZStack(alignment: .topTrailing) {
                     label
@@ -259,7 +261,7 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
                     if let unreadBadgeText {
                         Text(unreadBadgeText)
                             .font(.system(size: 7, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .frame(minWidth: 16, minHeight: 16)
                             .background(
                                 Circle()
@@ -330,11 +332,38 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
     }
 
     /// ユーザーデータを読み込む（未読件数が変わったときだけ更新する）。
-    /// タブごとに1つずつ動くため、ログは出さず、変化が無ければ状態も触らない
+    /// タブごとに1つずつ動くため、ログは出さず、変化が無ければ状態も触らない。
+    /// ユーザーが消えた（ログアウト・セッション切れ）ときは、古い未読バッジを残さないよう nil に戻す
     private func loadUserData() {
-        guard let updatedUser = UserService.shared.getCurrentUser() else { return }
+        guard let updatedUser = UserService.shared.getCurrentUser() else {
+            if user != nil {
+                user = nil
+            }
+            return
+        }
         if user == nil || user?.allKeijiMidokCnt != updatedUser.allKeijiMidokCnt {
             user = updatedUser
         }
     }
+}
+
+// MARK: - ユーザー情報の再読み込み
+
+/// 共通ツールバーがユーザー情報（未読件数）を読み直すきっかけ。
+///
+/// ユーザー情報そのものはKeychainにあり専用の変更通知が無いため、`UserDefaults` の変更を目安にしている。
+/// ただし `UserDefaults.didChangeNotification` はどの値の書き込みでも（書き込んだスレッドで）届き、
+/// タブの数だけKeychainの読み出しとデコードが走ってしまう。そこで連続した変更はまとめ、
+/// メインスレッドで1回だけ流す。全タブで同じ購読元を共有するため、型の外（非ジェネリック）に置く
+private enum UserDataRefreshSignal {
+
+    /// 連続した書き込みをまとめる間隔
+    private static let debounceInterval: DispatchQueue.SchedulerTimeType.Stride = .milliseconds(500)
+
+    static let publisher: AnyPublisher<Void, Never> = NotificationCenter.default
+        .publisher(for: UserDefaults.didChangeNotification)
+        .map { _ in () }
+        .debounce(for: debounceInterval, scheduler: DispatchQueue.main)
+        .share()
+        .eraseToAnyPublisher()
 }

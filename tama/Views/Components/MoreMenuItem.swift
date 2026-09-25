@@ -14,10 +14,18 @@ enum MoreMenuItem: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .mobileSite: return NSLocalizedString("スマホサイト", comment: "")
-        case .tamauni: return NSLocalizedString("たまゆに", comment: "")
-        case .teacherEmail: return NSLocalizedString("教師メール", comment: "")
-        case .printSystem: return NSLocalizedString("印刷システム", comment: "")
+        case .mobileSite:
+            return NSLocalizedString(
+                "スマホサイト", comment: "「その他」メニュー項目：T-NEXTのスマートフォン向けサイトを開く")
+        case .tamauni:
+            return NSLocalizedString(
+                "たまゆに", comment: "「その他」メニュー項目：Webサイト「たまゆに」（tamauniv.jp）を開く。サービス名のため固有名詞として扱う")
+        case .teacherEmail:
+            return NSLocalizedString(
+                "教師メール", comment: "「その他」メニュー項目：教員のメールアドレス一覧を開く")
+        case .printSystem:
+            return NSLocalizedString(
+                "印刷システム", comment: "「その他」メニュー項目：学内のプリンターで印刷するファイルをアップロードする画面を開く")
         }
     }
 
@@ -36,13 +44,16 @@ enum MoreMenuItem: CaseIterable, Identifiable {
         case .mobileSite:
             return Self.createTnextURL().map { .webView($0) }
         case .tamauni:
-            return .webView(URL(string: "https://tamauniv.jp")!)
+            return Self.tamauniURL.map { .webView($0) }
         case .teacherEmail:
             return .teacherEmail
         case .printSystem:
             return .printSystem
         }
     }
+
+    /// たまゆにのURL（固定の文字列だが、強制アンラップで落ちないよう Optional のまま扱う）
+    private static let tamauniURL = URL(string: "https://tamauniv.jp")
 
     /// T-nextへのURLを生成する
     private static func createTnextURL() -> URL? {

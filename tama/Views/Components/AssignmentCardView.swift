@@ -33,7 +33,7 @@ struct AssignmentCardView: View {
                 HStack {
                     Text(assignment.courseName)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
                     Spacer()
 
@@ -45,7 +45,7 @@ struct AssignmentCardView: View {
                         Text(assignment.remainingTimeText)
                             .font(.caption)
                     }
-                    .foregroundColor(timeColor)
+                    .foregroundStyle(timeColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
@@ -56,31 +56,31 @@ struct AssignmentCardView: View {
 
                 Text(assignment.title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .lineLimit(2)
 
                 Text(assignment.description)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
 
                 HStack {
                     // 期限日を表示
                     Text("\(formatDate(assignment.dueDate)) 締切")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             // 輪郭はアプリ共通の1ptの枠で取る（影で浮かせるカードはアプリ全体で作らない）
             .outlinedCard()
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
     }
 
     private func formatDate(_ date: Date) -> String {

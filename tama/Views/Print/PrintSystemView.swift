@@ -37,14 +37,8 @@ struct PrintSystemView: View {
             .navigationTitle("印刷システム")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
+                ToolbarItem(placement: .topBarLeading) {
+                    SheetCloseButton { dismiss() }
                 }
             }
         }
@@ -355,13 +349,10 @@ struct PrintResultView: View {
             .navigationTitle("アップロード完了")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                ToolbarItem(placement: .topBarLeading) {
+                    SheetCloseButton {
                         dismiss()
                         onDismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .foregroundStyle(.primary)
                     }
                 }
             }

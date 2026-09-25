@@ -8,7 +8,7 @@ struct TeacherEmailListView: View {
     @State private var showSearchBar = false
     @State private var visibleSection: String?
     @State private var isManualSelection = false
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) private var dismiss
     
     // 五十音行
     private let japaneseSections = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "その他"]
@@ -16,8 +16,14 @@ struct TeacherEmailListView: View {
     // 表示用の五十音行（「その他」を「#」に置換）
     private let displaySections = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "#"]
 
-    // 見出し位置の基準にする座標空間（画面全体ではなく、この画面自身を基準にする）
+    // 見出し位置の基準にする座標空間（教員一覧のスクロールビュー自身。0がスクロール領域の上端）。
+    // 画面全体や画面の上端を基準にすると、上のヘッダー（検索バー・選択バー）の高さで判定位置がずれるため
     private static let coordinateSpaceName = "teacherEmailList"
+
+    // 見出しがこの範囲（スクロール領域の上端からの距離）にあるグループを表示中とみなす。
+    // 上端より少し下（2行ほど）まで来たら表示中にし、見出しが上へ抜けても1行と少しの間は保つ。
+    // 以前の基準（画面上端からの -50〜150。ヘッダーの高さは約80）をスクロール領域の上端基準に直した値
+    private static let visibleHeaderRange: ClosedRange<CGFloat> = -130...70
 
     // MARK: - ボディ
     var body: some View {
@@ -30,7 +36,6 @@ struct TeacherEmailListView: View {
                     contentView
                 }
             }
-            .coordinateSpace(.named(Self.coordinateSpaceName))
             .overlay(
                 TeacherCopyConfirmationView(showing: showingCopyConfirmation)
             )
@@ -44,7 +49,7 @@ struct TeacherEmailListView: View {
         // 地の色はどのページも同じ白（暗い外観では黒）。
         // 以前はここだけ上から下へのグラデーションだったが、ページごとに地の色が変わって見えるため揃えた
         CardSurface.pageFill
-            .edgesIgnoringSafeArea(.all)
+            .ignoresSafeArea()
     }
     
     // MARK: - ヘッダービュー
@@ -104,7 +109,7 @@ struct TeacherEmailListView: View {
                 
                 Text("タップして選択して、メールアドレスをコピー")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
@@ -119,7 +124,7 @@ struct TeacherEmailListView: View {
                 CircleActionButton(
                     iconName: "xmark",
                     colors: [.gray, .gray.opacity(0.8)],
-                    action: { presentationMode.wrappedValue.dismiss() }
+                    action: { dismiss() }
                 )
             }
         }
@@ -197,7 +202,9 @@ struct TeacherEmailListView: View {
                                                 .onAppear {
                                                     updateVisibleSection(section: section, geometry: geometry)
                                                 }
-                                                .onChange(of: geometry.frame(in: .named(Self.coordinateSpaceName)).minY) { _, _ in
+                                                .onChange(
+                                                    of: geometry.frame(in: .named(Self.coordinateSpaceName)).minY
+                                                ) { _, _ in
                                                     updateVisibleSection(section: section, geometry: geometry)
                                                 }
                                         }
@@ -221,6 +228,7 @@ struct TeacherEmailListView: View {
                 .padding(.top, 16)
                 .readableWidth()
             }
+            .coordinateSpace(.named(Self.coordinateSpaceName))
             .onChange(of: selectedSection) { _, newSection in
                 scrollToSection(newSection, proxy: scrollProxy)
             }
@@ -308,8 +316,8 @@ struct TeacherEmailListView: View {
     /// 表示中のグループを更新（見出し位置に基づく）
     private func updateVisibleSection(section: String, geometry: GeometryProxy) {
         let headerY = geometry.frame(in: .named(Self.coordinateSpaceName)).minY
-        // 見出し位置が画面上部150px以内にある場合、そのグループが表示中と判断
-        if headerY <= 150 && headerY >= -50 {
+        // 見出しがスクロール領域の上端付近にある場合、そのグループが表示中と判断
+        if Self.visibleHeaderRange.contains(headerY) {
             if visibleSection != section {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     visibleSection = section
@@ -386,7 +394,7 @@ struct CircleActionButton: View {
         Button(action: action) {
             Image(systemName: iconName)
                 .font(.system(size: 18, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(width: 40, height: 40)
                 .background(
                     Circle()
@@ -462,11 +470,11 @@ struct StatusView: View {
             VStack(spacing: 12) {
                 Text(title)
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -493,7 +501,7 @@ struct StatusView: View {
                             )
                             .shadow(color: Color.appPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
                     )
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 }
                 .padding(.top, 8)
             }
@@ -522,7 +530,7 @@ struct TeacherSearchBar: View {
         HStack(spacing: 12) {
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .font(.system(size: 16, weight: .medium))
                 
                 TextField("教師名またはメールアドレスを検索", text: $text)
@@ -537,7 +545,7 @@ struct TeacherSearchBar: View {
                         }
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .font(.system(size: 16))
                     }
                     .transition(.scale.combined(with: .opacity))
@@ -556,7 +564,7 @@ struct TeacherSearchBar: View {
                 onClose()
             }) {
                 Text("キャンセル")
-                    .foregroundColor(Color.appPrimary)
+                    .foregroundStyle(Color.appPrimary)
                     .font(.system(size: 16, weight: .medium))
             }
         }
@@ -576,12 +584,12 @@ struct TeacherSelectionBar: View {
         HStack(spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .font(.system(size: 16))
                 
                 Text("\(selectedCount)人の教師を選択しました")
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
             }
             
             Spacer()
@@ -602,7 +610,7 @@ struct TeacherSelectionBar: View {
                                 )
                                 .shadow(color: Color.appPrimary.opacity(0.3), radius: 6, x: 0, y: 3)
                         )
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                 }
                 .scaleEffect(1.0)
                 .animation(.easeInOut(duration: 0.15), value: selectedCount)
@@ -610,7 +618,7 @@ struct TeacherSelectionBar: View {
                 Button(action: onClear) {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(width: 32, height: 32)
                         .background(
                             Circle()
@@ -654,7 +662,7 @@ struct TeacherIndexView: View {
                     Text(section)
                         .font(.system(size: 12, weight: .semibold))
                         .frame(width: 28, height: 28)
-                        .foregroundColor(isCurrentSection(index) ? .white : .primary)
+                        .foregroundStyle(isCurrentSection(index) ? Color.white : Color.primary)
                         .background(
                             Circle()
                                 .fill(
@@ -821,7 +829,7 @@ struct TeacherRow: View {
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                     }
                 }
             }
@@ -833,25 +841,25 @@ struct TeacherRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(teacher.name)
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 if let furigana = teacher.furigana {
                     Text(furigana)
                         .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 
                 // メールアドレスとコピーボタン
                 HStack(alignment: .center, spacing: 10) {
                     Text(teacher.email)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(Color.appPrimary)
+                        .foregroundStyle(Color.appPrimary)
                         .lineLimit(1)
                     
                     Button(action: onCopy) {
                         Image(systemName: "square.on.square")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Color.appPrimary)
+                            .foregroundStyle(Color.appPrimary)
                             .frame(width: 28, height: 28)
                             .background(
                                 Circle()
@@ -873,9 +881,13 @@ struct TeacherRow: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(
-                    isSelected ?
-                    LinearGradient(colors: [Color.appPrimary.opacity(0.10), Color.appPrimary.opacity(0.07)], startPoint: .topLeading, endPoint: .bottomTrailing) :
-                    LinearGradient(colors: [Color.clear, Color.clear], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    LinearGradient(
+                        colors: isSelected
+                            ? [Color.appPrimary.opacity(0.10), Color.appPrimary.opacity(0.07)]
+                            : [Color.clear, Color.clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
                 // 選ばれている行は色の付いた塗りと枠だけで示す（影では浮かせない）
                 .stroke(
@@ -956,11 +968,11 @@ struct TeacherLoadingView: View {
             VStack(spacing: 8) {
                 Text("教師情報を読み込んでいます...")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text("お待ちください")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -981,12 +993,12 @@ struct TeacherCopyConfirmationView: View {
             if showing {
                 HStack(spacing: 12) {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                         .font(.system(size: 20, weight: .medium))
                     
                     Text("メールアドレスをコピーしました")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)

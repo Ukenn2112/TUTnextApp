@@ -8,6 +8,9 @@ enum VerticalBarLayout {
     /// システムの縦バーが上端・下端に残すマージン。
     /// バー内のコントロールのフレームはAPIで公開されていないため、同じ値を定数として持つ。
     /// 上下どちらの端にも同じ値を使い、ページ内容の上端・下端をバーの端のコントロールと揃える
+    /// ウィンドウの `directionalLayoutMargins` は安全領域と同じ値で、`safeAreaInsets`・`scenePadding` にも
+    /// この余白は現れない（`docs/iphone-duo-metrics.md` の実測）。導出できる公開APIが無いため、
+    /// Duoの寸法を持つのはこの定数1か所だけにし、他の場所ではここを参照する
     /// （mirrors the system vertical bar's 24pt edge margin; bar controls' frames are not exposed）
     static let edgeMargin: CGFloat = 24
 }

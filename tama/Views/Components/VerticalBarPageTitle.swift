@@ -9,18 +9,33 @@ import SwiftUI
 /// 文字サイズ・太さ・寄せはどちらも同じにする
 enum PageTitleStyle {
 
-    /// タイトルの文字サイズ（ポーズや端末によらず同じ値を使う）
-    static let fontSize: CGFloat = 24
+    /// 既定の文字サイズ（Dynamic Typeが標準の「大」のときの値。ポーズや端末によらず同じ値を使う）
+    static let baseFontSize: CGFloat = 24
 
-    /// タイトルのフォント
-    static var font: Font { .system(size: fontSize, weight: .semibold) }
+    /// 文字サイズを拡大・縮小するときに追従するテキストスタイル。
+    /// ビューでは `@ScaledMetric(relativeTo: textStyle)` で `baseFontSize` を拡縮して使う
+    static let textStyle: Font.TextStyle = .title2
 
-    /// ページ内に描くときの先頭の余白。
-    /// システムのナビゲーションバーがタイトルに使う標準の先頭マージンに合わせる
-    static let leadingMargin: CGFloat = 20
+    /// レイアウト計算用の、現在のDynamic Typeで拡縮した文字サイズ。
+    /// ビュー側の `@ScaledMetric(relativeTo: textStyle)` と同じ拡縮になるよう、同じテキストスタイルで計算する
+    static var fontSize: CGFloat {
+        UIFontMetrics(forTextStyle: .title2).scaledValue(for: baseFontSize)
+    }
+
+    /// タイトルのフォント（`size` には拡縮済みの文字サイズを渡す）
+    static func font(size: CGFloat) -> Font { .system(size: size, weight: .semibold) }
 
     /// 長いローカライズ名（英語の学期名など）でも1行に収めるための最小縮小率
     static let minimumScaleFactor: CGFloat = 0.6
+
+    /// `Text` の枠上端からグリフ上端までの距離の、文字サイズに対する比。
+    /// 和文（漢字・数字）は ascender いっぱいまでは描かれないため、その差を比で持つ。
+    /// SFの和文フォールバックで実測した書体の性質で、Duoの寸法ではない
+    /// （フォールバック書体のグリフの外接矩形を得る公開APIが無いため、比として持つ。文字サイズを変えても比は変わらない）
+    static let glyphTopInsetRatio: CGFloat = 0.1838
+
+    /// `Text` の枠下端からグリフ下端までの距離（descender のうち描かれない分）の、文字サイズに対する比
+    static let glyphBottomInsetRatio: CGFloat = 0.1343
 }
 
 // MARK: - タイトルを寄せる辺
@@ -71,28 +86,60 @@ struct VerticalBarPageTitle: View {
     let title: String
 
     /// ウィンドウ上端からグリフ（文字の描画範囲）の上端までの距離
-    var glyphTopMargin: CGFloat = VerticalBarLayout.edgeMargin
+    let glyphTopMargin: CGFloat
 
     /// 寄せる辺（既定は先頭寄せ）
-    var edge: PageTitleEdge = .leading
+    let edge: PageTitleEdge
 
-    /// 寄せた辺に取る余白（既定はナビゲーションバー標準の先頭マージン）
-    var sideMargin: CGFloat = PageTitleStyle.leadingMargin
+    /// 寄せた辺に取る余白。
+    /// nil（既定）のときはシステムの最小のシーン余白（`scenePadding(.minimum)`）に任せ、
+    /// ナビゲーションバーの項目と同じくシステムのマージンに揃える
+    let sideMargin: CGFloat?
+
+    /// タイトルの文字サイズ（Dynamic Typeに追従する）
+    @ScaledMetric(relativeTo: PageTitleStyle.textStyle) private var fontSize = PageTitleStyle.baseFontSize
+
+    // MARK: - 初期化
+
+    /// 非公開の `fontSize` があるとメンバーごとのイニシャライザが非公開になるため、明示的に定義する
+    init(
+        title: String,
+        glyphTopMargin: CGFloat = VerticalBarLayout.edgeMargin,
+        edge: PageTitleEdge = .leading,
+        sideMargin: CGFloat? = nil
+    ) {
+        self.title = title
+        self.glyphTopMargin = glyphTopMargin
+        self.edge = edge
+        self.sideMargin = sideMargin
+    }
 
     // MARK: - ボディ
 
     var body: some View {
         Text(title)
-            .font(PageTitleStyle.font)
+            .font(PageTitleStyle.font(size: fontSize))
             .foregroundStyle(.primary)
             .lineLimit(1)
             .minimumScaleFactor(PageTitleStyle.minimumScaleFactor)
             .multilineTextAlignment(edge.textAlignment)
             .accessibilityAddTraits(.isHeader)
             .frame(maxWidth: .infinity, alignment: edge.alignment)
-            .padding(edge.edge, sideMargin)
+            .pageTitleSideMargin(sideMargin, edges: edge.edge)
             // Text の枠上端はグリフ上端より上にあるので、その分を戻してグリフ上端を合わせる
-            .padding(.top, glyphTopMargin - Self.glyphTopInset)
+            .padding(.top, glyphTopMargin - fontSize * PageTitleStyle.glyphTopInsetRatio)
+    }
+}
+
+private extension View {
+
+    /// タイトルの横の余白。値が無ければシステムの最小のシーン余白を使う
+    @ViewBuilder func pageTitleSideMargin(_ margin: CGFloat?, edges: Edge.Set) -> some View {
+        if let margin {
+            padding(edges, margin)
+        } else {
+            scenePadding(.minimum, edges: edges)
+        }
     }
 }
 
@@ -100,18 +147,18 @@ struct VerticalBarPageTitle: View {
 
 extension VerticalBarPageTitle {
 
+    // レイアウト計算用の値。どれも現在のDynamic Typeで拡縮した文字サイズ（`PageTitleStyle.fontSize`）から求める
+
     /// `Text` の枠の高さ（＝フォントの行の高さ）
     static var lineHeight: CGFloat {
         UIFont.systemFont(ofSize: PageTitleStyle.fontSize, weight: .semibold).lineHeight
     }
 
-    /// `Text` の枠上端からグリフ上端までの距離。
-    /// 和文（漢字・数字）は ascender いっぱいまでは描かれないため、その差を文字サイズ比で持つ
-    /// （SFの和文フォールバックで実測。文字サイズを変えても比は変わらない）
-    static var glyphTopInset: CGFloat { PageTitleStyle.fontSize * 0.1838 }
+    /// `Text` の枠上端からグリフ上端までの距離
+    static var glyphTopInset: CGFloat { PageTitleStyle.fontSize * PageTitleStyle.glyphTopInsetRatio }
 
     /// `Text` の枠下端からグリフ下端までの距離（descender のうち描かれない分）
-    static var glyphBottomInset: CGFloat { PageTitleStyle.fontSize * 0.1343 }
+    static var glyphBottomInset: CGFloat { PageTitleStyle.fontSize * PageTitleStyle.glyphBottomInsetRatio }
 }
 
 // MARK: - システムタイトルの非表示
@@ -128,7 +175,8 @@ extension View {
             if #available(iOS 18.0, *) {
                 toolbar(removing: .title)
             } else {
-                // iOS 17には該当APIが無い（従来どおりの中央インラインタイトルになる）
+                // iOS 17には該当APIが無い（従来どおりの中央インラインタイトルになる）。
+                // そのため `mainToolbar` もiOS 17では先頭のタイトル項目を作らず、タイトルが二重に出ないようにしている
                 self
             }
         } else {

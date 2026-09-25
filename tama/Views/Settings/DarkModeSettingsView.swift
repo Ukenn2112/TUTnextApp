@@ -55,16 +55,11 @@ struct DarkModeSettingsView: View {
                     Text(NSLocalizedString("「システムに従う」を選択すると、デバイスの設定に合わせて自動的に切り替わります。", comment: ""))
                 }
             }
-            .navigationBarTitle("外観モード", displayMode: .inline)
+            .navigationTitle("外観モード")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 30, height: 30)
-                            .clipShape(Circle())
-                    }
+                ToolbarItem(placement: .topBarLeading) {
+                    SheetCloseButton { dismiss() }
                 }
             }
         }

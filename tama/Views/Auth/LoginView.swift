@@ -36,7 +36,7 @@ struct LoginView: View {
             // フッター
             Text("@Meikennと@Claudeが愛を込めて作った")
                 .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .padding(.bottom, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -91,7 +91,7 @@ struct LoginView: View {
             if !viewModel.userName.isEmpty {
                 Text("\(viewModel.userName) さん")
                     .font(.system(size: 25, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
                     .padding(.bottom, 5)
@@ -101,7 +101,7 @@ struct LoginView: View {
             // タイトル
             Text("TUTnext へようこそ！👋")
                 .font(.system(size: 25, weight: .bold))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 30)
                 .padding(.bottom, 30)
@@ -109,7 +109,7 @@ struct LoginView: View {
             // エラーメッセージ
             if let errorMessage = viewModel.combinedErrorMessage {
                 Text(errorMessage)
-                    .foregroundColor(errorColor)
+                    .foregroundStyle(errorColor)
                     .font(.system(size: 14))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
@@ -144,9 +144,9 @@ struct LoginView: View {
                     )
                     .textContentType(.username)
                     .keyboardType(.asciiCapable)
-                    .autocapitalization(.none)
+                    .textInputAutocapitalization(.never)
                     .font(.system(size: 18))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .focused($focusedField, equals: .account)
                     .submitLabel(.next)
                     .onSubmit {
@@ -164,7 +164,7 @@ struct LoginView: View {
                         Text("学生証スキャン")
                             .font(.system(size: 12))
                     }
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
@@ -212,7 +212,7 @@ struct LoginView: View {
                 )
                 .textContentType(.password)
                 .font(.system(size: 18))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .focused($focusedField, equals: .password)
                 .submitLabel(.go)
                 .onSubmit {
@@ -225,80 +225,53 @@ struct LoginView: View {
     }
 
     // MARK: - ログインボタン
+
+    /// サインインボタン。
+    ///
+    /// 読み込み中も文字は消さずに透明にして残し、その上にインジケーターを重ねるので、
+    /// 状態が変わってもボタンの大きさ・形は変わらない。
+    /// 背景はアプリの文字色（`label`）で塗るため、文字とインジケーターは反転色（`systemBackground`）で描く
+    /// （Prominentスタイルの既定の白文字だと、ダークモードで白地に白文字になるため）
     private var loginButton: some View {
-        Group {
-            if #available(iOS 26.0, *) {
-                Button(action: performLogin) {
-                    Group {
-                        if viewModel.isLoading {
-                            ProgressView()
-                        } else {
-                            Text("多摩大アカウントでサインイン")
-                                .frame(maxWidth: .infinity)
-                                .foregroundColor(Color(UIColor.systemBackground))
-                        }
+        Button(action: performLogin) {
+            Text("多摩大アカウントでサインイン")
+                .foregroundStyle(Color(UIColor.systemBackground))
+                .frame(maxWidth: .infinity)
+                .opacity(viewModel.isLoading ? 0 : 1)
+                .overlay {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .controlSize(.regular)
+                            .tint(Color(UIColor.systemBackground))
                     }
                 }
-                .controlSize(.extraLarge)
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 30)
-                .padding(.top, 20)
-                .disabled(viewModel.isLoginButtonDisabled)
-                .tint(Color(UIColor.label))
-            } else {
-                Button(action: performLogin) {
-                    ZStack {
-                        Rectangle()
-                            .fill(Color(UIColor.label))
-                            .cornerRadius(25)
-                            .frame(height: 50)
-                            .shadow(
-                                color: Color(UIColor.label).opacity(0.12),
-                                radius: 5,
-                                x: 0,
-                                y: 2
-                            )
-
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                                .tint(Color(UIColor.systemBackground))
-                        } else {
-                            Text("多摩大アカウントでサインイン")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(Color(UIColor.systemBackground))
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 30)
-                .padding(.top, 20)
-                .disabled(viewModel.isLoginButtonDisabled)
-            }
         }
-    }
-
-    @available(iOS 26.0, *)
-    private struct NoScaleGlassButtonStyle: ButtonStyle {
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .glassEffect(.regular.interactive(), in: .capsule)
-                .scaleEffect(1.0)
-                .animation(nil, value: configuration.isPressed)
-        }
+        .prominentLoginButtonStyle()
+        .buttonBorderShape(.capsule)
+        .controlSize(.extraLarge)
+        .tint(Color(UIColor.label))
+        .disabled(viewModel.isLoginButtonDisabled)
+        .padding(.horizontal, 30)
+        .padding(.top, 20)
     }
 
     // MARK: - 利用規約
+    /// 利用規約のURL（固定の文字列だが、強制アンラップで落ちないよう Optional のまま扱う）
+    private static let termsURL = URL(string: "https://tama.qaq.tw/user-agreement")
+
     private var termsAndConditionsText: some View {
         HStack(spacing: 0) {
             Text("登録をすることで ")
-                .foregroundColor(.secondary)
-            Link("利用規約", destination: URL(string: "https://tama.qaq.tw/user-agreement")!)
-                .foregroundColor(.blue)
+                .foregroundStyle(.secondary)
+            if let termsURL = Self.termsURL {
+                Link("利用規約", destination: termsURL)
+                    .foregroundStyle(.blue)
+            } else {
+                Text("利用規約")
+                    .foregroundStyle(.secondary)
+            }
             Text(" に同意したことになります")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .font(.system(size: 12))
         .padding(.top, 20)
@@ -332,6 +305,20 @@ struct LoginView: View {
                     break
                 }
             }
+        }
+    }
+}
+
+// MARK: - ボタンスタイル
+
+private extension View {
+
+    /// 強調ボタンのスタイル（iOS 26以降はLiquid Glass、それ以前は標準の塗りつぶし）
+    @ViewBuilder func prominentLoginButtonStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            buttonStyle(.glassProminent)
+        } else {
+            buttonStyle(.borderedProminent)
         }
     }
 }

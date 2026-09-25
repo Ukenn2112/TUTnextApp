@@ -28,7 +28,11 @@ struct DuoDivision: Equatable {
     static func verticalFold(in proxy: GeometryProxy) -> DuoDivision? {
         guard #available(iOS 27.1, *) else { return nil }
 
-        let regions = proxy.reservedRegions(kind: .division, options: .includeInactive)
+        // `.mirrors`（既定値）では枠も余白も書字方向に合わせて反転した座標で返るため、
+        // RTLでも minX 側が常に `leading`、maxX 側が `trailing` になる。
+        // 呼び出し側（`DuoColumnSplit`）も先頭側の列から幅を数えるので、この組み合わせのまま使う
+        let regions = proxy.reservedRegions(
+            kind: .division, options: .includeInactive, layoutDirectionBehavior: .mirrors)
         guard let region = regions.first(where: {
             $0.isActive && $0.frame.height > $0.frame.width
         }) else {
