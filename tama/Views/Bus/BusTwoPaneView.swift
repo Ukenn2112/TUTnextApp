@@ -34,8 +34,15 @@ struct BusTwoPaneView: View {
     /// 折り目が有効なときの左右の列の幅（平らなときは nil＝`ArrangementView` まかせの等幅）
     @State private var columnSplit: DuoColumnSplit?
 
-    /// 左右の列の浮かぶ時刻カードの実測の高さ（路線ごと）
-    @State private var timeCardHeights: [BusSchedule.RouteType: CGFloat] = [:]
+    /// 左右の列の浮かぶ時刻カードの実測の高さ（列ごと）。
+    /// 路線ではなく列で持つので、駅を切り替えても前の駅の路線の高さが残らない
+    @State private var timeCardHeights: [ColumnSide: CGFloat] = [:]
+
+    /// 左右どちらの列か
+    private enum ColumnSide {
+        case leading
+        case trailing
+    }
 
     /// 時刻表を下げる量。左右の実測のうち高いほうを両方の列に配るので、
     /// 片方のカードだけが背の高い場面（選択中の「バス時刻」の行）でも
@@ -82,8 +89,18 @@ struct BusTwoPaneView: View {
             // 読む順は「知らせ → 操作 → 時刻表」。
             // 臨時ダイヤとピンは同じ「知らせ」なので続けて置き、
             // 駅と曜日の操作は、それが効く2つの列のすぐ上に置く
+            //
+            // 本のポーズではどちらも左の列（ヒンジの手前）に収め、折り目をまたいでスクロール・表示しない。
+            // 親の VStack は中央揃えなので、外側でもう一度ページの先頭側へ寄せる
             if let messages = viewModel.busSchedule?.temporaryMessages, !messages.isEmpty {
                 BusTemporaryMessagesView(messages: messages)
+                    // 横スクロールの行は自分で左右の余白を持つので、ページの端からヒンジの手前まで
+                    .frame(
+                        maxWidth: columnSplit.map { $0.leadingWidth + BusLayout.horizontalPadding }
+                            ?? .infinity,
+                        alignment: .leading
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if let pinMessage = viewModel.busSchedule?.pin {
@@ -91,14 +108,21 @@ struct BusTwoPaneView: View {
                     .frame(maxWidth: columnSplit.map { $0.leadingWidth } ?? .infinity,
                            alignment: .leading)
                     .padding(.horizontal, BusLayout.horizontalPadding)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             BusTwoPaneControls(
-                station: $viewModel.selectedStation,
-                scheduleType: $viewModel.selectedScheduleType,
+                station: viewModel.selectedStation,
+                scheduleType: viewModel.selectedScheduleType,
                 columnSplit: columnSplit,
-                onStationChanged: { viewModel.onStationChanged() },
-                onScheduleTypeChanged: { viewModel.onScheduleTypeChanged() }
+                onStationSelected: { station in
+                    viewModel.selectedStation = station
+                    viewModel.onStationChanged()
+                },
+                onScheduleTypeSelected: { scheduleType in
+                    viewModel.selectedScheduleType = scheduleType
+                    viewModel.onScheduleTypeChanged()
+                }
             )
             .padding(.horizontal, BusLayout.horizontalPadding)
             .padding(.top, BusLayout.Spacing.s)
@@ -118,23 +142,27 @@ struct BusTwoPaneView: View {
     /// `ArrangementView` が継ぎ目を持つので、列の中身は折り目を自分で避けなくてよい
     private var columns: some View {
         ArrangementView {
-            column(route: viewModel.selectedStation.toSchoolRoute, showsSpecialNotes: false)
+            column(
+                route: viewModel.selectedStation.toSchoolRoute, side: .leading,
+                showsSpecialNotes: false)
         } secondary: {
             // 備考はページ全体に効く注記（路線ごとには変わらない）なので、右の列だけで1回出す
-            column(route: viewModel.selectedStation.fromSchoolRoute, showsSpecialNotes: true)
+            column(
+                route: viewModel.selectedStation.fromSchoolRoute, side: .trailing,
+                showsSpecialNotes: true)
         }
         .arrangementViewStyle(.split.axes(.horizontal))
     }
 
     /// 片方の列（時刻カードの高さは左右で共有する）
     private func column(
-        route: BusSchedule.RouteType, showsSpecialNotes: Bool
+        route: BusSchedule.RouteType, side: ColumnSide, showsSpecialNotes: Bool
     ) -> some View {
         BusDirectionColumnView(
             viewModel: viewModel,
             route: route,
             sharedTimeCardHeight: sharedTimeCardHeight,
-            onTimeCardHeightChange: { timeCardHeights[route] = $0 },
+            onTimeCardHeightChange: { timeCardHeights[side] = $0 },
             showsSpecialNotes: showsSpecialNotes
         )
     }
@@ -176,17 +204,21 @@ extension BusStation {
 ///
 /// 見た目も並びも下の2列と揃える: 駅セレクタは左の列の幅、曜日セレクタは右の列の幅に広げ、
 /// どちらも同じセグメントの体裁・同じ高さで同じ線に乗せる。
-/// 本のポーズでは列の幅が折り目で決まるため、操作が折り目に掛かることもない
+/// 本のポーズでは列の幅が折り目で決まるため、操作が折り目に掛かることもない。
+///
+/// 駅と曜日は、利用者がセグメントを押したときだけ `onStationSelected` / `onScheduleTypeSelected` で返す。
+/// ディープリンクや起動時の曜日合わせのようにプログラムから値が変わったときは何も呼ばないので、
+/// 選んだ便やライブアクティビティ、ディープリンクで指定した路線が捨てられることはない
 private struct BusTwoPaneControls: View {
 
-    @Binding var station: BusStation
-    @Binding var scheduleType: BusSchedule.ScheduleType
+    let station: BusStation
+    let scheduleType: BusSchedule.ScheduleType
 
     /// 折り目が有効なときの左右の列の幅（平らなときは nil＝等幅）
     let columnSplit: DuoColumnSplit?
 
-    let onStationChanged: () -> Void
-    let onScheduleTypeChanged: () -> Void
+    let onStationSelected: (BusStation) -> Void
+    let onScheduleTypeSelected: (BusSchedule.ScheduleType) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: columnSplit?.gutter ?? BusLayout.TwoPane.columnGutter) {
@@ -200,28 +232,44 @@ private struct BusTwoPaneControls: View {
 
     /// 駅セレクタ（曜日セレクタとまったく同じセグメントの体裁）
     private var stationPicker: some View {
-        Picker("駅", selection: $station) {
+        Picker("駅", selection: stationSelection) {
             ForEach(BusStation.allCases, id: \.self) { candidate in
                 Text(candidate.displayName).tag(candidate)
             }
         }
         .pickerStyle(SegmentedPickerStyle())
-        .onChange(of: station) { _, _ in
-            onStationChanged()
-        }
     }
 
     /// 曜日セレクタ（1列表示と同じ選択肢・同じ体裁）
     private var dayPicker: some View {
-        Picker("スケジュールタイプ", selection: $scheduleType) {
+        Picker("スケジュールタイプ", selection: scheduleTypeSelection) {
             Text("平日（水曜日を除く）").tag(BusSchedule.ScheduleType.weekday)
             Text("水曜日").tag(BusSchedule.ScheduleType.wednesday)
             Text("土曜日").tag(BusSchedule.ScheduleType.saturday)
         }
         .pickerStyle(SegmentedPickerStyle())
-        .onChange(of: scheduleType) { _, _ in
-            onScheduleTypeChanged()
-        }
+    }
+
+    /// 駅セレクタの選択（押されたときだけ親へ返す）
+    private var stationSelection: Binding<BusStation> {
+        Binding(
+            get: { station },
+            set: { newValue in
+                guard newValue != station else { return }
+                onStationSelected(newValue)
+            }
+        )
+    }
+
+    /// 曜日セレクタの選択（押されたときだけ親へ返す）
+    private var scheduleTypeSelection: Binding<BusSchedule.ScheduleType> {
+        Binding(
+            get: { scheduleType },
+            set: { newValue in
+                guard newValue != scheduleType else { return }
+                onScheduleTypeSelected(newValue)
+            }
+        )
     }
 }
 
@@ -236,7 +284,7 @@ private struct BusLoadFailureView: View {
     var body: some View {
         VStack(spacing: 16) {
             Text(message)
-                .foregroundColor(.red)
+                .foregroundStyle(.red)
                 .padding()
                 .multilineTextAlignment(.center)
 

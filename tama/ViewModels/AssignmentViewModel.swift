@@ -87,7 +87,9 @@ final class AssignmentViewModel: ObservableObject {
     var thisWeekAssignments: [Assignment] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        let endOfWeek = calendar.date(byAdding: .day, value: 7, to: today)!
+        guard let endOfWeek = calendar.date(byAdding: .day, value: 7, to: today) else {
+            return []
+        }
 
         return assignments.filter { assignment in
             !assignment.isOverdue && assignment.isPending
@@ -99,17 +101,20 @@ final class AssignmentViewModel: ObservableObject {
     var thisMonthAssignments: [Assignment] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        let endOfWeek = calendar.date(byAdding: .day, value: 7, to: today)!
 
-        // 今月の最終日を取得
-        let components = calendar.dateComponents([.year, .month], from: today)
-        let startOfMonth = calendar.date(from: components)!
-        let nextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)!
-        let endOfMonth = calendar.date(byAdding: .day, value: -1, to: nextMonth)!
+        // 今月の範囲は「翌月1日 0:00 の手前まで」。
+        // 最終日の 0:00 で切ると、最終日の日中が締切の課題が抜け落ちてしまう
+        guard let endOfWeek = calendar.date(byAdding: .day, value: 7, to: today),
+              let startOfMonth = calendar.date(
+                from: calendar.dateComponents([.year, .month], from: today)),
+              let startOfNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)
+        else {
+            return []
+        }
 
         return assignments.filter { assignment in
             !assignment.isOverdue && assignment.isPending && assignment.dueDate > endOfWeek
-                && assignment.dueDate <= endOfMonth
+                && assignment.dueDate < startOfNextMonth
         }.sorted { $0.dueDate < $1.dueDate }  // 日付順
     }
 

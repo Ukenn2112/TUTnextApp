@@ -53,18 +53,6 @@ enum BusLayout {
         /// 平らなとき（折り目が無効なとき）の列と列の間。
         /// 左右の列がそれぞれ `BusLayout.horizontalPadding` の余白を持つので、その2つ分になる
         static let columnGutter = BusLayout.horizontalPadding * 2
-
-        /// 時刻カードの中身の高さ。
-        ///
-        /// 「次のバスまで」「選択したバスまで（バス時刻の行が増える）」「本日の運行は終了しました」で
-        /// 本来の高さが変わってしまうと、左右の時刻表が別の線から始まってしまう。
-        /// いちばん背の高い場面（選択中）の行の高さを常に確保して、両列を同じ線に揃える
-        static var timeCardContentHeight: CGFloat {
-            let label = UIFont.preferredFont(forTextStyle: .subheadline).lineHeight
-            let value = UIFont.systemFont(ofSize: 22, weight: .bold).lineHeight
-            let detail = UIFont.systemFont(ofSize: 13, weight: .medium).lineHeight
-            return label + Spacing.xxs + value + Spacing.xxs + detail
-        }
     }
 }
 
@@ -115,7 +103,7 @@ struct BusScheduleView: View {
                 }
         )
         .background(Color(UIColor.systemBackground))
-        .edgesIgnoringSafeArea(.bottom)
+        .ignoresSafeArea(edges: .bottom)
         // 縦バーのポーズでは空のナビゲーションバー帯の分だけ上が空くため、ウィンドウ上端まで広げる。
         // 下端はスクロールする内容なのでシステムに任せる（横バーのポーズでは何もしない）
         .ignoresSafeArea(.container, edges: isVerticalBarPose ? .top : [])
@@ -189,7 +177,7 @@ struct BusScheduleView: View {
             } else if let errorMessage = viewModel.errorMessage {
                 VStack(spacing: 16) {
                     Text(errorMessage)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                         .padding()
                         .multilineTextAlignment(.center)
 
@@ -251,13 +239,13 @@ struct BusTemporaryMessagesView: View {
     ) -> some View {
         HStack(alignment: .center, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .font(.system(size: 14))
 
             // 1行のメッセージでも2行分の高さを確保し、カードの高さを揃える（文字は縦中央）
             Text(message.title)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .frame(minHeight: Self.twoLineTextHeight, alignment: .leading)
@@ -267,7 +255,7 @@ struct BusTemporaryMessagesView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9))
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                     }
                     .contentShape(Rectangle())
                 }
@@ -297,19 +285,31 @@ struct BusScheduleTypeSelector: View {
 
     var body: some View {
         HStack {
-            Picker("スケジュールタイプ", selection: $selectedScheduleType) {
+            Picker("スケジュールタイプ", selection: userSelection) {
                 Text("平日（水曜日を除く）").tag(BusSchedule.ScheduleType.weekday)
                 Text("水曜日").tag(BusSchedule.ScheduleType.wednesday)
                 Text("土曜日").tag(BusSchedule.ScheduleType.saturday)
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal, BusLayout.horizontalPadding)
-            .onChange(of: selectedScheduleType) { _, _ in
-                onChanged()
-            }
         }
         .padding(.vertical, 12)
         .background(Color(UIColor.systemBackground))
+    }
+
+    /// 利用者がセグメントを押したときだけ `onChanged` を呼ぶ選択。
+    ///
+    /// `onChange(of:)` で見張ると、起動時の曜日合わせやディープリンクのように
+    /// プログラムから曜日を変えたときにも、選んだ便とライブアクティビティを捨ててしまう
+    private var userSelection: Binding<BusSchedule.ScheduleType> {
+        Binding(
+            get: { selectedScheduleType },
+            set: { newValue in
+                guard newValue != selectedScheduleType else { return }
+                selectedScheduleType = newValue
+                onChanged()
+            }
+        )
     }
 }
 
@@ -460,7 +460,7 @@ private struct BusRouteChip: View {
                             color: isSelected ? Color.appPrimary.opacity(0.3) : Color.clear,
                             radius: 3, x: 0, y: 2)
                 )
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundStyle(isSelected ? .white : .primary)
         }
         .buttonStyle(PlainButtonStyle())
         .animation(.easeInOut(duration: 0.2), value: isSelected)
@@ -508,99 +508,27 @@ struct BusTimeCardView: View {
     /// 2列表示ではページ共通の情報なので、左右に2回出さず帯の側で1回だけ出す
     var showsPinMessage: Bool = true
 
-    /// 中身の高さを固定するか（2列表示のとき。左右の時刻表を同じ線から始めるため）
-    var fixedContentHeight: CGFloat?
+    /// いちばん背の高い場面（選択中＝バス時刻の行がある）の高さを常に確保するか。
+    /// 2列表示で左右の時刻表を同じ線から始めるために使う
+    var reservesTallestHeight: Bool = false
 
     /// このカードが見ている路線（1列表示では選択中の路線）
     private var effectiveRoute: BusSchedule.RouteType {
         route ?? viewModel.selectedRouteType
     }
 
-    /// このカードに出す選択中の便
+    /// このカードに出す選択中の便（別の路線で選んだ便は出さない）
     private var selectedEntry: BusSchedule.TimeEntry? {
-        if let route {
-            return viewModel.selectedEntry(on: route)
-        }
-        return viewModel.selectedTimeEntry
+        viewModel.selectedEntry(on: effectiveRoute)
     }
 
     var body: some View {
         VStack(spacing: 10) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("現在時刻")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    Text(viewModel.timeFormatter.string(from: viewModel.currentTime))
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.primary)
-                }
-
-                Spacer()
-
-                if let selectedTime = selectedEntry,
-                    viewModel.isTimeEqual(selectedTime, to: viewModel.currentTime) {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("バスの出発時刻です")
-                            .font(.subheadline)
-                            .foregroundColor(.orange)
-                            .transition(.opacity)
-
-                        Text("0分0秒")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.orange)
-                            .transition(.opacity)
-                    }
-                } else if let nextBus = selectedEntry ?? viewModel.getNextBus(for: effectiveRoute) {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(selectedEntry != nil ? "選択したバスまで" : "次のバスまで")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .transition(.opacity)
-
-                        HStack(spacing: 4) {
-                            Text(viewModel.getCountdownText(to: nextBus))
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(selectedEntry != nil ? .orange : .green)
-                                .transition(.opacity)
-
-                            if let note = nextBus.specialNote {
-                                Text(note)
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 2)
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(4)
-                                    .transition(.opacity)
-                            }
-                        }
-
-                        if selectedEntry != nil {
-                            HStack {
-                                Text("バス時刻")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                Text(
-                                    "\(String(format: "%02d:%02d", nextBus.hour, nextBus.minute))"
-                                )
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.orange)
-                            }
-                            .opacity(viewModel.cardInfoAppeared ? 1 : 0)
-                            .offset(y: viewModel.cardInfoAppeared ? 0 : 5)
-                            .transition(.opacity)
-                        }
-                    }
-                } else {
-                    Text("本日の運行は終了しました")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
+            // 秒のカウントダウンはカードの中だけで描き直す（ページの残りは分の境目でしか変わらない）。
+            // 刻みはページの時計の秒の境目に合わせ、表示が秒の途中でずれて進まないようにする
+            TimelineView(.periodic(from: BusScheduleViewModel.nextSecondBoundary(), by: 1)) { context in
+                timeRow(now: BusScheduleViewModel.pageTime(from: context.date))
             }
-            // 2列表示だけ、いちばん背の高い場面の高さを常に確保して左右のカードの高さを揃える
-            .frame(height: fixedContentHeight)
 
             if showsPinMessage, let pinMessage = viewModel.busSchedule?.pin {
                 PinMessageRowView(pinMessage: pinMessage)
@@ -613,6 +541,110 @@ struct BusTimeCardView: View {
         .animation(.easeInOut(duration: 0.2), value: viewModel.selectedTimeEntry)
     }
 
+    /// 現在時刻と、次のバス（または選んだ便）までの残り時間の行
+    private func timeRow(now: Date) -> some View {
+        ZStack {
+            if reservesTallestHeight {
+                tallestLayoutTemplate
+            }
+
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("現在時刻")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Text(viewModel.timeFormatter.string(from: now))
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.primary)
+                }
+
+                Spacer()
+
+                countdown(now: now)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func countdown(now: Date) -> some View {
+        let entry = selectedEntry
+        if let selectedTime = entry, viewModel.isTimeEqual(selectedTime, to: now) {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("バスの出発時刻です")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+                    .transition(.opacity)
+
+                Text("0分0秒")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.orange)
+                    .transition(.opacity)
+            }
+        } else if let nextBus = entry ?? viewModel.getNextBus(for: effectiveRoute, at: now) {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(entry != nil ? "選択したバスまで" : "次のバスまで")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .transition(.opacity)
+
+                HStack(spacing: 4) {
+                    Text(viewModel.getCountdownText(to: nextBus, now: now))
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(entry != nil ? .orange : .green)
+                        .transition(.opacity)
+
+                    if let note = nextBus.specialNote {
+                        Text(note)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Color.red.opacity(0.1))
+                            .clipShape(.rect(cornerRadius: 4))
+                            .transition(.opacity)
+                    }
+                }
+
+                if entry != nil {
+                    HStack {
+                        Text("バス時刻")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        Text(
+                            "\(String(format: "%02d:%02d", nextBus.hour, nextBus.minute))"
+                        )
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.orange)
+                    }
+                    .opacity(viewModel.cardInfoAppeared ? 1 : 0)
+                    .offset(y: viewModel.cardInfoAppeared ? 0 : 5)
+                    .transition(.opacity)
+                }
+            }
+        } else {
+            Text("本日の運行は終了しました")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// いちばん背の高い場面（見出し・残り時間・バス時刻の3行）と同じ文字・同じ間隔の見えない型。
+    ///
+    /// 数値で高さを決めずに実際の文字で場所を取るので、SwiftUIの文字サイズ
+    /// （`dynamicTypeSize` の上限や固定を含む）がそのまま反映される
+    private var tallestLayoutTemplate: some View {
+        VStack(spacing: 4) {
+            Text(verbatim: " ")
+                .font(.subheadline)
+            Text(verbatim: " ")
+                .font(.system(size: 22, weight: .bold))
+            Text(verbatim: " ")
+                .font(.system(size: 13, weight: .medium))
+        }
+        .hidden()
+        .accessibilityHidden(true)
+    }
 }
 
 // MARK: - ピンメッセージ行ビュー
@@ -705,24 +737,26 @@ struct BusTimeTableContent: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
+    /// この表が最後に自動スクロールした時間。
+    /// 毎分の時計では次のバスの時間が変わったときだけスクロールし、
+    /// 利用者が自分でスクロールした位置を分の境目ごとに引き戻さない
+    @State private var lastScrolledHour: Int?
+
     /// この表が見ている路線（1列表示では選択中の路線）
     private var effectiveRoute: BusSchedule.RouteType {
         route ?? viewModel.selectedRouteType
     }
 
     /// この表の中でその便が選ばれているか。
-    /// 1列表示では従来どおり便だけを見る。2列表示では列の路線まで見て、
-    /// 反対向きの同じ「分」が一緒に光らないようにする
+    /// 1列表示でも2列表示でも路線まで見るので、反対向きの同じ「分」が一緒に光ったり、
+    /// 2列表示で別の路線に選んだ便が1列に戻ったときに違う路線の表で光ったりしない
     private func isSelected(_ time: BusSchedule.TimeEntry) -> Bool {
-        if let route {
-            return viewModel.isSelected(time, on: route)
-        }
-        return viewModel.selectedTimeEntry == time
+        viewModel.isSelected(time, on: effectiveRoute)
     }
 
     /// 開いたときに見せたい時間（次のバスの時間）
     private var targetHour: Int? {
-        route == nil ? viewModel.scrollToHour : viewModel.scrollHour(for: effectiveRoute)
+        viewModel.scrollHour(for: effectiveRoute)
     }
 
     /// 表に並べる時間帯（バスの無い時間帯は行にしない）
@@ -736,8 +770,9 @@ struct BusTimeTableContent: View {
     /// 行の上端を上端に合わせるだけで、その行は見出しに隠れず丸ごと見える。
     /// 目当ての行が表の先頭のときだけは、その上にある注記（水曜日の特別ダイヤ）も見えるように、
     /// 行ではなく内容の先頭に合わせる（＝いちばん上で止まる）
-    private func scrollToTarget(_ hour: Int, proxy: ScrollViewProxy) {
-        if visibleSchedules.first?.hour == hour {
+    private func scrollToTarget(_ hour: Int, firstHour: Int?, proxy: ScrollViewProxy) {
+        lastScrolledHour = hour
+        if firstHour == hour {
             proxy.scrollTo(Self.tableTopID, anchor: .top)
         } else {
             proxy.scrollTo("hour_\(hour)", anchor: .top)
@@ -758,6 +793,11 @@ struct BusTimeTableContent: View {
     /// 見出しと行はスクロール領域を境に接しているだけで重ならないので、
     /// 時刻カードと見出しの間や見出しの上に行が覗くことは構造上ありえない
     var body: some View {
+        // 表の行と次のバスは描き直しのたびに1回だけ求め、各行・各分チップへ配る
+        let schedules = visibleSchedules
+        let nextBus = viewModel.getNextBus(for: effectiveRoute)
+        let firstHour = schedules.first?.hour
+
         VStack(spacing: 0) {
             pinnedTableHeader
                 .padding(.horizontal, BusLayout.horizontalPadding)
@@ -767,11 +807,20 @@ struct BusTimeTableContent: View {
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     VStack(alignment: .center, spacing: BusLayout.Spacing.m) {
-                        scheduleRowsView
+                        scheduleRowsView(schedules, nextBus: nextBus)
+                            // 次のバスの時間が変わったときだけ動かす（例: 10:59 の次が 11:05 になった）
                             .onChange(of: targetHour) { _, newValue in
-                                if let hour = newValue {
+                                if let hour = newValue, hour != lastScrolledHour {
                                     withAnimation {
-                                        scrollToTarget(hour, proxy: scrollProxy)
+                                        scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
+                                    }
+                                }
+                            }
+                            // 路線・駅・曜日の変更やフォアグラウンド復帰では、時間が同じでも位置を戻す
+                            .onChange(of: viewModel.scrollRequestID) { _, _ in
+                                if let hour = targetHour {
+                                    withAnimation {
+                                        scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                                     }
                                 }
                             }
@@ -790,7 +839,7 @@ struct BusTimeTableContent: View {
                     if let hour = targetHour {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             withAnimation {
-                                scrollToTarget(hour, proxy: scrollProxy)
+                                scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                             }
                         }
                     }
@@ -840,14 +889,16 @@ struct BusTimeTableContent: View {
             }
     }
 
-    private var scheduleRowsView: some View {
+    private func scheduleRowsView(
+        _ schedules: [BusSchedule.HourSchedule], nextBus: BusSchedule.TimeEntry?
+    ) -> some View {
         VStack(spacing: 0) {
             if viewModel.selectedScheduleType == .wednesday {
                 wednesdaySpecialMessage
             }
 
-            ForEach(Array(visibleSchedules.enumerated()), id: \.element.hour) { index, hourSchedule in
-                hourScheduleRow(hourSchedule, rowIndex: index)
+            ForEach(Array(schedules.enumerated()), id: \.element.hour) { index, hourSchedule in
+                hourScheduleRow(hourSchedule, rowIndex: index, nextBus: nextBus)
             }
         }
         // 表の中の縞模様はそのまま。外側だけカードと同じ白地＋1ptの枠にする
@@ -871,7 +922,7 @@ struct BusTimeTableContent: View {
         HStack(spacing: 0) {
             Text("時間")
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .frame(width: 70, alignment: .center)
                 .padding(.vertical, 12)
 
@@ -881,7 +932,7 @@ struct BusTimeTableContent: View {
 
             Text("発車時刻")
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 12)
         }
@@ -895,11 +946,11 @@ struct BusTimeTableContent: View {
     private var wednesdaySpecialMessage: some View {
         HStack {
             Image(systemName: "info.circle.fill")
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
 
             Text("水曜日は特別ダイヤで運行しています")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Spacer()
         }
@@ -908,12 +959,14 @@ struct BusTimeTableContent: View {
     }
 
 
-    private func hourScheduleRow(_ hourSchedule: BusSchedule.HourSchedule, rowIndex: Int) -> some View {
+    private func hourScheduleRow(
+        _ hourSchedule: BusSchedule.HourSchedule, rowIndex: Int, nextBus: BusSchedule.TimeEntry?
+    ) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Text("\(hourSchedule.hour)")
                     .font(.system(size: 20, weight: .bold, design: .monospaced))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .frame(width: 70, alignment: .center)
                     .padding(.vertical, 12)
 
@@ -924,7 +977,7 @@ struct BusTimeTableContent: View {
                 VStack(alignment: .center) {
                     LazyVGrid(columns: minuteColumns, alignment: .center, spacing: 12) {
                         ForEach(hourSchedule.times, id: \.minute) { time in
-                            timeEntryView(time)
+                            timeEntryView(time, isNextBus: time == nextBus)
                         }
                     }
                 }
@@ -942,7 +995,7 @@ struct BusTimeTableContent: View {
         }
         .id("hour_\(hourSchedule.hour)")
         .background(
-            viewModel.isCurrentHour(hourSchedule.hour, on: effectiveRoute)
+            nextBus?.hour == hourSchedule.hour
                 ? Color.currentHourBackground
                 : (rowIndex % 2 == 0
                     ? Color(UIColor.systemBackground)
@@ -950,32 +1003,29 @@ struct BusTimeTableContent: View {
         )
     }
 
-    private func timeEntryView(_ time: BusSchedule.TimeEntry) -> some View {
-        ZStack(alignment: .topTrailing) {
+    private func timeEntryView(_ time: BusSchedule.TimeEntry, isNextBus: Bool) -> some View {
+        let selected = isSelected(time)
+        return ZStack(alignment: .topTrailing) {
             Text("\(String(format: "%02d", time.minute))")
                 .font(.system(size: 16, weight: .medium, design: .monospaced))
-                .foregroundColor(
-                    viewModel.isCurrentOrNextBus(time, on: effectiveRoute) || isSelected(time)
-                        ? .white : .primary
-                )
+                .foregroundStyle(isNextBus || selected ? .white : .primary)
                 .frame(width: 36, height: 36, alignment: .center)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
                         .fill(
-                            isSelected(time)
+                            selected
                                 ? Color.orange.opacity(0.9)
-                                : (viewModel.isCurrentOrNextBus(time, on: effectiveRoute)
-                                    ? Color.appPrimary : Color.clear)
+                                : (isNextBus ? Color.appPrimary : Color.clear)
                         )
                 )
 
             if let note = time.specialNote {
                 Text(note)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .frame(width: 18, height: 18)
                     .background(Color.red.opacity(0.8))
-                    .cornerRadius(9)
+                    .clipShape(.rect(cornerRadius: 9))
                     .offset(x: 8, y: -4)
             }
         }
@@ -989,21 +1039,21 @@ struct BusTimeTableContent: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("備考")
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             ForEach(viewModel.busSchedule?.specialNotes ?? [], id: \.symbol) { note in
                 HStack(alignment: .top, spacing: 8) {
                     Text(note.symbol)
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .frame(width: 20, height: 20)
                         .background(Color.red.opacity(0.8))
-                        .cornerRadius(10)
+                        .clipShape(.rect(cornerRadius: 10))
 
                     Text(note.description)
                         .font(.system(size: 14))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -1023,18 +1073,18 @@ struct BusTimeTableContent: View {
     private var wednesdayWarningMessage: some View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.red)
+                .foregroundStyle(.red)
 
             Text("水曜日は特別ダイヤで運行しています")
                 .font(.system(size: 15, weight: .bold))
-                .foregroundColor(.red)
+                .foregroundStyle(.red)
 
             Spacer()
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(Color.red.opacity(0.1))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 

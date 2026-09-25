@@ -8,7 +8,7 @@ import SwiftUI
 /// 見出し（路線名と向き）→ 浮かぶ時刻カード（次のバスまで／選択したバスまで）→ その方向の時刻表。
 /// 左右の列は同じこのビューを路線だけ変えて使うので、行の高さも位置も必ず一致する。
 ///
-/// 時刻カードの中身の高さは `BusLayout.TwoPane.timeCardContentHeight` で固定してある。
+/// 時刻カードは、いちばん背の高い場面（選択中）の高さを常に確保する（`reservesTallestHeight`）。
 /// 片方が「本日の運行は終了しました」でもう片方がカウントダウン、という場面でもカードの高さが変わらず、
 /// 下の時刻表が左右で同じ線から始まる。
 /// そのうえで時刻表を下げる量は列ごとの実測ではなく**左右の実測のうち高いほう**（`sharedTimeCardHeight`）で、
@@ -48,7 +48,7 @@ struct BusDirectionColumnView: View {
                     viewModel: viewModel,
                     route: route,
                     showsPinMessage: false,
-                    fixedContentHeight: BusLayout.TwoPane.timeCardContentHeight
+                    reservesTallestHeight: true
                 )
                 .padding(.horizontal, BusLayout.horizontalPadding)
                 .onGeometryChange(for: CGFloat.self) { proxy in

@@ -71,6 +71,7 @@ struct AssignmentView: View {
                 }
 
                 contentView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         // 縦バーのポーズでは空のナビゲーションバー帯の分だけ上が空くため、ウィンドウ上端まで広げる。
@@ -123,97 +124,168 @@ struct AssignmentView: View {
 
     // MARK: - サブビュー
 
-    /// タイトルの下に置く本体（読み込み中・エラー・空・課題リスト）
+    /// タイトルの下に置く本体（読み込み中・エラー・空・課題リスト）。
+    ///
+    /// 取り直しに失敗しても前回の控えが残っていれば、全面のエラーではなく一覧を出したまま
+    /// 上に小さな知らせを出す（全面のエラーは、見せる課題が1件も無いときだけ）
     @ViewBuilder private var contentView: some View {
-        Group {
-            if viewModel.isLoading {
-                ProgressView("読み込み中...")
-                    .progressViewStyle(CircularProgressViewStyle())
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let errorMessage = viewModel.errorMessage {
-                VStack {
-                    Text("エラーが発生しました")
-                        .font(.headline)
-
-                    Text(errorMessage)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding()
-
-                    Button {
-                        viewModel.loadAssignments()
-                    } label: {
-                        Text("再読み込み")
-                    }
-                }
-                .padding()
-            } else if viewModel.assignments.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 60))
-                        .foregroundColor(.green)
-
-                    Text("課題はありません")
-                        .font(.title2)
-
-                    Text("現在提出すべき課題はありません。")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-
-                    Button {
-                        viewModel.loadAssignments()
-                    } label: {
-                        Text("再読み込み")
-                    }
-                }
-                .padding()
+        if viewModel.isLoading {
+            ProgressView("読み込み中...")
+                .progressViewStyle(CircularProgressViewStyle())
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if viewModel.assignments.isEmpty {
+            if let errorMessage = viewModel.errorMessage {
+                loadFailureView(message: errorMessage)
             } else {
-                VStack(spacing: 0) {
-                    // フィルターセグメントコントロール
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 15) {
-                            filterButton(title: NSLocalizedString("すべて", comment: ""), filter: .all)
-                            filterButton(
-                                title: NSLocalizedString("今日", comment: ""), filter: .today)
-                            filterButton(
-                                title: NSLocalizedString("今週", comment: ""), filter: .thisWeek)
-                            filterButton(
-                                title: NSLocalizedString("今月", comment: ""), filter: .thisMonth)
-                            filterButton(
-                                title: NSLocalizedString("期限切れ", comment: ""), filter: .overdue)
-                        }
-                        .padding(.horizontal, AssignmentLayout.horizontalPadding)
-                        .padding(.vertical, 5)
-                    }
-                    .clippedToHorizontalSafeArea(contentInset: AssignmentLayout.horizontalPadding)
-                    .padding(.vertical, 8)
-                    .background(Color(UIColor.systemBackground))
+                emptyView
+            }
+        } else {
+            assignmentList
+        }
+    }
 
-                    // 課題リスト
-                    ScrollView {
-                        if isTwoPane {
-                            twoColumnGrid
-                        } else {
-                            LazyVStack(spacing: AssignmentLayout.cardSpacing) {
-                                ForEach(filteredAssignments) { assignment in
-                                    card(for: assignment)
-                                        .padding(.horizontal, AssignmentLayout.horizontalPadding)
-                                }
-                            }
-                            .padding(.vertical)
-                        }
-                    }
-                    // 折り目はスクロールしない入れ物（＝このスクロールビューの枠）の座標で読む
-                    .onGeometryChange(for: DuoColumnSplit?.self) { proxy in
-                        DuoColumnSplit.make(
-                            proxy: proxy, padding: AssignmentLayout.horizontalPadding)
-                    } action: { columnSplit = $0 }
-                }
+    /// 取得に失敗し、見せる課題も無いとき
+    private func loadFailureView(message: String) -> some View {
+        VStack {
+            Text("エラーが発生しました")
+                .font(.headline)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding()
+
+            Button {
+                viewModel.loadAssignments()
+            } label: {
+                Text("再読み込み")
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    /// 課題が1件も無いとき
+    private var emptyView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 60))
+                .foregroundStyle(.green)
+
+            Text("課題はありません")
+                .font(.title2)
+
+            Text("現在提出すべき課題はありません。")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                viewModel.loadAssignments()
+            } label: {
+                Text("再読み込み")
+            }
+        }
+        .padding()
+    }
+
+    /// 課題の一覧（取り直しの失敗の知らせ・フィルター・カード）
+    private var assignmentList: some View {
+        VStack(spacing: 0) {
+            if let errorMessage = viewModel.errorMessage {
+                refreshFailureNotice(message: errorMessage)
+                    .padding(.horizontal, AssignmentLayout.horizontalPadding)
+                    .padding(.top, AssignmentLayout.Spacing.xs)
+                    .frame(maxWidth: leadingColumnMaxWidth, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // フィルターセグメントコントロール。
+            // 本のポーズでは左の列（ヒンジの手前）に収め、チップが折り目をまたいでスクロールしないようにする
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 15) {
+                    filterButton(title: NSLocalizedString("すべて", comment: ""), filter: .all)
+                    filterButton(
+                        title: NSLocalizedString("今日", comment: ""), filter: .today)
+                    filterButton(
+                        title: NSLocalizedString("今週", comment: ""), filter: .thisWeek)
+                    filterButton(
+                        title: NSLocalizedString("今月", comment: ""), filter: .thisMonth)
+                    filterButton(
+                        title: NSLocalizedString("期限切れ", comment: ""), filter: .overdue)
+                }
+                .padding(.horizontal, AssignmentLayout.horizontalPadding)
+                .padding(.vertical, 5)
+            }
+            .clippedToHorizontalSafeArea(contentInset: AssignmentLayout.horizontalPadding)
+            .frame(maxWidth: leadingColumnMaxWidth, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 8)
+            .background(Color(UIColor.systemBackground))
+
+            // 課題リスト
+            ScrollView {
+                if isTwoPane {
+                    twoColumnGrid
+                } else {
+                    LazyVStack(spacing: AssignmentLayout.cardSpacing) {
+                        ForEach(filteredAssignments) { assignment in
+                            card(for: assignment)
+                                .padding(.horizontal, AssignmentLayout.horizontalPadding)
+                        }
+                    }
+                    .padding(.vertical)
+                }
+            }
+            // 折り目はスクロールしない入れ物（＝このスクロールビューの枠）の座標で読む
+            .onGeometryChange(for: DuoColumnSplit?.self) { proxy in
+                DuoColumnSplit.make(
+                    proxy: proxy, padding: AssignmentLayout.horizontalPadding)
+            } action: { columnSplit = $0 }
+        }
+    }
+
+    /// ページの端から左の列の終わり（ヒンジの手前）までの幅。折り目が無効なときは制限しない
+    private var leadingColumnMaxWidth: CGFloat {
+        columnSplit.map { $0.leadingWidth + AssignmentLayout.horizontalPadding } ?? .infinity
+    }
+
+    /// 取り直しに失敗したが、前回の一覧を出し続けているときの小さな知らせ。
+    /// バスタブの臨時ダイヤの知らせと同じ、オレンジの枠だけで輪郭を取る体裁
+    private func refreshFailureNotice(message: String) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("課題を更新できませんでした")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text(message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                viewModel.loadAssignments()
+            } label: {
+                Text("再読み込み")
+                    .font(.system(size: 13, weight: .medium))
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: CardSurface.cornerRadius)
+                .fill(CardSurface.pageFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CardSurface.cornerRadius)
+                .stroke(Color.orange.opacity(0.4), lineWidth: CardSurface.outlineWidth)
+        )
     }
 
     /// 課題カード1枚（1列でも2列でも同じ部品・同じ動き）
@@ -299,7 +371,7 @@ struct AssignmentView: View {
                             color: selectedFilter == filter ? Color.blue.opacity(0.3) : Color.clear,
                             radius: 3, x: 0, y: 2)
                 )
-                .foregroundColor(selectedFilter == filter ? .white : .primary)
+                .foregroundStyle(selectedFilter == filter ? .white : .primary)
         }
         .buttonStyle(PlainButtonStyle())
     }
