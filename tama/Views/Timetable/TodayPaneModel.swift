@@ -90,6 +90,44 @@ enum TodaySchedule {
         }
     }
 
+    /// 「今日」ペインが使う曜日のキー（"1"=月 〜 "7"=日）。DEBUGの曜日差し替えを反映する
+    static func weekdayKey(for date: Date, calendar: Calendar = .current) -> String {
+        #if DEBUG
+        if let overridden = DuoDebugTimetable.todayWeekday { return overridden }
+        #endif
+        let weekday = calendar.component(.weekday, from: date)
+        return "\(weekday == 1 ? 7 : weekday - 1)"
+    }
+
+    /// バスの時刻表の種類を決める `Calendar` の曜日（1＝日曜）。DEBUGの曜日差し替えを反映する
+    static func calendarWeekday(for date: Date, calendar: Calendar = .current) -> Int {
+        #if DEBUG
+        if let overridden = DuoDebugTimetable.todayWeekday, let japanese = Int(overridden) {
+            // 月=1〜日=7 を Calendar の 日=1〜土=7 に直す
+            return japanese == 7 ? 1 : japanese + 1
+        }
+        #endif
+        return calendar.component(.weekday, from: date)
+    }
+
+    /// その日の「今日」ペインの授業（時間割の全曜日から、その日の曜日の分を取り出す）。
+    ///
+    /// 日付はペインの時計から毎分渡されるので、日付が変わればそのまま翌日の授業に入れ替わる。
+    /// DEBUGのモックの1日を使っているときはそちらを返す
+    static func todayClasses(
+        on date: Date,
+        courses: [String: [String: CourseModel]],
+        periods: [(String, String, String)]
+    ) -> [TodayClass] {
+        #if DEBUG
+        if DuoDebugTimetable.usesMockDay {
+            return DuoDebugTimetable.mockClasses(on: date)
+        }
+        #endif
+        return classes(
+            courses: courses[weekdayKey(for: date)] ?? [:], periods: periods, on: date)
+    }
+
     /// "9:00" のような時刻表記を、基準日のその時刻に変換する
     private static func date(from timeString: String, on referenceDate: Date, calendar: Calendar) -> Date? {
         let parts = timeString.split(separator: ":")

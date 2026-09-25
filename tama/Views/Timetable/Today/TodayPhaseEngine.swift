@@ -189,6 +189,9 @@ struct TodayPaneState: Equatable {
     /// 今日の時刻表そのものが手元にあるか。
     /// 「運行が終わった」と「そもそも時刻表が無い（日曜・控えが古い）」を言い分けるために使う
     let hasSchedule: Bool
+
+    /// 学校に居ないと分かっているか（帰りのバスを出さない理由を一言で言うのに使う）
+    var isOffCampus = false
 }
 
 // MARK: - 入力
@@ -218,6 +221,16 @@ struct TodayPaneInput {
     /// 発車したあとに「次はこの便に乗れば間に合います」と勧めるのは、
     /// すでに乗っている人には的外れなので、通学の案内そのものをやめる合図に使う
     var hasDepartedTowardSchool = false
+
+    /// 通学の案内をやめるか。
+    /// 記録済みの発車（`hasDepartedTowardSchool`）に加えて、選んでいる学校行きの便の発車時刻を
+    /// `now` が過ぎていれば、選択がまだ捨てられていなくても発車したものとして扱う
+    /// （ペインを開いたまま発車時刻を迎えても、乗っている人に別の便を勧めない）
+    var hasLeftForSchool: Bool {
+        if hasDepartedTowardSchool { return true }
+        guard let selection, selection.route.isTowardSchool else { return false }
+        return selection.date <= now
+    }
 }
 
 // MARK: - 場面を決める
@@ -234,7 +247,8 @@ enum TodayPhaseEngine {
             homeBus: homeBus(input),
             lateBus: lateBus(input: input),
             station: input.station,
-            hasSchedule: !input.bus.isEmpty)
+            hasSchedule: !input.bus.isEmpty,
+            isOffCampus: input.isOnCampus == false)
     }
 
     // MARK: - 場面
@@ -298,7 +312,7 @@ enum TodayPhaseEngine {
     private static func commutePhase(
         _ input: TodayPaneInput, firstLesson: TodayClass
     ) -> TodayPhase? {
-        guard !input.hasDepartedTowardSchool else { return nil }
+        guard !input.hasLeftForSchool else { return nil }
         let now = input.now
 
         // バスタブで選んだ便があれば、それを最優先で案内する
@@ -371,7 +385,7 @@ enum TodayPhaseEngine {
     /// 学内に居ると分かっている・もう発車した便に乗っている・まだ間に合う便が残っている、
     /// のいずれかなら出さない（すでに大学に居る人に「遅刻の可能性」と言わない）
     private static func lateBus(input: TodayPaneInput) -> BusPlan? {
-        guard input.isOnCampus != true, !input.hasDepartedTowardSchool else { return nil }
+        guard input.isOnCampus != true, !input.hasLeftForSchool else { return nil }
         guard let first = input.classes.first, first.start > input.now else { return nil }
 
         let station = input.station
@@ -451,6 +465,9 @@ enum TodayPhaseEngine {
     /// 授業がもう終わっている（または今日は授業が無い）ときは、いまより後の最初の便になる
     private static func homeBus(_ input: TodayPaneInput) -> BusPlan? {
         if let selected = selectedPlan(input, towardSchool: false) { return selected }
+
+        // 学校に居ないと分かっているなら、帰りのバスは勧めない（`afterSchoolBus` と同じ判定）
+        guard input.isOnCampus != false else { return nil }
 
         let station = input.station
         let anchor = max(input.now, input.classes.last?.end ?? input.now)

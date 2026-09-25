@@ -17,22 +17,22 @@ enum TodayPaneTokens {
     enum Spacing {
 
         /// 4pt（数字と単位の間など、いちばん細かい間）
-        static let xxs: CGFloat = 4
+        static let xxSmall: CGFloat = 4
 
         /// 6pt（見出しの記号と文字の間）
         static let header: CGFloat = 6
 
         /// 8pt（見出しの行と科目名の間・ボタンとボタンの間）
-        static let xs: CGFloat = 8
+        static let xSmall: CGFloat = 8
 
         /// 12pt（科目名と下の段の間・下の段と進み具合のバーの間）
-        static let s: CGFloat = 12
+        static let small: CGFloat = 12
 
         /// 16pt（タイルの内側の余白・組と組の間・ペインの左右の余白）
-        static let m: CGFloat = 16
+        static let medium: CGFloat = 16
 
         /// 24pt（①の事実どうしの間）
-        static let xl: CGFloat = 24
+        static let xLarge: CGFloat = 24
     }
 
     // MARK: - 文字
@@ -66,10 +66,10 @@ enum TodayPaneTokens {
     enum Metrics {
 
         /// ペインの左右の余白（見出しの末尾側の余白もこれに合わせる）
-        static let horizontalInset = Spacing.m
+        static let horizontalInset = Spacing.medium
 
         /// タイルの内側の余白（上下左右とも同じ値）
-        static let tilePadding = Spacing.m
+        static let tilePadding = Spacing.medium
 
         /// タイルの角丸。左ペインの時限セル（`TimeSlotCell`）と同じ値にする
         static let cornerRadius = TimeSlotCell.cornerRadius
@@ -85,10 +85,10 @@ enum TodayPaneTokens {
 
         /// 見出しの行の高さと、見出しと中身のあいだ（`TodayStackLayout` の計算と揃える）
         static let headerHeight: CGFloat = 17
-        static let headerGap = Spacing.xs
+        static let headerGap = Spacing.xSmall
 
         /// 進み具合のバーの高さ
-        static let progressBar = Spacing.xxs
+        static let progressBar = Spacing.xxSmall
 
         /// 丸いボタンの見た目の高さ（押せる高さは `minimumHit` で別に取る）
         static let buttonHeight: CGFloat = 34
@@ -106,7 +106,7 @@ enum TodayPaneTokens {
         static let headerSymbol: CGFloat = 12
 
         /// 行を押したときの角丸
-        static let rowCornerRadius = Spacing.xs
+        static let rowCornerRadius = Spacing.xSmall
     }
 
     // MARK: - 濃さ

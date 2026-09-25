@@ -25,17 +25,18 @@ import SwiftUI
 /// - 課題は課題タブと共通の `AssignmentStore`（10分に1回まで。この画面のために増やさない）
 /// - 掲示だけ `CourseNoticeStore` が授業ごとに1回取りに行き、30分ほど控える
 ///
-/// 時刻に依存する部分は `TimelineView(.periodic(...))` で1分ごとに描き直す。
+/// 時刻に依存する部分（見出しの日付を含む）は `TimelineView(.everyMinute)` で分の変わり目ちょうどに描き直す。
+/// 日付もこの時計から求めるので、日付が変わればそのまま翌日の中身になる。
 /// 残り10分を切った数字だけはシステム側が秒まで描き直す
 struct TodayPaneView: View {
 
     // MARK: - プロパティ
 
-    /// 見出しに出す日付（DEBUGの曜日差し替えを使っていない限り今日）
-    let referenceDate: Date
+    /// 時間割の全曜日の授業（曜日キー → 時限キー → 授業）。今日の分はペインの時計の日付で取り出す
+    let courses: [String: [String: CourseModel]]
 
-    /// 今日の授業（時限順）
-    let todayClasses: [TodayClass]
+    /// `TimetableViewModel.getPeriods()` が返す（時限, 開始, 終了）の一覧
+    let periods: [(String, String, String)]
 
     /// システムのバーが縦バーとして表示されているか（見出しの上端の取り方が変わる）
     let isVerticalBarPose: Bool
@@ -52,10 +53,11 @@ struct TodayPaneView: View {
     /// 課題の一覧へ（課題タブへ切り替える）
     let onOpenAssignments: () -> Void
 
-    @StateObject private var selectionStore = BusSelectionStore.shared
-    @StateObject private var presence = CampusPresenceService.shared
-    @StateObject private var noticeStore = CourseNoticeStore.shared
-    @StateObject private var assignmentStore = AssignmentStore.shared
+    // どれもアプリ全体で共有しているシングルトンなので、このビューは持ち主にならず見ているだけにする
+    @ObservedObject private var selectionStore = BusSelectionStore.shared
+    @ObservedObject private var presence = CampusPresenceService.shared
+    @ObservedObject private var noticeStore = CourseNoticeStore.shared
+    @ObservedObject private var assignmentStore = AssignmentStore.shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -64,6 +66,9 @@ struct TodayPaneView: View {
 
     /// ①のタイルの実測の高さ（②と③④に配る高さを決めるのに使う）
     @State private var lessonHeight: CGFloat = 0
+
+    /// 1分ごとに読み直すバスの時刻表（`BusScheduleService` は変更を知らせないので、時計の刻みで読む）
+    @State private var busSchedule: BusScheduleRead?
 
     /// ペインの時計（DEBUGの時刻差し替えを通す）
     private let clock = TodayClock.current
@@ -83,14 +88,14 @@ struct TodayPaneView: View {
         }
         .onAppear {
             presence.start()
-            selectionStore.pruneIfPassed(now: clock.now(Date()))
+            refresh(at: clock.now(Date()))
             assignmentStore.loadIfNeeded()
         }
         .onDisappear(perform: presence.stop)
         .onReceive(
             NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
         ) { _ in
-            selectionStore.pruneIfPassed(now: clock.now(Date()))
+            refresh(at: clock.now(Date()))
             assignmentStore.loadIfNeeded()
         }
         .sheet(item: $noticeURL) { link in
@@ -99,20 +104,33 @@ struct TodayPaneView: View {
     }
 
     private var pane: some View {
-        VStack(spacing: 0) {
-            TodayPaneHeader(
-                date: referenceDate, isVerticalBarPose: isVerticalBarPose, metrics: metrics)
-                .frame(height: metrics.gridTop, alignment: .top)
+        // 分の変わり目ちょうどに描き直す（`.periodic(from: .now, by: 60)` だと開いた秒数だけずれる）
+        TimelineView(.everyMinute) { context in
+            let now = clock.now(context.date)
+            let classes = TodaySchedule.todayClasses(on: now, courses: courses, periods: periods)
 
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                let now = clock.now(context.date)
-                content(board: board(now: now))
+            VStack(spacing: 0) {
+                TodayPaneHeader(date: now, isVerticalBarPose: isVerticalBarPose, metrics: metrics)
+                    .frame(height: metrics.gridTop, alignment: .top)
+
+                content(board: board(now: now, classes: classes), classes: classes)
+                    // タイルの束は左の表とまったく同じ高さに収める（めくらない）
+                    .frame(height: metrics.gridHeight, alignment: .top)
             }
-            // タイルの束は左の表とまったく同じ高さに収める（めくらない）
-            .frame(height: metrics.gridHeight, alignment: .top)
+            // 刻みごとに、発車した選択を片付けて時刻表を読み直す
+            .onChange(of: context.date) { _, date in
+                refresh(at: clock.now(date))
+            }
         }
         .padding(.horizontal, Token.Metrics.horizontalInset)
         .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// 時計が進んだとき（と、表示・前面に戻ったとき）の片付け。
+    /// 発車時刻を過ぎた選択を捨て（学校行きなら発車を記録する）、バスの時刻表を読み直す
+    private func refresh(at now: Date) {
+        selectionStore.pruneIfPassed(now: now)
+        busSchedule = BusScheduleRead(schedule: Self.readBusSchedule())
     }
 
     // MARK: - 中身
@@ -121,8 +139,9 @@ struct TodayPaneView: View {
     ///
     /// 高さの配り方は `TodayStackLayout` が数として決める。
     /// ①は中身の高さのまま（測った値を渡す）、②はもらった高さに行を等分して敷き、
-    /// ③④は残り全部を受け取って、入るだけ一覧の行を並べる
-    private func content(board: TodayBoard) -> some View {
+    /// ③④は残り全部を受け取って、入るだけ一覧の行を並べる。
+    /// 縦積みで1行も入らないタイルは出さない（左の表の下端からはみ出さないため）
+    private func content(board: TodayBoard, classes: [TodayClass]) -> some View {
         let layout = self.layout(for: board)
 
         return VStack(spacing: metrics.rowGap) {
@@ -132,7 +151,8 @@ struct TodayPaneView: View {
                 onSelect: onSelect,
                 onOpenNotice: open(notice:period:))
                 .modifier(
-                    NoticeLoader(lesson: noticeLesson(for: board.lesson), store: noticeStore))
+                    NoticeLoader(
+                        lesson: noticeLesson(for: board.lesson, in: classes), store: noticeStore))
                 // 測るのは「足した高さを除いた」①の素の高さ。
                 // 足したぶんを引かずに入れ直すと、割り付けと測定が互いを追いかけてしまう
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measured in
@@ -155,9 +175,13 @@ struct TodayPaneView: View {
                 .frame(maxHeight: .infinity)
             } else {
                 // バスは中身の高さのままの帯にして、残りは課題が取る
-                bus(board, layout: layout)
-                assignments(board, layout: layout)
-                    .frame(maxHeight: .infinity)
+                if layout.busRows > 0 {
+                    bus(board, layout: layout)
+                }
+                if layout.assignmentRows > 0 {
+                    assignments(board, layout: layout)
+                        .frame(maxHeight: .infinity)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -200,10 +224,10 @@ struct TodayPaneView: View {
     private static let estimatedLessonHeight: CGFloat = 176
 
     /// その時刻の4枚のタイルを組み立てる
-    private func board(now: Date) -> TodayBoard {
+    private func board(now: Date, classes: [TodayClass]) -> TodayBoard {
         TodayBoardBuilder.make(
-            state: TodayPhaseEngine.state(for: input(now: now)),
-            classes: todayClasses,
+            state: TodayPhaseEngine.state(for: input(now: now, classes: classes)),
+            classes: classes,
             assignments: assignmentStore.assignments,
             now: now,
             clock: clock,
@@ -214,10 +238,10 @@ struct TodayPaneView: View {
 
     // MARK: - 入力の組み立て
 
-    private func input(now: Date) -> TodayPaneInput {
+    private func input(now: Date, classes: [TodayClass]) -> TodayPaneInput {
         TodayPaneInput(
             now: now,
-            classes: todayClasses,
+            classes: classes,
             bus: busSnapshot(now: now),
             station: selectionStore.preferredStation,
             selection: selectionStore.selectedDeparture,
@@ -226,8 +250,16 @@ struct TodayPaneView: View {
         )
     }
 
-    /// 今日のバス時刻表。12時間より古いキャッシュしか無いときはダミーが返るので使わない
+    /// 今日のバス時刻表（刻みごとに読んだ控えから作る。まだ読んでいなければその場で1回だけ読む）
     private func busSnapshot(now: Date) -> BusSnapshot {
+        BusSnapshot.make(
+            schedule: (busSchedule ?? BusScheduleRead(schedule: Self.readBusSchedule())).schedule,
+            weekday: TodaySchedule.calendarWeekday(for: now),
+            referenceDate: now)
+    }
+
+    /// バスの時刻表を読む。12時間より古いキャッシュしか無いときはダミーが返るので使わない
+    private static func readBusSchedule() -> BusSchedule? {
         var schedule: BusSchedule?
         if BusScheduleService.shared.isCacheValid() {
             schedule = BusScheduleService.shared.getBusScheduleData()
@@ -237,20 +269,7 @@ struct TodayPaneView: View {
             schedule = DuoDebugTimetable.mockBusSchedule()
         }
         #endif
-
-        return BusSnapshot.make(
-            schedule: schedule, weekday: calendarWeekday, referenceDate: now)
-    }
-
-    /// バスの時刻表の種類を決める曜日（DEBUGの曜日差し替えを反映する）
-    private var calendarWeekday: Int {
-        #if DEBUG
-        if let overridden = DuoDebugTimetable.todayWeekday, let japanese = Int(overridden) {
-            // 月=1〜日=7 を Calendar の 日=1〜土=7 に直す
-            return japanese == 7 ? 1 : japanese + 1
-        }
-        #endif
-        return Calendar.current.component(.weekday, from: referenceDate)
+        return schedule
     }
 
     /// 学内に居るか（DEBUGの差し替えがあればそれを使う）
@@ -274,9 +293,9 @@ struct TodayPaneView: View {
     // MARK: - 掲示
 
     /// 掲示を取りに行く対象の授業（①のタイルが授業を映しているあいだだけ）
-    private func noticeLesson(for tile: TodayLessonTileModel) -> TodayClass? {
+    private func noticeLesson(for tile: TodayLessonTileModel, in classes: [TodayClass]) -> TodayClass? {
         guard let period = tile.period else { return nil }
-        return todayClasses.first { $0.period == period }
+        return classes.first { $0.period == period }
     }
 
     /// 「掲示」を押したとき。
@@ -300,6 +319,13 @@ struct TodayPaneView: View {
         guard let url = URL(string: urlString) else { return }
         UIApplication.shared.open(url)
     }
+}
+
+// MARK: - 読んだバスの時刻表
+
+/// 刻みごとに読んだバスの時刻表（読んだが使えなかった＝nil と、まだ読んでいないを分けるための包み）
+private struct BusScheduleRead {
+    let schedule: BusSchedule?
 }
 
 // MARK: - Safariで開く掲示
@@ -349,7 +375,7 @@ private struct TodayPaneHeader: View {
     }
 
     private var glyphTopMargin: CGFloat {
-        isVerticalBarPose ? VerticalBarLayout.edgeMargin : TodayPaneTokens.Spacing.xs
+        isVerticalBarPose ? VerticalBarLayout.edgeMargin : TodayPaneTokens.Spacing.xSmall
     }
 
     var body: some View {

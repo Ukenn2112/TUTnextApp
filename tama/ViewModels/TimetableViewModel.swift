@@ -49,10 +49,12 @@ final class TimetableViewModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isLoading = false
-                self.hasLoadedOnce = true
 
                 switch result {
                 case .success(let timetableData):
+                    // 取得に成功したときだけ「読み込み済み」にする。
+                    // 失敗のあとに再試行したときは、見本のデータではなく読み込み表示を出す
+                    self.hasLoadedOnce = true
                     if !timetableData.isEmpty {
                         self.courses = timetableData
                     }

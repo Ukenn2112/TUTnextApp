@@ -136,6 +136,14 @@ struct CourseDetailView: View {
 
     // MARK: - ヘルパー
 
+    /// 選んでいる色。番号がプリセットの範囲外（色の数が変わった・保存値が古い）でも落ちないようにする
+    private var selectedColor: Color {
+        if presetColors.indices.contains(selectedColorIndex) {
+            return presetColors[selectedColorIndex]
+        }
+        return presetColors.first ?? Color.gray
+    }
+
     /// 時限バッジのテキスト色
     private var periodBadgeTextColor: Color {
         if colorScheme == .dark {
@@ -143,7 +151,7 @@ struct CourseDetailView: View {
             return Color.white.opacity(0.9)
         }
         // ライトモード: パステル色から彩度アップ・明度ダウンで視認性の高い派生色を生成
-        let base = presetColors[selectedColorIndex]
+        let base = selectedColor
         var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
         UIColor(base).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
         guard saturation > 0.05 else { return .secondary }
@@ -152,7 +160,7 @@ struct CourseDetailView: View {
 
     /// 時限バッジの背景色
     private var periodBadgeBackgroundColor: Color {
-        let base = presetColors[selectedColorIndex]
+        let base = selectedColor
         if colorScheme == .dark {
             // ダークモード: カラーセットのダーク変種を使用（tertiarySystemFillをベースに重ねる）
             return base.opacity(0.85)
@@ -167,14 +175,14 @@ struct CourseDetailView: View {
     private func sectionHeader(icon: String, title: LocalizedStringKey, trailing: Text? = nil) -> some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
             Text(title)
                 .font(.system(size: 16, weight: .medium))
             Spacer()
             if let trailing {
                 trailing
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.secondary)
             }
         }
     }
@@ -183,6 +191,13 @@ struct CourseDetailView: View {
     private var closeLabel: String {
         NSLocalizedString("閉じる", comment: "科目詳細を閉じる")
     }
+
+}
+
+// MARK: - 各カード
+
+// 型の本体が長くなりすぎないよう、画面を組み立てる各カードは拡張に分けてある
+extension CourseDetailView {
 
     // MARK: - Hero Header
 
@@ -193,17 +208,17 @@ struct CourseDetailView: View {
                     HStack {
                         Text(course.periodInfo)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(periodBadgeTextColor)
+                            .foregroundStyle(periodBadgeTextColor)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .glassEffect(.regular.tint(presetColors[selectedColorIndex]), in: .capsule)
+                            .glassEffect(.regular.tint(selectedColor), in: .capsule)
 
                         Spacer()
 
                         Button(action: close) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(Color.secondary)
                                 .frame(width: 28, height: 28)
                         }
                         .buttonStyle(.glass)
@@ -215,7 +230,7 @@ struct CourseDetailView: View {
                 HStack {
                     Text(course.periodInfo)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(periodBadgeTextColor)
+                        .foregroundStyle(periodBadgeTextColor)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(
@@ -230,7 +245,7 @@ struct CourseDetailView: View {
                     Button(action: close) {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(Color.secondary)
                             .frame(width: 28, height: 28)
                             .background(Color(UIColor.tertiarySystemFill))
                             .clipShape(Circle())
@@ -241,16 +256,16 @@ struct CourseDetailView: View {
 
             Text(course.name)
                 .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.primary)
+                .foregroundStyle(Color.primary)
 
             HStack(spacing: 16) {
                 Label(course.teacher, systemImage: "person.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.secondary)
 
                 Label("\(course.room) 教室", systemImage: "mappin.and.ellipse")
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.secondary)
             }
         }
         .padding(.top, 8)
@@ -281,11 +296,11 @@ struct CourseDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(announcement.title)
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(Color.primary)
                                         .multilineTextAlignment(.leading)
                                     Text(announcement.formattedDate)
                                         .font(.system(size: 12))
-                                        .foregroundColor(.gray)
+                                        .foregroundStyle(.gray)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -303,7 +318,7 @@ struct CourseDetailView: View {
             } else {
                 Text("掲示はありません")
                     .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 4)
             }
@@ -325,11 +340,11 @@ struct CourseDetailView: View {
                         VStack(spacing: 4) {
                             Text("\(data.count)")
                                 .font(.system(size: 30, weight: .bold))
-                                .foregroundColor(data.color)
+                                .foregroundStyle(data.color)
 
                             Text(data.type)
                                 .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(Color.secondary)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -372,7 +387,7 @@ struct CourseDetailView: View {
                                 "\(data.type) \(data.percentage(total: viewModel.totalAttendance))"
                             )
                             .font(.system(size: 14))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(Color.secondary)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -381,7 +396,7 @@ struct CourseDetailView: View {
             } else {
                 Text("出欠情報はありません")
                     .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 4)
             }
@@ -395,7 +410,7 @@ struct CourseDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "note.text")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.secondary)
                 Text("メモ")
                     .font(.system(size: 16, weight: .medium))
                 Spacer()
@@ -408,7 +423,7 @@ struct CourseDetailView: View {
                     }) {
                         Text("保存")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(Color.appPrimary))
@@ -422,7 +437,7 @@ struct CourseDetailView: View {
                 if viewModel.memo.isEmpty && !isMemoFocused {
                     Text("持ち物や小テスト情報など\n授業に関することをメモできます。")
                         .font(.system(size: 14))
-                        .foregroundColor(Color(UIColor.placeholderText))
+                        .foregroundStyle(Color(UIColor.placeholderText))
                         .lineSpacing(4)
                         .padding(.horizontal, 5)
                         .padding(.top, 8)
@@ -431,7 +446,7 @@ struct CourseDetailView: View {
 
                 TextEditor(text: $viewModel.memo)
                     .font(.system(size: 14))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(Color.primary)
                     .frame(minHeight: 60)
                     .focused($isMemoFocused)
                     .onChange(of: viewModel.memo) { _, _ in
@@ -469,20 +484,20 @@ struct CourseDetailView: View {
                 HStack {
                     Image(systemName: "book.closed")
                         .font(.system(size: 14))
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.gray)
                         .frame(width: 28, height: 28)
                         .background(Color.gray.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
 
                     Text("シラバス")
                         .font(.system(size: 16))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(Color.primary)
 
                     Spacer()
 
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
         }
@@ -505,7 +520,8 @@ struct CourseDetailView: View {
             sectionHeader(icon: "paintpalette", title: "色を選択")
 
             LazyVGrid(columns: colorColumns, spacing: 12) {
-                ForEach(1..<presetColors.count, id: \.self) { index in
+                // 0番（白）は見本に出さない（色が1つも無くても範囲が壊れないように indices から作る）
+                ForEach(Array(presetColors.indices.dropFirst()), id: \.self) { index in
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             selectedColorIndex = index
@@ -532,7 +548,7 @@ struct CourseDetailView: View {
                             .overlay(
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(Color.primary)
                                     .opacity(selectedColorIndex == index ? 1 : 0)
                                     .scaleEffect(selectedColorIndex == index ? 1 : 0.5)
                                     .animation(
@@ -560,14 +576,14 @@ struct CourseDetailView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
 
             Text("エラーが発生しました")
                 .font(.system(size: 18, weight: .semibold))
 
             Text(message)
                 .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
@@ -576,7 +592,7 @@ struct CourseDetailView: View {
             }) {
                 Text("再読み込み")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 10)
                     .background(Capsule().fill(Color.blue))

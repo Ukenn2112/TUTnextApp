@@ -67,7 +67,7 @@ struct TodayTile<Content: View>: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
 
-            Spacer(minLength: Token.Spacing.xxs)
+            Spacer(minLength: Token.Spacing.xxSmall)
 
             if let trailing {
                 // 幅が足りないときは、いちばん後ろの総数から先に落とす
@@ -91,7 +91,7 @@ struct TodayTile<Content: View>: View {
     private func trailingLabel(
         _ trailing: TodayTileTrailing, showsCount: Bool
     ) -> some View {
-        HStack(spacing: Token.Spacing.xxs) {
+        HStack(spacing: Token.Spacing.xxSmall) {
             if let accent = trailing.accent {
                 Text(accent).foregroundStyle(trailing.accentColor)
             }
@@ -244,25 +244,14 @@ struct TodayRow: View {
 
     /// 時刻の列を置いた行で、文字の段が始まる位置（区切り線もここから引く）
     static var textLeading: CGFloat {
-        TodayPaneTokens.Metrics.timeColumn + TodayPaneTokens.Spacing.xs
+        TodayPaneTokens.Metrics.timeColumn + TodayPaneTokens.Spacing.xSmall
     }
 
     var body: some View {
-        HStack(spacing: Token.Spacing.xs) {
+        HStack(spacing: Token.Spacing.xSmall) {
             if let time {
                 VStack(alignment: .leading, spacing: 1) {
-                    (Text(time)
-                        .font(
-                            .system(
-                                size: emphasisesTime
-                                    ? Token.Typography.title : Token.Typography.body,
-                                weight: emphasisesTime ? .bold : .semibold))
-                        .monospacedDigit()
-                        .foregroundColor(.primary)
-                        + Text(timeMark ?? "")
-                        .font(.system(size: Token.Typography.micro, weight: .bold))
-                        .foregroundColor(.red)
-                        .baselineOffset(Token.Spacing.xxs + 2))
+                    Text(timeText(time))
                         .minimumScaleFactor(0.85)
                     if let timeCaption {
                         Text(timeCaption)
@@ -283,7 +272,7 @@ struct TodayRow: View {
                 subtitleView
             }
 
-            Spacer(minLength: Token.Spacing.xs)
+            Spacer(minLength: Token.Spacing.xSmall)
 
             if let value {
                 VStack(alignment: .trailing, spacing: 1) {
@@ -305,9 +294,29 @@ struct TodayRow: View {
         .contentShape(Rectangle())
     }
 
+    /// 時刻と、その右肩の赤い備考記号を1つの文字列にする（縮めるときに2つが一緒に縮むように）
+    private func timeText(_ time: String) -> AttributedString {
+        // UIKit にも同じ名前の属性があるので、SwiftUI の属性だと明示する
+        var text = AttributedString(time)
+        text.swiftUI.font = Font.system(
+            size: emphasisesTime ? Token.Typography.title : Token.Typography.body,
+            weight: emphasisesTime ? .bold : .semibold
+        ).monospacedDigit()
+        text.swiftUI.foregroundColor = Color.primary
+
+        if let timeMark {
+            var mark = AttributedString(timeMark)
+            mark.swiftUI.font = Font.system(size: Token.Typography.micro, weight: .bold)
+            mark.swiftUI.foregroundColor = Color.red
+            mark.swiftUI.baselineOffset = Token.Spacing.xxSmall + 2
+            text += mark
+        }
+        return text
+    }
+
     @ViewBuilder private var subtitleView: some View {
         if let live {
-            HStack(spacing: Token.Spacing.xxs) {
+            HStack(spacing: Token.Spacing.xxSmall) {
                 Text(live.prefix)
                 Text(
                     timerInterval: Date()...max(live.target, Date().addingTimeInterval(1)),

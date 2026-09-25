@@ -42,26 +42,30 @@ struct TodayLessonTile: View {
                 headline(lesson)
 
                 bottomRail(lesson)
-                    .padding(.top, Token.Spacing.s + extraSpacing)
+                    .padding(.top, Token.Spacing.small + extraSpacing)
 
                 if let progress = lesson.progress {
                     self.progress(lesson, value: progress)
-                        .padding(.top, Token.Spacing.s)
+                        .padding(.top, Token.Spacing.small)
                 }
             }
         }
     }
 
     private func title(_ lesson: TodayLessonTileModel.Lesson) -> String {
-        let state = lesson.state == .inClass
-            ? NSLocalizedString("授業中", comment: "「今日」ペイン")
-            : NSLocalizedString("次の授業", comment: "「今日」ペイン")
-        return state + " · " + PeriodLabel.text(for: lesson.periodNumber)
+        let period = lesson.periodNumber
+        return lesson.state == .inClass
+            ? String(
+                localized: "授業中 · \(period)限",
+                comment: "「今日」ペインの授業のタイルの見出し。授業中の時限")
+            : String(
+                localized: "次の授業 · \(period)限",
+                comment: "「今日」ペインの授業のタイルの見出し。次の授業の時限")
     }
 
     /// 科目名と、その右に置く要の数字（残り時間）
     private func headline(_ lesson: TodayLessonTileModel.Lesson) -> some View {
-        HStack(alignment: .top, spacing: Token.Spacing.m) {
+        HStack(alignment: .top, spacing: Token.Spacing.medium) {
             Text(lesson.courseName)
                 .font(.system(size: Token.Typography.headline, weight: .semibold))
                 .foregroundStyle(.primary)
@@ -123,9 +127,9 @@ struct TodayLessonTile: View {
     /// タイルの底に敷く1本の段。左に名札の付いた事実（教室・教員）、右に押せるもの。
     /// 事実の値とボタンが同じ底の線に乗るので、2つの組が1本の段に見える
     private func bottomRail(_ lesson: TodayLessonTileModel.Lesson) -> some View {
-        HStack(alignment: .bottom, spacing: Token.Spacing.s) {
+        HStack(alignment: .bottom, spacing: Token.Spacing.small) {
             facts(lesson)
-            Spacer(minLength: Token.Spacing.xs)
+            Spacer(minLength: Token.Spacing.xSmall)
             actions(lesson)
         }
     }
@@ -133,7 +137,7 @@ struct TodayLessonTile: View {
     /// 名札の付いた事実を横に並べる（教室・教員）。
     /// 名札の上端はそろえ、値は同じ高さの箱の底にそろえるので、どちらも1本の線に乗って見える
     private func facts(_ lesson: TodayLessonTileModel.Lesson) -> some View {
-        HStack(alignment: .top, spacing: Token.Spacing.xl) {
+        HStack(alignment: .top, spacing: Token.Spacing.xLarge) {
             roomFact(lesson)
             if let teacher = lesson.teacher {
                 fact(label: NSLocalizedString("教員", comment: "「今日」ペイン")) {
@@ -155,7 +159,7 @@ struct TodayLessonTile: View {
                 label: NSLocalizedString("教室 · 変更あり", comment: "「今日」ペイン"),
                 labelColor: .orange
             ) {
-                HStack(alignment: .lastTextBaseline, spacing: Token.Spacing.xs) {
+                HStack(alignment: .lastTextBaseline, spacing: Token.Spacing.xSmall) {
                     Text(room)
                         .font(.system(size: Token.Typography.headline, weight: .bold))
                         .monospacedDigit()
@@ -208,7 +212,7 @@ struct TodayLessonTile: View {
 
     /// 授業中だけ引く。開始時刻と終了時刻のあいだに置くので意味が一意に決まる
     private func progress(_ lesson: TodayLessonTileModel.Lesson, value: Double) -> some View {
-        HStack(spacing: Token.Spacing.xs) {
+        HStack(spacing: Token.Spacing.xSmall) {
             Text(lesson.startTime)
             Capsule()
                 .fill(Color(UIColor.tertiarySystemFill))
@@ -232,7 +236,7 @@ struct TodayLessonTile: View {
 
     /// 押せるものはここにだけ置く（タイルそのものは押せない）
     private func actions(_ lesson: TodayLessonTileModel.Lesson) -> some View {
-        HStack(spacing: Token.Spacing.xs) {
+        HStack(spacing: Token.Spacing.xSmall) {
             Button {
                 onSelect(lesson.period)
             } label: {
@@ -244,7 +248,7 @@ struct TodayLessonTile: View {
                 Button {
                     onOpenNotice(lesson.notice, lesson.period)
                 } label: {
-                    HStack(spacing: Token.Spacing.xxs) {
+                    HStack(spacing: Token.Spacing.xxSmall) {
                         Text(NSLocalizedString("掲示", comment: "「今日」ペイン"))
                         if lesson.unreadCount > 0 {
                             badge(lesson.unreadCount)
@@ -262,7 +266,7 @@ struct TodayLessonTile: View {
             .font(.system(size: Token.Typography.micro, weight: .bold))
             .foregroundStyle(.white)
             .monospacedDigit()
-            .padding(.horizontal, Token.Spacing.xxs)
+            .padding(.horizontal, Token.Spacing.xxSmall)
             .frame(minWidth: Token.Metrics.badge, minHeight: Token.Metrics.badge)
             .background { Capsule().fill(Token.Accent.lesson) }
     }

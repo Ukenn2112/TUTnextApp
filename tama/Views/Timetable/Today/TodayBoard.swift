@@ -385,12 +385,14 @@ extension TodayBoardBuilder {
                     lesson.course.room, room ?? ""))
         }
 
-        var detail = String(
-            format: NSLocalizedString("〜%@", comment: "「今日」ペインの終了時刻"),
-            TodayFormat.time(lesson.end))
-        if !lesson.course.teacher.isEmpty {
-            detail += " · " + lesson.course.teacher
-        }
+        let endTime = TodayFormat.time(lesson.end)
+        let teacher = lesson.course.teacher
+        let detail = teacher.isEmpty
+            ? String(
+                format: NSLocalizedString("〜%@", comment: "「今日」ペインの終了時刻"), endTime)
+            : String(
+                localized: "〜\(endTime) · \(teacher)",
+                comment: "「今日」ペインの「このあとの授業」の2段目。終了時刻と教員名")
 
         return TodayUpcomingTileModel.Row(
             id: lesson.period,
@@ -498,7 +500,7 @@ extension TodayBoardBuilder {
             statusStyle: .plain,
             isKey: false,
             remaining: 0,
-            systemTarget: departure.date)
+            systemTarget: clock.systemDate(for: departure.date))
     }
 
     /// 1時間より先は何も言わない（時刻そのものが答えになっているため）
@@ -517,6 +519,19 @@ extension TodayBoardBuilder {
         return state.homeBus
     }
 
+    /// 便が無いときの一言。学外に居ると分かっているときの帰りの便は「終了」とは言わない
+    /// （まだ走っている時間帯に嘘になるため）
+    private static func emptyText(state: TodayPaneState, isTowardSchool: Bool) -> String {
+        if !isTowardSchool, state.isOffCampus, state.hasSchedule {
+            return String(
+                localized: "学内にいるときに表示します",
+                comment: "「今日」ペインの帰りのバスのタイル。学外に居るので帰りの便を出さないときの一言")
+        }
+        return state.hasSchedule
+            ? NSLocalizedString("本日の運行は終了しました", comment: "「今日」ペイン")
+            : NSLocalizedString("バスの情報がありません", comment: "「今日」ペイン")
+    }
+
     /// 便が1本も無いとき。向きだけは場面から決めて、見出しが揺れないようにする
     private static func empty(
         state: TodayPaneState, classes: [TodayClass], now: Date
@@ -527,9 +542,7 @@ extension TodayBoardBuilder {
         return TodayBusTileModel(
             isTowardSchool: isTowardSchool,
             rows: [],
-            emptyText: state.hasSchedule
-                ? NSLocalizedString("本日の運行は終了しました", comment: "「今日」ペイン")
-                : NSLocalizedString("バスの情報がありません", comment: "「今日」ペイン"),
+            emptyText: emptyText(state: state, isTowardSchool: isTowardSchool),
             route: isTowardSchool ? station.toSchoolRoute : station.fromSchoolRoute)
     }
 }
@@ -572,14 +585,14 @@ extension TodayBoardBuilder {
     private static func item(
         _ assignment: Assignment, now: Date, calendar: Calendar
     ) -> TodayAssignmentTileModel.Item {
-        let remaining = String(
-            format: NSLocalizedString("あと %@", comment: "「今日」ペイン"),
-            assignment.remainingTimeText)
         let day = dayLabel(for: assignment.dueDate, now: now, calendar: calendar)
+        let remaining = assignment.remainingTimeText
         return TodayAssignmentTileModel.Item(
             id: assignment.id,
             title: assignment.title,
-            detail: "\(day) · \(remaining)",
+            detail: String(
+                localized: "\(day) · あと \(remaining)",
+                comment: "「今日」ペインの課題の2段目。締切の日（今日・明日・日付）と残り時間"),
             isAccented: assignment.isUrgent,
             url: assignment.url)
     }

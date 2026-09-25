@@ -57,8 +57,8 @@ struct TimetableDetailPane: View {
             .safeAreaPadding(.top, paneTopMargin)
         } else {
             TodayPaneView(
-                referenceDate: Date(),
-                todayClasses: todayClasses,
+                courses: viewModel.courses,
+                periods: viewModel.getPeriods(),
                 isVerticalBarPose: isVerticalBarPose,
                 metrics: gridMetrics,
                 onSelect: { period in
@@ -87,27 +87,15 @@ struct TimetableDetailPane: View {
 
     // MARK: - 今日の授業
 
-    /// 「今日」ペインが使う曜日（DEBUGの起動引数で差し替えられる）
+    /// 「今日」ペインが使う曜日（DEBUGの起動引数で差し替えられる）。
+    /// 押した時点で求めるので、日付が変わったあとも「今日」の曜日になる
     private var todayWeekday: String {
-        #if DEBUG
-        if let overridden = DuoDebugTimetable.todayWeekday {
-            return overridden
-        }
-        #endif
-        return viewModel.getCurrentWeekday()
+        TodaySchedule.weekdayKey(for: Date())
     }
 
-    /// 「今日」ペインに渡す今日の授業一覧。時限表は `TimetableViewModel` のものをそのまま使う
+    /// 今日の授業一覧（選んだ授業を引くときだけ使う。ペインそのものは自分の時計で求め直す）
     private var todayClasses: [TodayClass] {
-        #if DEBUG
-        if DuoDebugTimetable.usesMockDay {
-            return DuoDebugTimetable.mockClasses(on: Date())
-        }
-        #endif
-        return TodaySchedule.classes(
-            courses: viewModel.courses[todayWeekday] ?? [:],
-            periods: viewModel.getPeriods(),
-            on: Date()
-        )
+        TodaySchedule.todayClasses(
+            on: Date(), courses: viewModel.courses, periods: viewModel.getPeriods())
     }
 }

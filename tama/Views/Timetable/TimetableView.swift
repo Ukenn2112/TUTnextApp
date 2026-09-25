@@ -228,7 +228,7 @@ struct TimetableView: View {
 
                     Text(errorMessage)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(Color.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
 
@@ -259,7 +259,7 @@ struct TimetableView: View {
                 } else {
                     Text(weekdayString(from: day))
                         .font(.system(size: 14))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(Color.primary)
                         .frame(width: layout.cellWidth, height: layout.weekdayRowHeight)
                 }
             }
@@ -275,7 +275,7 @@ struct TimetableView: View {
                 .frame(width: 20, height: 20)
             Text(weekdayString(from: day))
                 .font(.system(size: 14))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         }
         .frame(width: width, height: height)
     }
@@ -298,14 +298,14 @@ struct TimetableView: View {
         VStack(spacing: 2) {
             Text(startTime)
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
             Text(period)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundStyle(Color.primary)
                 .frame(maxWidth: .infinity, alignment: .center)
             Text(endTime)
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
         }
         .frame(width: layout.timeColumnWidth, height: layout.cellHeight)
     }
@@ -578,10 +578,10 @@ struct TimeSlotCell: View {
                         .lineLimit(3)
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.8)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(Color.primary)
                     Text(course.room)
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
                 .padding(.horizontal, 4)
 
@@ -596,7 +596,7 @@ struct TimeSlotCell: View {
                                     .frame(width: 15, height: 15)
                                 Text("\(keijiMidokCnt)")
                                     .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundStyle(.white)
                             }
                             .padding(.trailing, -6)
                             .padding(.top, -6)
@@ -610,7 +610,7 @@ struct TimeSlotCell: View {
                 // 空セルテキスト
                 Text("\(displayDay)\(period)")
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.secondary)
             }
         }
         .frame(width: cellWidth, height: cellHeight)

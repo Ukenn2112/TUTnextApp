@@ -62,6 +62,7 @@ enum TodayStackLayout {
         var upcomingHeight: CGFloat?
         var upcomingRows = 0
 
+        /// ③④の行数。縦積みで1行も入らないときは 0（そのタイルは出さない）
         var busRows = 0
         var assignmentRows = 0
 
@@ -125,18 +126,18 @@ enum TodayStackLayout {
             return result
         }
 
-        // 縦積み: ③は持っている行だけ、④が残りを取る
+        // 縦積み: ③は持っている行だけ、④が残りを取る。
+        // 1行も入らないタイルは 0 行（＝出さない）にする。無理に1行持たせると左の表の下端からはみ出す
         result.arrangement = .stacked
-        result.busRows = min(max(1, busCount), stackedBusRowLimit)
-        let busHeight = height(rows: result.busRows)
-        let assignmentHeight = max(0, bottom - busHeight - gap)
-        result.assignmentRows = min(
-            max(1, assignmentCount), max(1, rows(in: assignmentHeight)))
+        result.busRows = min(max(1, busCount), stackedBusRowLimit, fitting)
+        let busBlock = result.busRows > 0 ? height(rows: result.busRows) + gap : 0
+        let assignmentHeight = max(0, bottom - busBlock)
+        result.assignmentRows = min(max(1, assignmentCount), rows(in: assignmentHeight))
 
         // 端数が1行ぶん残るなら、④の行をもう1本増やして使い切る
         let fixed = lessonHeight + gap
-            + (upcoming > 0 ? height(rows: upcoming) + gap : 0) + busHeight + gap
-        while result.assignmentRows < assignmentCount,
+            + (upcoming > 0 ? height(rows: upcoming) + gap : 0) + busBlock
+        while result.assignmentRows > 0, result.assignmentRows < assignmentCount,
               fixed + height(rows: result.assignmentRows + 1) <= total {
             result.assignmentRows += 1
         }
@@ -179,7 +180,10 @@ enum TodayStackLayout {
         case .sideBySide:
             return height(rows: max(result.busRows, result.assignmentRows))
         case .stacked:
-            return height(rows: result.busRows) + gap + height(rows: result.assignmentRows)
+            // 0 行のタイルは出さないので、高さも間隔も数えない
+            let tiles = [result.busRows, result.assignmentRows].filter { $0 > 0 }
+            return tiles.reduce(0) { $0 + height(rows: $1) }
+                + CGFloat(max(0, tiles.count - 1)) * gap
         }
     }
 

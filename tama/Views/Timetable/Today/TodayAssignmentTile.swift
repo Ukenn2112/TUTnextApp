@@ -29,6 +29,10 @@ struct TodayAssignmentTile: View {
     /// 記号つきの「何も無い」を出してよい高さ
     private static let symbolMinimumHeight: CGFloat = 120
 
+    /// 見出しの行を押せる高さ（タイルの上端から、1行目が始まる位置まで）
+    private static let headerHitHeight = Token.Metrics.tilePadding
+        + Token.Metrics.headerHeight + Token.Metrics.headerGap
+
     var body: some View {
         TodayTile(
             symbol: "checklist",
@@ -40,13 +44,14 @@ struct TodayAssignmentTile: View {
         ) {
             content
         }
-        // 見出しの行を課題タブへの入り口にする
+        // 見出しの行を課題タブへの入り口にする。
+        // 押せる範囲は1行目の上端で止める（44ptまで伸ばすと1行目の上側を覆ってしまう）
         .overlay(alignment: .topLeading) {
             Button(action: onOpenAssignments) {
                 Color.clear.contentShape(Rectangle())
             }
             .buttonStyle(TodayPressableStyle())
-            .frame(height: Token.Metrics.minimumHit)
+            .frame(height: Self.headerHitHeight)
             .accessibilityLabel(
                 NSLocalizedString("課題", comment: "「今日」ペインのタイルの見出し"))
             .accessibilityAddTraits(.isButton)
@@ -68,12 +73,14 @@ struct TodayAssignmentTile: View {
             : nil
         guard model.isLoaded else { return count.map { TodayTileTrailing($0) } }
 
-        let today = NSLocalizedString("今日", comment: "「今日」ペインの課題の数の名札")
-        let tomorrow = NSLocalizedString("明日", comment: "「今日」ペインの課題の数の名札")
         return TodayTileTrailing(
-            accent: "\(today) \(model.todayCount)",
+            accent: String(
+                localized: "今日 \(model.todayCount)",
+                comment: "「今日」ペインの課題のタイルの見出しの右端。今日が締切の件数"),
             accentColor: model.todayCount > 0 ? accent : .secondary,
-            plain: "· \(tomorrow) \(model.tomorrowCount)",
+            plain: String(
+                localized: "· 明日 \(model.tomorrowCount)",
+                comment: "「今日」ペインの課題のタイルの見出しの右端。「今日 N」に続く、明日が締切の件数"),
             count: count)
     }
 
@@ -97,7 +104,7 @@ struct TodayAssignmentTile: View {
     /// 出すものが本当に何も無いときだけの顔（高さに余裕があるときだけ記号を添える）
     private var empty: some View {
         GeometryReader { proxy in
-            VStack(spacing: Token.Spacing.xs) {
+            VStack(spacing: Token.Spacing.xSmall) {
                 if proxy.size.height >= Self.symbolMinimumHeight {
                     Image(systemName: "checkmark.circle")
                         .font(.system(size: Token.Typography.key))
