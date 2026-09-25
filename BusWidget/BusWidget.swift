@@ -256,10 +256,12 @@ struct BusWidgetEntryView: View {
         }
     }
 
+    /// 切迫度の色（段階の閾値はアプリ本体と共通の BusUrgency に従う）
+    /// 余裕がある間は路線のアクセントカラーを使う
     private func urgencyColor(minutes: Int?) -> Color {
-        guard let m = minutes else { return .secondary }
-        if m <= 5 { return .orange }
-        return accent
+        guard let minutes else { return .secondary }
+        let level = BusUrgency.level(minutesUntil: minutes)
+        return level == .calm ? accent : level.color
     }
 
     // MARK: - 共有サブビュー

@@ -16,7 +16,7 @@ enum SharedModelContainer {
     /// App Group コンテナURL
     private static let storeURL: URL = {
         let containerURL = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.meikenn.tama"
+            forSecurityApplicationGroupIdentifier: AppConstants.appGroupID
         )!
         return containerURL.appendingPathComponent("shared.store")
     }()
@@ -58,15 +58,25 @@ enum SharedModelContainer {
     }()
 
     /// Widget 拡張用の安全なアクセサ
-    /// ストアの削除や fatalError を行わず、失敗時は nil を返す
-    static let sharedForExtension: ModelContainer? = {
+    /// ストアの削除や fatalError を行わず、失敗時は nil を返す。
+    /// 成功した場合のみキャッシュし、失敗時は次回アクセスで再試行する
+    static var sharedForExtension: ModelContainer? {
+        extensionLock.lock()
+        defer { extensionLock.unlock() }
+        if let cachedExtensionContainer { return cachedExtensionContainer }
         do {
-            return try makeContainer()
+            let container = try makeContainer()
+            cachedExtensionContainer = container
+            return container
         } catch {
             #if DEBUG
             print("【SharedModelContainer】拡張用 ModelContainer の作成に失敗しました: \(error)")
             #endif
             return nil
         }
-    }()
+    }
+
+    /// 拡張用コンテナのキャッシュ（extensionLock で保護）
+    nonisolated(unsafe) private static var cachedExtensionContainer: ModelContainer?
+    private static let extensionLock = NSLock()
 }

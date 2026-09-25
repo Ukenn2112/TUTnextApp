@@ -27,7 +27,8 @@ final class LiveActivityScheduler: ObservableObject {
     private var lastComputedDateKey: String = ""
     private var lastClassEndDate: Date?
     /// Activity ID ごとの push token 監視タスク
-    private var pushTokenTasks: [String: Task<Void, Never>] = [:]
+    /// token はタスクの識別子。終了時に自分自身のエントリだけを削除するために使う
+    private var pushTokenTasks: [String: (token: UUID, task: Task<Void, Never>)] = [:]
     /// push-to-start 等で外部から開始された Activity を検知する長命タスク
     private var activityUpdatesTask: Task<Void, Never>?
     /// push-to-start トークン監視タスク（iOS 17.2+）
@@ -35,7 +36,7 @@ final class LiveActivityScheduler: ObservableObject {
 
     // MARK: - 定数
 
-    private static let apiBase = "https://tama.qaq.tw"
+    private static let apiBase = AppConstants.backendBaseURL
     private static let pushToStartTokenKey = "LiveActivity.lastSentPushToStartToken"
 
     // MARK: - Public API
@@ -140,6 +141,39 @@ final class LiveActivityScheduler: ObservableObject {
         scheduleNextTimer()
 
         print("【LA】syncLiveActivity 完了")
+    }
+
+    /// ログアウト時に呼ぶ。監視タスク・Timer を止め、バックエンドの登録を解除し、
+    /// 次回ログイン時に push-to-start トークンを再登録できるよう状態を初期化する
+    /// - Parameter username: 登録解除に使うユーザー名（ユーザー情報を削除する前に取得したもの）
+    func resetForLogout(username: String?) {
+        print("【LA】ログアウトに伴いリセット")
+
+        foregroundTimer?.invalidate()
+        foregroundTimer = nil
+
+        pushToStartTask?.cancel()
+        pushToStartTask = nil
+
+        activityUpdatesTask?.cancel()
+        activityUpdatesTask = nil
+
+        for entry in pushTokenTasks.values { entry.task.cancel() }
+        pushTokenTasks.removeAll()
+
+        // バックエンド側の Activity 登録を解除（Activity 自体の終了は LiveActivityService が行う）
+        if let username {
+            for activity in Activity<ClassLiveActivityAttributes>.activities {
+                unregisterActivity(id: activity.id, username: username)
+            }
+        }
+
+        UserDefaults.standard.removeObject(forKey: Self.pushToStartTokenKey)
+
+        transitions = []
+        lastComputedDateKey = ""
+        lastClassEndDate = nil
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.bgTaskIdentifier)
     }
 
     /// フォアグラウンド Timer を停止する（バックグラウンド移行時）
@@ -313,7 +347,7 @@ final class LiveActivityScheduler: ObservableObject {
         for activity in Activity<ClassLiveActivityAttributes>.activities {
             await endAndUnregister(activity)
         }
-        for task in pushTokenTasks.values { task.cancel() }
+        for entry in pushTokenTasks.values { entry.task.cancel() }
         pushTokenTasks.removeAll()
     }
 
@@ -360,12 +394,11 @@ final class LiveActivityScheduler: ObservableObject {
         }
 
         guard activityUpdatesTask == nil else { return }
+        // @MainActor メソッド内で生成した Task はメインアクター上で動くため、MainActor.run は不要
         activityUpdatesTask = Task { [weak self] in
             for await activity in Activity<ClassLiveActivityAttributes>.activityUpdates {
-                await MainActor.run {
-                    print("【LA】新しい Activity を検出: \(activity.id.prefix(8))")
-                    self?.observePushToken(for: activity)
-                }
+                print("【LA】新しい Activity を検出: \(activity.id.prefix(8))")
+                self?.observePushToken(for: activity)
             }
         }
     }
@@ -375,22 +408,26 @@ final class LiveActivityScheduler: ObservableObject {
         let id = activity.id
         guard pushTokenTasks[id] == nil else { return }
 
-        pushTokenTasks[id] = Task { [weak self] in
+        let taskToken = UUID()
+        let task = Task { [weak self] in
             for await tokenData in activity.pushTokenUpdates {
                 let token = tokenData.map { String(format: "%02x", $0) }.joined()
                 print("【LA】Push token 更新 (\(id.prefix(8))): \(token.prefix(16))...")
                 await self?.sendPushTokenToBackend(token: token, activityId: id)
             }
-            self?.clearPushTokenTask(for: id)
+            self?.clearPushTokenTask(for: id, token: taskToken)
         }
+        pushTokenTasks[id] = (token: taskToken, task: task)
     }
 
-    private func clearPushTokenTask(for id: String) {
+    /// 監視タスク終了時に呼ぶ。別のタスクに置き換わっている場合は削除しない
+    private func clearPushTokenTask(for id: String, token: UUID) {
+        guard pushTokenTasks[id]?.token == token else { return }
         pushTokenTasks[id] = nil
     }
 
     private func cancelPushTokenObservation(for id: String) {
-        pushTokenTasks[id]?.cancel()
+        pushTokenTasks[id]?.task.cancel()
         pushTokenTasks[id] = nil
     }
 
@@ -469,10 +506,10 @@ final class LiveActivityScheduler: ObservableObject {
     }
 
     /// Activity の登録を解除する（fire-and-forget、1回のみ）
-    private func unregisterActivity(id: String) {
-        guard let user = UserService.shared.getCurrentUser() else { return }
+    private func unregisterActivity(id: String, username: String? = nil) {
+        guard let username = username ?? UserService.shared.getCurrentUser()?.username else { return }
         let body: [String: String] = [
-            "username": user.username,
+            "username": username,
             "activityId": id,
         ]
         Task { [body] in
@@ -524,137 +561,57 @@ final class LiveActivityScheduler: ObservableObject {
                   let endDate = lesson.endTime(on: dateString) else { continue }
 
             // 授業名には教員名が末尾に付くため displayName で除去する
-            let name = lesson.displayName
             let room = lesson.cleanRoom
-            let teacher = lesson.primaryTeacher
             let hasRoomChange = lesson.hasRoomChange
+            let baseState = ClassLiveActivityAttributes.ContentState(
+                phase: .upcoming,
+                countdownDate: startDate,
+                courseName: lesson.displayName,
+                room: room,
+                teacher: lesson.primaryTeacher,
+                period: lessonNum,
+                startDate: startDate,
+                endDate: endDate,
+                hasRoomChange: hasRoomChange,
+                newRoom: hasRoomChange ? room : nil
+            )
 
             // --- upcoming ---
-            // 長い休憩（>10分）: upcoming は授業開始10分前から
-            // 短い休憩（≤10分）: upcoming は前の授業終了直後から
-            let upcomingDate: Date
-            if i == 0 {
-                upcomingDate = startDate.addingTimeInterval(-30 * 60)
-            } else if let prevEnd = sorted[i - 1].endTime(on: dateString) {
-                let gap = startDate.timeIntervalSince(prevEnd)
-                if gap > 10 * 60 {
-                    upcomingDate = startDate.addingTimeInterval(-10 * 60)
-                } else {
-                    upcomingDate = prevEnd
-                }
-            } else {
-                upcomingDate = startDate.addingTimeInterval(-30 * 60)
-            }
-
-            result.append(ScheduleTransition(
-                date: upcomingDate,
-                state: .init(
-                    phase: .upcoming,
-                    countdownDate: startDate,
-                    courseName: name,
-                    room: room,
-                    teacher: teacher,
-                    period: lessonNum,
-                    startDate: startDate,
-                    endDate: endDate,
-                    hasRoomChange: hasRoomChange,
-                    newRoom: hasRoomChange ? room : nil
-                )
-            ))
+            let upcomingDate = upcomingTransitionDate(
+                index: i, startDate: startDate, sorted: sorted, dateString: dateString
+            )
+            result.append(ScheduleTransition(date: upcomingDate, state: baseState))
 
             // --- imminent（upcoming から5分以上ある場合のみ生成）---
             let imminentDate = startDate.addingTimeInterval(-5 * 60)
             if imminentDate > upcomingDate {
-                result.append(ScheduleTransition(
-                    date: imminentDate,
-                    state: .init(
-                        phase: .imminent,
-                        countdownDate: startDate,
-                        courseName: name,
-                        room: room,
-                        teacher: teacher,
-                        period: lessonNum,
-                        startDate: startDate,
-                        endDate: endDate,
-                        hasRoomChange: hasRoomChange,
-                        newRoom: hasRoomChange ? room : nil
-                    )
-                ))
+                var imminent = baseState
+                imminent.phase = .imminent
+                result.append(ScheduleTransition(date: imminentDate, state: imminent))
             }
 
             // --- inProgress ---
-            result.append(ScheduleTransition(
-                date: startDate,
-                state: .init(
-                    phase: .inProgress,
-                    countdownDate: endDate,
-                    courseName: name,
-                    room: room,
-                    teacher: teacher,
-                    period: lessonNum,
-                    startDate: startDate,
-                    endDate: endDate,
-                    hasRoomChange: hasRoomChange,
-                    newRoom: hasRoomChange ? room : nil
-                )
-            ))
+            var inProgress = baseState
+            inProgress.phase = .inProgress
+            inProgress.countdownDate = endDate
+            result.append(ScheduleTransition(date: startDate, state: inProgress))
 
             // --- breakTime or finished ---
             let nextLesson: TodayLesson? = i + 1 < sorted.count ? sorted[i + 1] : nil
-
-            if let next = nextLesson,
-               let nextStart = next.startTime(on: dateString),
-               next.endTime(on: dateString) != nil,
-               let nextNum = next.lessonNum,
-               next.name != nil {
-
-                // 隣接授業チェック: [start, end) ルール
-                // nextStart <= endDate → breakTime をスキップ
-                if nextStart > endDate {
-                    let gap = nextStart.timeIntervalSince(endDate)
-                    let nextName = next.displayName
-                    let nextRoom = next.cleanRoom
-                    let nextTeacher = next.primaryTeacher
-
-                    // 休憩が10分超 → breakTime を表示（昼休み等）
-                    // 10分以下 → breakTime スキップ、upcoming がそのまま続く
-                    if gap > 10 * 60 {
-                        result.append(ScheduleTransition(
-                            date: endDate,
-                            state: .init(
-                                phase: .breakTime,
-                                countdownDate: nextStart,
-                                courseName: name,
-                                room: room,
-                                teacher: teacher,
-                                period: lessonNum,
-                                startDate: startDate,
-                                endDate: endDate,
-                                hasRoomChange: false,
-                                newRoom: nil,
-                                nextCourseName: nextName,
-                                nextCourseRoom: nextRoom,
-                                nextCourseTeacher: nextTeacher,
-                                nextCoursePeriod: nextNum
-                            )
-                        ))
-                    }
+            if let next = nextLesson, let nextStart = validNextStart(of: next, dateString: dateString) {
+                if let breakTransition = breakTimeTransition(
+                    current: baseState, next: next, nextStart: nextStart
+                ) {
+                    result.append(breakTransition)
                 }
             } else {
                 // 最後の授業 → finished
-                result.append(ScheduleTransition(
-                    date: endDate,
-                    state: .init(
-                        phase: .finished,
-                        countdownDate: endDate,
-                        courseName: name,
-                        room: room,
-                        teacher: teacher,
-                        period: lessonNum,
-                        startDate: startDate,
-                        endDate: endDate
-                    )
-                ))
+                var finished = baseState
+                finished.phase = .finished
+                finished.countdownDate = endDate
+                finished.hasRoomChange = false
+                finished.newRoom = nil
+                result.append(ScheduleTransition(date: endDate, state: finished))
             }
         }
 
@@ -664,6 +621,51 @@ final class LiveActivityScheduler: ObservableObject {
             }
             return a.date < b.date
         }
+    }
+
+    /// upcoming トランジションの開始時刻
+    /// 長い休憩（>10分）: upcoming は授業開始10分前から
+    /// 短い休憩（≤10分）: upcoming は前の授業終了直後から
+    private func upcomingTransitionDate(
+        index: Int, startDate: Date, sorted: [TodayLesson], dateString: String
+    ) -> Date {
+        guard index > 0, let prevEnd = sorted[index - 1].endTime(on: dateString) else {
+            return startDate.addingTimeInterval(-30 * 60)
+        }
+        let gap = startDate.timeIntervalSince(prevEnd)
+        return gap > 10 * 60 ? startDate.addingTimeInterval(-10 * 60) : prevEnd
+    }
+
+    /// 次の授業が有効（開始・終了時刻、時限、授業名が揃っている）なら開始時刻を返す
+    private func validNextStart(of next: TodayLesson, dateString: String) -> Date? {
+        guard let nextStart = next.startTime(on: dateString),
+              next.endTime(on: dateString) != nil,
+              next.lessonNum != nil,
+              next.name != nil else { return nil }
+        return nextStart
+    }
+
+    /// 授業終了から次の授業までの breakTime トランジション
+    /// 隣接授業チェック: [start, end) ルール（nextStart <= endDate → breakTime をスキップ）
+    /// 休憩が10分超 → breakTime を表示（昼休み等）、10分以下 → スキップして upcoming がそのまま続く
+    private func breakTimeTransition(
+        current: ClassLiveActivityAttributes.ContentState,
+        next: TodayLesson,
+        nextStart: Date
+    ) -> ScheduleTransition? {
+        let endDate = current.endDate
+        guard nextStart > endDate, nextStart.timeIntervalSince(endDate) > 10 * 60 else { return nil }
+
+        var state = current
+        state.phase = .breakTime
+        state.countdownDate = nextStart
+        state.hasRoomChange = false
+        state.newRoom = nil
+        state.nextCourseName = next.displayName
+        state.nextCourseRoom = next.cleanRoom
+        state.nextCourseTeacher = next.primaryTeacher
+        state.nextCoursePeriod = next.lessonNum
+        return ScheduleTransition(date: endDate, state: state)
     }
 
     /// トランジションの安定ソート用フェーズ優先度

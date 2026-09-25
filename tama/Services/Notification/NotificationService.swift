@@ -78,7 +78,7 @@ final class NotificationService: NSObject, ObservableObject {
 
     /// デバイストークンをサーバーに送信する
     func sendDeviceTokenToServer(token: String, username: String, encryptedPassword: String) {
-        guard let url = URL(string: "https://tama.qaq.tw/push/send") else { return }
+        guard let url = URL(string: AppConstants.backendBaseURL + "/push/send") else { return }
 
         let body: [String: Any] = [
             "username": username,
@@ -114,7 +114,7 @@ final class NotificationService: NSObject, ObservableObject {
 
     /// デバイストークンをサーバーから登録解除する
     func unregisterDeviceTokenFromServer(token: String) {
-        guard let url = URL(string: "https://tama.qaq.tw/push/unregister") else { return }
+        guard let url = URL(string: AppConstants.backendBaseURL + "/push/unregister") else { return }
 
         let body: [String: Any] = ["deviceToken": token]
 

@@ -11,7 +11,7 @@ final class BusScheduleService {
     static let shared = BusScheduleService()
 
     /// APIエンドポイント
-    private let apiURL = "https://tama.qaq.tw/bus/app_data"
+    private let apiURL = AppConstants.backendBaseURL + "/bus/app_data"
 
     /// キャッシュされたバス時刻表データ
     private var cachedSchedule: BusSchedule?

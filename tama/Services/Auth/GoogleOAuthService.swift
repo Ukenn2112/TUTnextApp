@@ -286,7 +286,7 @@ final class GoogleOAuthService: ObservableObject {
         username: String,
         completion: @escaping (Result<Bool, Error>) -> Void
     ) {
-        guard let url = URL(string: "https://tama.qaq.tw/oauth/status") else {
+        guard let url = URL(string: AppConstants.backendBaseURL + "/oauth/status") else {
             completion(.failure(APIError.invalidURL))
             return
         }
@@ -338,7 +338,7 @@ final class GoogleOAuthService: ObservableObject {
         refreshToken: String?,
         completion: @escaping (Result<[String: Any], Error>) -> Void
     ) {
-        guard let url = URL(string: "https://tama.qaq.tw/oauth/tokens") else {
+        guard let url = URL(string: AppConstants.backendBaseURL + "/oauth/tokens") else {
             completion(.failure(APIError.invalidURL))
             return
         }
@@ -405,7 +405,7 @@ final class GoogleOAuthService: ObservableObject {
         username: String,
         completion: @escaping (Result<[String: Any], Error>) -> Void
     ) {
-        guard let url = URL(string: "https://tama.qaq.tw/oauth/revoke") else {
+        guard let url = URL(string: AppConstants.backendBaseURL + "/oauth/revoke") else {
             completion(.failure(APIError.invalidURL))
             return
         }

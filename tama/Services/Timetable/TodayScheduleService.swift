@@ -41,7 +41,7 @@ final class TodayScheduleService {
         dateFormatter.timeZone = TimeZone(identifier: "Asia/Tokyo")
         let todayString = dateFormatter.string(from: Date())
 
-        guard let url = URL(string: "https://tama.qaq.tw/schedule/later") else {
+        guard let url = URL(string: AppConstants.backendBaseURL + "/schedule/later") else {
             throw TodayScheduleError.invalidURL
         }
 

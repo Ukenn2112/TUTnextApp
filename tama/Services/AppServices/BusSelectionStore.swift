@@ -33,7 +33,7 @@ final class BusSelectionStore: ObservableObject {
 
     // MARK: - 保存先
 
-    private static let suiteName = "group.com.meikenn.tama"
+    private static let suiteName = AppConstants.appGroupID
     private static let stationKey = "TodayPane.preferredStation"
     private static let departureKey = "TodayPane.selectedDeparture"
     private static let departedKey = "TodayPane.departedTowardSchoolAt"

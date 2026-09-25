@@ -8,7 +8,7 @@ final class TeacherEmailListService {
     /// 教員一覧を取得する
     func fetchTeachers() -> AnyPublisher<[Teacher], Error> {
         return Future<[Teacher], Error> { promise in
-            guard let url = URL(string: "https://tama.qaq.tw/tmail") else {
+            guard let url = URL(string: AppConstants.backendBaseURL + "/tmail") else {
                 promise(.failure(URLError(.badURL)))
                 return
             }

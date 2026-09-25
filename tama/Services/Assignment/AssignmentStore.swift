@@ -36,6 +36,8 @@ final class AssignmentStore: ObservableObject {
 
     private var fetchedAt: Date?
     private var inFlight = false
+    /// `clear()` のたびに進める世代番号。ログアウト前に始まった取得の結果を捨てるために使う
+    private var generation = 0
     private var observers: [NSObjectProtocol] = []
 
     private init() {
@@ -79,9 +81,12 @@ final class AssignmentStore: ObservableObject {
         isLoading = !hasLoadedOnce
         errorMessage = nil
 
+        let requestGeneration = generation
         AssignmentService.shared.getAssignments { [weak self] result in
             Task { @MainActor in
                 guard let self else { return }
+                // ログアウト（clear）後に届いた前のユーザーの結果は捨てる
+                guard requestGeneration == self.generation else { return }
                 self.inFlight = false
                 self.isLoading = false
                 self.hasLoadedOnce = true
@@ -103,6 +108,8 @@ final class AssignmentStore: ObservableObject {
 
     /// ログアウト時に控えを捨てる
     func clear() {
+        generation += 1
+        inFlight = false
         assignments = []
         isLoading = false
         errorMessage = nil

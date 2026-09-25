@@ -151,11 +151,28 @@ final class AuthService {
             NotificationService.shared.unregisterDeviceTokenFromServer(token: deviceToken)
         }
 
+        clearLocalSession()
+    }
+
+    // MARK: - ローカルセッションのクリア（ログアウト共通処理）
+
+    /// ログアウト時にローカルのセッション・キャッシュ・Live Activity をすべて片付ける
+    /// （通常ログアウトと強制ログアウトで共通）
+    private func clearLocalSession() {
+        // ユーザー情報を削除する前に、バックエンドの登録解除に使うユーザー名を控えておく
+        let username = UserService.shared.getCurrentUser()?.username
+
         Task { @MainActor in
+            // 監視タスクの停止・登録解除・push-to-start トークンの破棄（次回ログイン時に再登録させる）
+            LiveActivityScheduler.shared.resetForLogout(username: username)
+            // 前のユーザーの時間割キャッシュ（メモリ・共有 SwiftData）を削除し、ウィジェットを更新
+            TimetableService.shared.clearCacheForLogout()
+            // Live Activity をすべて終了
             await LiveActivityService.shared.endAllActivities()
         }
 
         CookieService.shared.clearCookies()
+        // 課題・お知らせの控えとパスワードも clearCurrentUser 内で削除する
         UserService.shared.clearCurrentUser()
     }
 
@@ -193,11 +210,6 @@ final class AuthService {
             NotificationService.shared.unregisterDeviceTokenFromServer(token: deviceToken)
         }
 
-        // Live Activity をすべて終了
-        Task { @MainActor in
-            await LiveActivityService.shared.endAllActivities()
-        }
-
         // ログアウトはローカル操作を優先する。
         // サーバー側ログアウトはベストエフォートで送信し、その成否に関わらず
         // ローカルセッションをクリアして完了を通知する。
@@ -221,8 +233,7 @@ final class AuthService {
         )(request)
 
         // サーバー応答を待たずにローカルセッションを即時クリアし、UI を確実に遷移させる
-        CookieService.shared.clearCookies()
-        UserService.shared.clearCurrentUser()
+        clearLocalSession()
         completion(.success(true))
     }
 }

@@ -34,6 +34,8 @@ final class CourseNoticeStore: ObservableObject {
 
     private var fetchedAt: [String: Date] = [:]
     private var inFlight: Set<String> = []
+    /// `clear()` のたびに進める世代番号。ログアウト前に始まった取得の結果を捨てるために使う
+    private var generation = 0
 
     private init() {}
 
@@ -67,9 +69,12 @@ final class CourseNoticeStore: ObservableObject {
         #endif
 
         inFlight.insert(code)
+        let requestGeneration = generation
         CourseDetailService.shared.fetchCourseDetail(course: course) { [weak self] result in
             Task { @MainActor in
                 guard let self else { return }
+                // ログアウト（clear）後に届いた前のユーザーの結果は捨てる
+                guard requestGeneration == self.generation else { return }
                 self.inFlight.remove(code)
                 self.fetchedAt[code] = Date()
                 switch result {
@@ -82,6 +87,16 @@ final class CourseNoticeStore: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - 破棄
+
+    /// ログアウト時に控えを捨てる
+    func clear() {
+        generation += 1
+        notices = [:]
+        fetchedAt = [:]
+        inFlight = []
     }
 
     /// APIの掲示をペインが使う形に直す（上限まで）

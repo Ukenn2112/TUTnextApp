@@ -17,7 +17,7 @@ final class AssignmentService {
     func getAssignments(completion: @escaping (Result<[Assignment], Error>) -> Void) {
         // APIエンドポイント
         let endpoint = "/kadai"
-        let baseURL = "https://tama.qaq.tw"  // 実際のAPIのベースURL
+        let baseURL = AppConstants.backendBaseURL
 
         guard let url = URL(string: baseURL + endpoint) else {
             completion(

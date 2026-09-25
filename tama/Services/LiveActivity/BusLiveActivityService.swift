@@ -94,6 +94,7 @@ final class BusLiveActivityService {
 
         let now = Date()
         var adopted: Activity<BusLiveActivityAttributes>?
+        var activitiesToEnd: [Activity<BusLiveActivityAttributes>] = []
 
         for activity in activities {
             let state = activity.activityState
@@ -101,13 +102,13 @@ final class BusLiveActivityService {
             let isDead = state == .ended || state == .dismissed || now > deadline
 
             if isDead || adopted != nil {
-                await activity.end(nil, dismissalPolicy: .immediate)
-                print("【Bus LA】終了（発車済み or 重複）: \(activity.content.state.departureTimeText)")
+                activitiesToEnd.append(activity)
             } else {
                 adopted = activity
             }
         }
 
+        // アクター再入対策: await より前に状態（currentActivity・タイマー）を確定させる
         dismissalTimer?.invalidate()
         dismissalTimer = nil
         currentActivity = adopted
@@ -116,6 +117,12 @@ final class BusLiveActivityService {
             // プロセス再起動後でも自動終了タイマーを張り直す
             scheduleDismissal(at: adopted.content.state.departureDate.addingTimeInterval(dismissalDelay))
             print("【Bus LA】既存 Activity を再採用: \(adopted.content.state.departureTimeText)")
+        }
+
+        // 不要な Activity の終了は状態確定後に行う
+        for activity in activitiesToEnd {
+            await activity.end(nil, dismissalPolicy: .immediate)
+            print("【Bus LA】終了（発車済み or 重複）: \(activity.content.state.departureTimeText)")
         }
     }
 

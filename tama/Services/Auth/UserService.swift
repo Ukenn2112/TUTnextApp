@@ -47,10 +47,9 @@ final class UserService {
     }
 
     // パスワードを保存（カレンダー購読などの再認証用）
+    // getPassword は同期で読むため、書き込みも同期で行う（Keychain はスレッドセーフ）
     func savePassword(_ password: String) {
-        DispatchQueue.main.async {
-            self.keychain.save(password, forKey: "userPassword")
-        }
+        keychain.save(password, forKey: "userPassword")
     }
 
     // パスワードを取得
@@ -60,18 +59,20 @@ final class UserService {
 
     // パスワードを削除
     func clearPassword() {
-        DispatchQueue.main.async {
-            self.keychain.delete(forKey: "userPassword")
-        }
+        keychain.delete(forKey: "userPassword")
     }
 
     // ユーザーデータを削除（ログアウト時）
     func clearCurrentUser() {
-        // 前のユーザーの課題一覧が残らないように、共用の控えも捨てる
-        Task { @MainActor in AssignmentStore.shared.clear() }
+        // 前のユーザーの課題一覧・授業のお知らせが残らないように、共用の控えも捨てる
+        Task { @MainActor in
+            AssignmentStore.shared.clear()
+            CourseNoticeStore.shared.clear()
+        }
+        // パスワードは同期で削除する（ログアウト直後の getPassword に残さない）
+        clearPassword()
         DispatchQueue.main.async {
             self.keychain.delete(forKey: "currentUser")
-            self.keychain.delete(forKey: "userPassword")
         }
     }
 

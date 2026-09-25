@@ -70,7 +70,7 @@ final class TimetableService {
                 return URL(
                     string: "https://next.tama.ac.jp/uprx/webapi/up/ap/Apa004Resource/getJugyoKeijiMenuInfo")
             case .backend:
-                return URL(string: "https://tama.qaq.tw/schedule/class_bulletin")
+                return URL(string: AppConstants.backendBaseURL + "/schedule/class_bulletin")
             }
         }
 
@@ -123,7 +123,8 @@ final class TimetableService {
         ) { tnextResult in
             switch tnextResult {
             case .success(let payload) where self.isCourseListComplete(payload.courseList):
-                self.applyCourseListPayload(payload, source: .tnext, completion: completion)
+                self.applyCourseListPayload(
+                    payload, source: .tnext, credentials: credentials, completion: completion)
 
             case .success(let partialPayload):
                 print("【時間割】T-NEXT のデータに教室または教員名の欠損あり → バックエンドで補完を試行")
@@ -133,10 +134,12 @@ final class TimetableService {
                 ) { backendResult in
                     switch backendResult {
                     case .success(let payload):
-                        self.applyCourseListPayload(payload, source: .backend, completion: completion)
+                        self.applyCourseListPayload(
+                            payload, source: .backend, credentials: credentials, completion: completion)
                     case .failure(let error):
                         print("【時間割】バックエンド補完失敗（\(error.localizedDescription)）→ T-NEXT のデータをそのまま使用")
-                        self.applyCourseListPayload(partialPayload, source: .tnext, completion: completion)
+                        self.applyCourseListPayload(
+                            partialPayload, source: .tnext, credentials: credentials, completion: completion)
                     }
                 }
 
@@ -148,7 +151,8 @@ final class TimetableService {
                 ) { backendResult in
                     switch backendResult {
                     case .success(let payload):
-                        self.applyCourseListPayload(payload, source: .backend, completion: completion)
+                        self.applyCourseListPayload(
+                            payload, source: .backend, credentials: credentials, completion: completion)
                     case .failure(let backendError):
                         self.finishWithFailure(backendError, completion: completion)
                     }
@@ -167,7 +171,9 @@ final class TimetableService {
         }
     }
 
-    /// 指定した取得元に時間割をリクエストする（失敗時は最大 maxRetries 回、2秒間隔でリトライ）
+    /// 指定した取得元に時間割をリクエストする
+    /// 通信エラー（URLError 等）・データなし・HTTP 5xx のときだけ最大 maxRetries 回、2秒間隔でリトライする。
+    /// API エラー（statusDto.success == false）や解析失敗は再試行しても結果が変わらないため即座に失敗を返す
     private func requestCourseList(
         from source: TimetableSource,
         year: Int,
@@ -227,11 +233,13 @@ final class TimetableService {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                // 通信エラーはリトライ対象
                 retryOrFail(error)
                 return
             }
 
-            if let httpResponse = response as? HTTPURLResponse {
+            let httpResponse = response as? HTTPURLResponse
+            if let httpResponse {
                 print("【時間割】\(source.logName) HTTPステータスコード: \(httpResponse.statusCode)")
                 if let responseURL = httpResponse.url {
                     CookieService.shared.saveCookies(from: httpResponse, for: responseURL.absoluteString)
@@ -247,7 +255,12 @@ final class TimetableService {
             case .success(let payload):
                 completion(.success(payload))
             case .failure(let error):
-                retryOrFail(error)
+                // サーバー側の一時的な障害（5xx）のみリトライし、API エラー・解析失敗は即座に返す
+                if let statusCode = httpResponse?.statusCode, (500...599).contains(statusCode) {
+                    retryOrFail(error)
+                } else {
+                    completion(.failure(error))
+                }
             }
         }.resume()
     }
@@ -310,6 +323,7 @@ final class TimetableService {
     private func applyCourseListPayload(
         _ payload: CourseListPayload,
         source: TimetableSource,
+        credentials: RequestCredentials,
         completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
     ) {
         let data = payload.data
@@ -336,12 +350,16 @@ final class TimetableService {
         // 時間割データの変換
         let timetableData = convertToTimetableData(payload.courseList)
 
-        // メモリ内のキャッシュも更新
-        cachedTimetableData = timetableData
-        lastFetchTime = Date()
-
-        // SwiftData 操作はメインスレッドで実行
+        // メモリ内キャッシュの更新と SwiftData 操作はメインスレッドで実行
+        // （キャッシュの読み手はメインスレッドのため、書き込みもメインに揃える）
         DispatchQueue.main.async {
+            // 取得中にログアウト・別ユーザーでの再ログインがあった場合は前のユーザーのデータを捨てる
+            guard UserService.shared.getCurrentUser()?.username == credentials.username else {
+                print("【時間割】ユーザーが変わったため取得結果を破棄します")
+                return
+            }
+            self.cachedTimetableData = timetableData
+            self.lastFetchTime = Date()
             self.saveTimetableData(timetableData)
         }
 
@@ -357,15 +375,18 @@ final class TimetableService {
     }
 
     /// 取得失敗時の処理: 12時間以内のキャッシュがあればそれを使い続け、なければエラーを返す
+    /// キャッシュはメインスレッドでのみ読み書きするため、判定もメインスレッドで行う
     private func finishWithFailure(
         _ error: Error,
         completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
     ) {
-        if cachedTimetableData == nil || !isCacheValid() {
-            print("【時間割】有効なキャッシュがありません（12時間以上経過）: \(error.localizedDescription)")
-            completion(.failure(error))
-        } else {
-            print("【時間割】取得失敗、キャッシュを使用します（有効期限内）")
+        DispatchQueue.main.async {
+            if self.cachedTimetableData == nil || !self.isCacheValid() {
+                print("【時間割】有効なキャッシュがありません（12時間以上経過）: \(error.localizedDescription)")
+                completion(.failure(error))
+            } else {
+                print("【時間割】取得失敗、キャッシュを使用します（有効期限内）")
+            }
         }
     }
 
@@ -523,6 +544,25 @@ final class TimetableService {
         } catch {
             print("【時間割】SwiftData からの読み込みに失敗: \(error.localizedDescription)")
         }
+    }
+
+    /// ログアウト時にメモリ内キャッシュと共有 SwiftData の時間割を削除し、ウィジェットを更新する
+    /// メインスレッドから呼ぶこと
+    func clearCacheForLogout() {
+        cachedTimetableData = nil
+        lastFetchTime = nil
+
+        if let context = modelContext {
+            do {
+                try context.delete(model: CachedTimetable.self)
+                try context.save()
+                print("【時間割】ログアウトに伴いキャッシュを削除しました")
+            } catch {
+                print("【時間割】キャッシュの削除に失敗: \(error.localizedDescription)")
+            }
+        }
+
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// キャッシュされた時間割データを取得

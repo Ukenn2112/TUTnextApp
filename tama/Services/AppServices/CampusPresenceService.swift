@@ -11,6 +11,8 @@ import Foundation
 /// `CLLocationManager` は1つしか作らない。
 ///
 /// - 権限は「使用中のみ」。バックグラウンドの位置情報は使わない
+/// - ジオフェンス（`CLCircularRegion` の監視）は「常に許可」が必要なため使わず、
+///   位置情報の更新から学校までの距離で判定する
 /// - 許可を求めるのは、実際に使う画面が現れたとき（`start()`）だけ
 /// - 許可されていない・まだ位置が分からない間は `isOnCampus` は nil のままで、
 ///   使う側は時刻だけで動く作りにしておくこと
@@ -37,13 +39,8 @@ final class CampusPresenceService: NSObject, ObservableObject {
     /// 学内と見なす半径（m）
     private nonisolated static let geofenceRadius: CLLocationDistance = 400
 
-    /// ジオフェンスの識別子
-    private nonisolated static let regionIdentifier = "SchoolArea"
-
-    /// 学校の位置（座標そのもの）
-    private nonisolated static var schoolLocation: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: schoolLatitude, longitude: schoolLongitude)
-    }
+    /// 以前のバージョンが登録していたジオフェンスの識別子（後片付け用）
+    private static let legacyRegionIdentifier = "SchoolArea"
 
     // MARK: - プライベートプロパティ
 
@@ -69,7 +66,7 @@ final class CampusPresenceService: NSObject, ObservableObject {
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.requestWhenInUseAuthorization()
-        setupGeofence(on: manager)
+        removeLegacyGeofence(on: manager)
         manager.startUpdatingLocation()
     }
 
@@ -79,28 +76,20 @@ final class CampusPresenceService: NSObject, ObservableObject {
         guard useCount == 0, let manager = locationManager else { return }
 
         manager.stopUpdatingLocation()
-        manager.monitoredRegions.forEach { manager.stopMonitoring(for: $0) }
         manager.delegate = nil
         locationManager = nil
+        // 止めた後は学内かどうか分からないので、使う側は時刻だけで動く状態に戻す
+        isOnCampus = nil
     }
 
     // MARK: - プライベートメソッド
 
-    private func setupGeofence(on manager: CLLocationManager) {
-        manager.monitoredRegions.forEach { region in
-            if region is CLCircularRegion {
-                manager.stopMonitoring(for: region)
-            }
-        }
-
-        let region = CLCircularRegion(
-            center: Self.schoolLocation,
-            radius: Self.geofenceRadius,
-            identifier: Self.regionIdentifier
-        )
-        region.notifyOnEntry = true
-        region.notifyOnExit = true
-        manager.startMonitoring(for: region)
+    /// 以前のバージョンが登録したジオフェンスが残っていれば監視を止める
+    /// （領域監視はアプリを再起動しても OS 側に残り続けるため）
+    private func removeLegacyGeofence(on manager: CLLocationManager) {
+        manager.monitoredRegions
+            .filter { $0.identifier == Self.legacyRegionIdentifier }
+            .forEach { manager.stopMonitoring(for: $0) }
     }
 
     /// 測位した位置から学内かどうかを決める
@@ -111,6 +100,8 @@ final class CampusPresenceService: NSObject, ObservableObject {
     }
 
     private func apply(isOnCampus newValue: Bool) {
+        // stop() 後に届いた古い通知は無視する
+        guard locationManager != nil else { return }
         guard self.isOnCampus != newValue else { return }
         self.isOnCampus = newValue
     }
@@ -125,16 +116,6 @@ extension CampusPresenceService: CLLocationManagerDelegate {
     ) {
         guard let location = locations.last else { return }
         Task { @MainActor in self.apply(location: location) }
-    }
-
-    nonisolated func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-        guard region.identifier == Self.regionIdentifier else { return }
-        Task { @MainActor in self.apply(isOnCampus: true) }
-    }
-
-    nonisolated func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-        guard region.identifier == Self.regionIdentifier else { return }
-        Task { @MainActor in self.apply(isOnCampus: false) }
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
