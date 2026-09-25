@@ -45,6 +45,98 @@
         }
       }
     },
+    "%@ · あと %@" : {
+      "comment" : "「今日」ペインの課題の2段目。締切の日（今日・明日・日付）と残り時間",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · in %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 앞으로 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 还有 %2$@"
+          }
+        }
+      }
+    },
+    "%d分%d秒" : {
+      "comment" : "バスのカウントダウン（分・秒）",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$dm %2$ds"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d분 %2$d초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d分%2$d秒"
+          }
+        }
+      }
+    },
+    "%d時間%d分%d秒" : {
+      "comment" : "バスのカウントダウン（時間・分・秒）",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$dh %2$dm %3$ds"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d시간 %2$d분 %3$d초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d小时%2$d分%3$d秒"
+          }
+        }
+      }
+    },
+    "· 明日 %lld" : {
+      "comment" : "「今日」ペインの課題のタイルの見出しの右端。「今日 N」に続く、明日が締切の件数",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· Tomorrow %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· 내일 %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· 明天 %lld"
+          }
+        }
+      }
+    },
     "〜%@" : {
       "comment" : "「今日」ペインの終了時刻",
       "localizations" : {
@@ -790,24 +882,47 @@
         }
       }
     },
-    "TUTnext へようこそ！👋" : {
+    "TUTnext へようこそ！" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Welcome to TUTnext! 👋"
+            "value" : "Welcome to TUTnext!"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TUTnext 에 오신 것을 환영합니다! 👋"
+            "value" : "TUTnext 에 오신 것을 환영합니다!"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "欢迎使用！TUTnext 👋"
+            "value" : "欢迎使用！TUTnext"
+          }
+        }
+      }
+    },
+    "〜%@ · %@" : {
+      "comment" : "「今日」ペインの「このあとの授業」の2段目。終了時刻と教員名",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "until %1$@ · %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "~%1$@ · %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "至%1$@ · %2$@"
           }
         }
       }
@@ -2200,6 +2315,29 @@
         }
       }
     },
+    "今日 %lld" : {
+      "comment" : "「今日」ペインの課題のタイルの見出しの右端。今日が締切の件数",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天 %lld"
+          }
+        }
+      }
+    },
     "今月" : {
       "localizations" : {
         "en" : {
@@ -2372,6 +2510,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新读取"
+          }
+        }
+      }
+    },
+    "学内にいるときに表示します" : {
+      "comment" : "「今日」ペインの帰りのバスのタイル。学外に居るので帰りの便を出さないときの一言",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shown while you're on campus"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교내에 있을 때 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在校内时显示"
+          }
+        }
+      }
+    },
+    "授業中 · %lld限" : {
+      "comment" : "「今日」ペインの授業のタイルの見出し。授業中の時限",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In class · Period %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 중 · %lld교시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上课中 · 第%lld节"
           }
         }
       }
@@ -3876,6 +4060,29 @@
         }
       }
     },
+    "次の授業 · %lld限" : {
+      "comment" : "「今日」ペインの授業のタイルの見出し。次の授業の時限",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next class · Period %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 수업 · %lld교시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下节课 · 第%lld节"
+          }
+        }
+      }
+    },
     "残り" : {
       "comment" : "「今日」ペイン",
       "localizations" : {
@@ -4656,6 +4863,29 @@
         }
       }
     },
+    "課題を更新できませんでした" : {
+      "comment" : "課題の再取得に失敗し、キャッシュを表示しているときの通知",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't update assignments"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "과제를 업데이트할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法更新作业"
+          }
+        }
+      }
+    },
     "通知設定" : {
       "localizations" : {
         "en" : {
@@ -4768,7 +4998,7 @@
       }
     },
     "閉じる" : {
-      "comment" : "科目詳細を閉じる",
+      "comment" : "シートや詳細画面を閉じるボタン",
       "localizations" : {
         "en" : {
           "stringUnit" : {

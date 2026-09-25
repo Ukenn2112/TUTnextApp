@@ -99,7 +99,7 @@ struct LoginView: View {
             }
 
             // タイトル
-            Text("TUTnext へようこそ！👋")
+            Text("TUTnext へようこそ！")
                 .font(.system(size: 25, weight: .bold))
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
