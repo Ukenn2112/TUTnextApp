@@ -1,3 +1,6 @@
 *.xcconfig
 .DS_Store
 build/
+CLAUDE.md
+xcuserdata/
+docs/
