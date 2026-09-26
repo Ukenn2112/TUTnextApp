@@ -86,25 +86,33 @@ struct CourseDetailView: View {
     /// 科目詳細の本体。
     ///
     /// 見出し（科目名・教員・教室）は手元の `CourseModel` からすぐに描く。
-    /// 取得を待つ掲示・出欠・メモのカードは、読み込みが少し長引いたときだけ仮のデータをスケルトンで出し、
-    /// 届いたら本物に入れ替える。動かすのはスケルトンを見せていたときの1回だけ（`DelayedSkeletonGate` が決める）。
-    /// スケルトンを出す前に届いたときや、引っ張って更新したときは動かさずにその場で描き替える
+    /// 取得を待つ掲示・出欠・メモのカードは、読み込み中はずっと仮のデータ（`CourseDetailResponse.placeholder`）で組んでおく。
+    /// スケルトンを出すまでの短い猶予のあいだは同じ形のまま隠しておくので、隠す→スケルトンは不透明度だけの変化で、形は変わらない。
+    /// 本物が届いたら（`isLoading` が false になった瞬間）、仮のデータから本物への入れ替え・高さの変化・
+    /// スケルトンや隠しの解除を1つの `Motion.standard` でまとめて動かす。スケルトンを出していてもいなくても、
+    /// 動くのはこの1回だけ（その後に `DelayedSkeletonGate` が `showsSkeleton` を戻しても見た目は変わらない）。
+    /// 下のリンク・色選択のカードも同じアニメーションでなめらかにずれる。
+    /// 引っ張って更新したときは `isLoading` に触れないので、動かさずにその場で描き替える
     private var detailScrollView: some View {
         ScrollView {
             VStack(spacing: 16) {
                 heroHeaderSection
 
                 DelayedSkeletonGate(isLoading: viewModel.isLoading) { showsSkeleton in
-                    let detail = showsSkeleton ? CourseDetailResponse.placeholder : viewModel.courseDetail
-                    // スケルトンを出すまでの短い猶予のあいだは、空の状態（「掲示はありません」など）を
-                    // 本物のように見せないよう、カードを隠しておく
-                    let isHidden = viewModel.isLoading && !showsSkeleton
+                    let isLoading = viewModel.isLoading
+                    // 読み込み中は（隠しているあいだもスケルトンのあいだも）仮のデータで組み、形を変えない
+                    let detail = isLoading ? CourseDetailResponse.placeholder : viewModel.courseDetail
+                    // 門が `showsSkeleton` を戻すのは届いた後の別の更新（`Motion.quick`）なので、
+                    // 届いた時点でスケルトンを外せるよう `isLoading` とも組み合わせる
+                    let isSkeleton = showsSkeleton && isLoading
+                    // スケルトンを出すまでの短い猶予のあいだは、仮のデータが素のまま見えないよう隠しておく
+                    let isHidden = isLoading && !showsSkeleton
                     VStack(spacing: 16) {
                         announcementsCard(detail: detail)
                         attendanceCard(detail: detail)
                         memoCard
                     }
-                    .skeleton(showsSkeleton)
+                    .skeleton(isSkeleton)
                     .opacity(isHidden ? 0 : 1)
                     .allowsHitTesting(!isHidden)
                 }
@@ -112,6 +120,9 @@ struct CourseDetailView: View {
                 linksCard
                 colorPickerCard
             }
+            // 本物が届いたときの1回だけの入れ替え（下のカードの位置も含めて）。
+            // 引っ張って更新では `isLoading` が変わらないので動かない
+            .motionAnimation(Motion.standard, value: viewModel.isLoading)
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, 24)
