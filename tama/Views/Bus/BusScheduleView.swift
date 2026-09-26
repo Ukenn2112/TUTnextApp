@@ -863,12 +863,6 @@ struct BusTimeTableContent: View {
     /// 2列表示では左右に2回出さず、右（駅行）の列だけで1回出す
     var showsSpecialNotes: Bool = true
 
-    /// 自動スクロールの行き先にする「行のいちばん上」（スクロールする内容の先頭）
-    private static let tableTopID = "bus_table_top"
-
-    /// 開いたときの自動スクロールを、表の配置が済むまで待つ時間（秒）
-    private static let initialScrollDelay: Double = 0.5
-
     /// 表の輪郭の角丸。
     /// 上の2つの角は固定された見出しが、下の2つの角はスクロールする行の入れ物が受け持つ
     private static let tableCornerRadius = CardSurface.cornerRadius
@@ -884,6 +878,37 @@ struct BusTimeTableContent: View {
     /// 路線の変更で次のバスの時間とスクロールの依頼が同時に変わったとき、
     /// 時間の変化の側で先に動かさずに飛んでしまわないよう、依頼の側に任せるために使う
     @State private var handledScrollRequestID: Int?
+
+    /// 表のスクロール位置（上端に合わせている行の識別。`scrollPosition(id:anchor:)` と結ぶ）。
+    ///
+    /// 初期値は `init` で次のバスの時間の行にしておくので、表は最初の1フレームからその位置で描かれ、
+    /// 開いた後に遅れて飛ぶことはない。利用者がスクロールするとスクロールビューがここへ書き戻すが、
+    /// 自動スクロールの判断（`lastScrolledHour`・`handledScrollRequestID`）には使わない
+    @State private var scrolledRowID: String?
+
+    init(
+        viewModel: BusScheduleViewModel,
+        route: BusSchedule.RouteType? = nil,
+        showsSpecialNotes: Bool = true
+    ) {
+        self.viewModel = viewModel
+        self.route = route
+        self.showsSpecialNotes = showsSpecialNotes
+
+        // 最初の配置の前に、次のバスの時間の行（先頭の時間なら表の頭）を位置として決めておく
+        let effectiveRoute = route ?? viewModel.selectedRouteType
+        let hour = viewModel.scrollHour(for: effectiveRoute)
+        let initialRowID = hour.flatMap { initialHour in
+            Self.scrollTargetID(
+                hour: initialHour,
+                schedules: Self.visibleSchedules(viewModel: viewModel, route: effectiveRoute),
+                showsNote: viewModel.selectedScheduleType == .wednesday,
+                tableKey: Self.tableKey(route: effectiveRoute, scheduleType: viewModel.selectedScheduleType)
+            )
+        }
+        _scrolledRowID = State(initialValue: initialRowID)
+        _lastScrolledHour = State(initialValue: hour)
+    }
 
     /// この表が見ている路線（1列表示では選択中の路線）
     private var effectiveRoute: BusSchedule.RouteType {
@@ -904,32 +929,85 @@ struct BusTimeTableContent: View {
 
     /// 表の中身の識別（路線と曜日）。変わったときは表ごとクロスフェードで入れ替える
     private var tableKey: String {
-        "\(effectiveRoute.rawValue)_\(viewModel.selectedScheduleType.rawValue)"
+        Self.tableKey(route: effectiveRoute, scheduleType: viewModel.selectedScheduleType)
+    }
+
+    private static func tableKey(route: BusSchedule.RouteType, scheduleType: BusSchedule.ScheduleType) -> String {
+        "\(route.rawValue)_\(scheduleType.rawValue)"
     }
 
     /// 時間の行のスクロール先の識別。
     /// クロスフェード中は古い表も重なって残るので、表の識別を含めて新しい表の行だけを指す
-    private func rowID(hour: Int) -> String {
+    private static func rowID(tableKey: String, hour: Int) -> String {
         "hour_\(tableKey)_\(hour)"
+    }
+
+    /// 水曜日の特別ダイヤの注記のスクロール先の識別（行と同じく表の識別を含める）
+    private static func noteID(tableKey: String) -> String {
+        "note_\(tableKey)"
+    }
+
+    /// 表の1行（識別は表の識別入りの行の識別）
+    private struct ScheduleRow: Identifiable {
+        let id: String
+        let index: Int
+        let schedule: BusSchedule.HourSchedule
+    }
+
+    /// ForEach の識別も行の識別（表の識別入りの文字列）にして、
+    /// `scrollPosition(id:)` と `ScrollViewProxy.scrollTo` のどちらからも同じ値で指せるようにする
+    private func scheduleRows(_ schedules: [BusSchedule.HourSchedule], tableKey: String) -> [ScheduleRow] {
+        schedules.enumerated().map { index, schedule in
+            ScheduleRow(id: Self.rowID(tableKey: tableKey, hour: schedule.hour), index: index, schedule: schedule)
+        }
     }
 
     /// 表に並べる時間帯（バスの無い時間帯は行にしない）
     private var visibleSchedules: [BusSchedule.HourSchedule] {
-        viewModel.getFilteredSchedule(for: effectiveRoute).hourSchedules.filter { !$0.times.isEmpty }
+        Self.visibleSchedules(viewModel: viewModel, route: effectiveRoute)
     }
 
-    /// 目当ての時間の行が見えるところまでスクロールする。
+    private static func visibleSchedules(
+        viewModel: BusScheduleViewModel, route: BusSchedule.RouteType
+    ) -> [BusSchedule.HourSchedule] {
+        viewModel.getFilteredSchedule(for: route).hourSchedules.filter { !$0.times.isEmpty }
+    }
+
+    /// その時間を見せるときに上端へ合わせる行の識別。
     ///
     /// 見出し行（時間｜発車時刻）はスクロールの外にあり、スクロール領域の上端は見出しのすぐ下なので、
     /// 行の上端を上端に合わせるだけで、その行は見出しに隠れず丸ごと見える。
     /// 目当ての行が表の先頭のときだけは、その上にある注記（水曜日の特別ダイヤ）も見えるように、
-    /// 行ではなく内容の先頭に合わせる（＝いちばん上で止まる）
-    private func scrollToTarget(_ hour: Int, firstHour: Int?, proxy: ScrollViewProxy) {
+    /// 表の最初の子（注記があれば注記、無ければ先頭の行）に合わせる（＝いちばん上で止まる）。
+    /// その時間の行が表に無いとき（終バスの後など）は nil（動かさない）
+    private static func scrollTargetID(
+        hour: Int, schedules: [BusSchedule.HourSchedule], showsNote: Bool, tableKey: String
+    ) -> String? {
+        guard schedules.contains(where: { $0.hour == hour }) else { return nil }
+        if hour == schedules.first?.hour, showsNote {
+            return noteID(tableKey: tableKey)
+        }
+        return rowID(tableKey: tableKey, hour: hour)
+    }
+
+    /// 目当ての時間の行を上端に合わせる。
+    ///
+    /// 位置は `scrolledRowID`（`scrollPosition(id:anchor:)`）を書き換えて動かす。
+    /// 呼び出し側が `withMotion` で包めば静かに寄せ、包まなければその場で移す。
+    /// 位置の値が既にその行を指しているとき（利用者がその行の中で少しだけ動かした、など）は、
+    /// 同じ値を入れ直してもスクロールビューは動かないので、そのときだけ `ScrollViewProxy` で寄せ直す
+    private func scrollToTarget(_ hour: Int, schedules: [BusSchedule.HourSchedule], proxy: ScrollViewProxy) {
         lastScrolledHour = hour
-        if firstHour == hour {
-            proxy.scrollTo(Self.tableTopID, anchor: .top)
+        guard let targetID = Self.scrollTargetID(
+            hour: hour,
+            schedules: schedules,
+            showsNote: viewModel.selectedScheduleType == .wednesday,
+            tableKey: tableKey
+        ) else { return }
+        if scrolledRowID == targetID {
+            proxy.scrollTo(targetID, anchor: .top)
         } else {
-            proxy.scrollTo(rowID(hour: hour), anchor: .top)
+            scrolledRowID = targetID
         }
     }
 
@@ -950,7 +1028,6 @@ struct BusTimeTableContent: View {
         // 表の行と次のバスは描き直しのたびに1回だけ求め、各行・各分チップへ配る
         let schedules = visibleSchedules
         let nextBus = viewModel.getNextBus(for: effectiveRoute)
-        let firstHour = schedules.first?.hour
 
         VStack(spacing: 0) {
             pinnedTableHeader
@@ -974,19 +1051,21 @@ struct BusTimeTableContent: View {
                             guard let hour = newValue, hour != lastScrolledHour else { return }
                             // 路線・曜日の変更と同時なら、下の依頼の側が静かに寄せる
                             guard handledScrollRequestID == viewModel.scrollRequestID else { return }
-                            scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
+                            scrollToTarget(hour, schedules: schedules, proxy: scrollProxy)
                         }
-                        // 路線・駅・曜日の変更やフォアグラウンド復帰では、時間が同じでも位置を戻す
+                        // 路線・駅・曜日の変更やフォアグラウンド復帰・ディープリンクでは、時間が同じでも位置を戻す。
+                        // 路線・曜日が変わるときは新しい表の行（表の識別入り）を指すので、フェードしていく古い表には寄らない
                         .onChange(of: viewModel.scrollRequestID) { _, newValue in
                             handledScrollRequestID = newValue
                             guard let hour = targetHour else { return }
                             if viewModel.scrollRequestAnimates {
                                 // 利用者の操作では、表のクロスフェード（Motion.standard）と同じ長さで寄せる
                                 withMotion(Motion.standard) {
-                                    scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
+                                    scrollToTarget(hour, schedules: schedules, proxy: scrollProxy)
                                 }
                             } else {
-                                scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
+                                // 自動の依頼（開いたとき・フォアグラウンド復帰・ディープリンク）は動かさずに移す
+                                scrollToTarget(hour, schedules: schedules, proxy: scrollProxy)
                             }
                         }
 
@@ -997,17 +1076,12 @@ struct BusTimeTableContent: View {
                     .padding(.horizontal, BusLayout.horizontalPadding)
                     // 最後の行・備考を最後まで送り出せるだけの下の余白（左右の余白と同じ値）
                     .padding(.bottom, BusLayout.horizontalPadding)
-                    // スクロールする内容のいちばん上＝スクロールの行き先「表の頭」
-                    .id(Self.tableTopID)
                 }
+                // 位置は行の識別で持つ。初期値（init で決めた次のバスの時間の行）のまま最初に配置されるので、
+                // 開いたときに遅れてスクロールして表が跳ねることはない
+                .scrollPosition(id: $scrolledRowID, anchor: .top)
                 .onAppear {
                     handledScrollRequestID = viewModel.scrollRequestID
-                    if let hour = targetHour {
-                        // 開いたときは動かさず、次のバスの時間の位置で出す
-                        DispatchQueue.main.asyncAfter(deadline: .now() + Self.initialScrollDelay) {
-                            scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
-                        }
-                    }
                 }
             }
         }
@@ -1057,15 +1131,20 @@ struct BusTimeTableContent: View {
     private func scheduleRowsView(
         _ schedules: [BusSchedule.HourSchedule], nextBus: BusSchedule.TimeEntry?
     ) -> some View {
-        VStack(spacing: 0) {
+        let key = tableKey
+        // 注記と各行がこの VStack の直接の子で、`scrollPosition(id:)` の行き先になる（識別は表の識別入り）
+        return VStack(spacing: 0) {
             if viewModel.selectedScheduleType == .wednesday {
                 wednesdaySpecialMessage
+                    .id(Self.noteID(tableKey: key))
             }
 
-            ForEach(Array(schedules.enumerated()), id: \.element.hour) { index, hourSchedule in
-                hourScheduleRow(hourSchedule, rowIndex: index, nextBus: nextBus)
+            ForEach(scheduleRows(schedules, tableKey: key)) { row in
+                hourScheduleRow(row.schedule, rowIndex: row.index, nextBus: nextBus)
+                    .id(row.id)
             }
         }
+        .scrollTargetLayout()
         // 表の中の縞模様はそのまま。外側だけカードと同じ白地＋1ptの枠にする
         .background(CardSurface.pageFill)
         .clipShape(bodyShape)
@@ -1158,7 +1237,6 @@ struct BusTimeTableContent: View {
             Divider()
                 .background(Color.gray.opacity(0.3))
         }
-        .id(rowID(hour: hourSchedule.hour))
         .background(
             (nextBus?.hour == hourSchedule.hour
                 ? Color.currentHourBackground
