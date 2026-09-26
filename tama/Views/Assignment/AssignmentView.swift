@@ -41,6 +41,10 @@ struct AssignmentView: View {
     @EnvironmentObject private var ratingService: RatingService
     @EnvironmentObject private var oauthService: GoogleOAuthService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 今回の読み込みでスケルトンを実際に画面に出したか。
+    /// 出していたときだけ、読み込み完了で本体へクロスフェードする（出す前に読み込めたときは動かさない）
+    @State private var skeletonWasShown = false
     // フォアグラウンド復帰通知オブザーバー
     @State private var willEnterForegroundObserver: NSObjectProtocol?
     /// ページに与えられている大きさ（2列にするかの判定に使う）
@@ -148,7 +152,9 @@ struct AssignmentView: View {
     /// 取り直しに失敗しても前回の控えが残っていれば、全面のエラーではなく一覧を出したまま
     /// 上に小さな知らせを出す（全面のエラーは、見せる課題が1件も無いときだけ）
     ///
-    /// 読み込み中（初回の取得の前だけ）はスケルトンのカードを、空・失敗は下から持ち上げて出す
+    /// 読み込み中（初回の取得の前だけ）はスケルトンのカードを出す。
+    /// 切り替わりを動かすのは、スケルトンを実際に出していたときの「スケルトン → 本体」のクロスフェードだけ。
+    /// 取り直し（引っ張って更新・フォアグラウンド復帰）で一覧・空・失敗が入れ替わるときは動かさない
     private var contentView: some View {
         ZStack {
             switch contentPhase {
@@ -157,16 +163,26 @@ struct AssignmentView: View {
                     .motionTransition(.fade)
             case .failure:
                 loadFailureView(message: viewModel.errorMessage ?? "")
-                    .motionTransition(.rise)
+                    .motionTransition(.fade)
             case .empty:
                 emptyView
-                    .motionTransition(.rise)
+                    .motionTransition(.fade)
             case .list:
                 assignmentList
                     .motionTransition(.fade)
             }
         }
-        .motionAnimation(Motion.standard, value: contentPhase)
+        // スケルトンを出していなければ nil を渡し、外側の取引に付いた動きも打ち消す
+        .animation(
+            skeletonWasShown ? Motion.resolved(Motion.standard, reduceMotion: reduceMotion) : nil,
+            value: contentPhase
+        )
+        .onChange(of: contentPhase) { oldPhase, newPhase in
+            // 読み込みが終わったら印を戻す（この変化の描画ではまだ true なので、上のクロスフェードは効く）
+            if oldPhase == .loading && newPhase != .loading {
+                skeletonWasShown = false
+            }
+        }
     }
 
     private var contentPhase: ContentPhase {
@@ -191,6 +207,7 @@ struct AssignmentView: View {
                 }
                 .scrollDisabled(true)
                 .skeleton(true)
+                .onAppear { skeletonWasShown = true }
             } else {
                 Color.clear
             }
@@ -238,7 +255,7 @@ struct AssignmentView: View {
                     .padding(.top, AssignmentLayout.Spacing.xs)
                     .frame(maxWidth: leadingColumnMaxWidth, alignment: .leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .motionTransition(.rise)
+                    .motionTransition(.fade)
             }
 
             // フィルターのチップ（選択中の塗りがチップの間を滑って移る・選び直すと触覚を返す）。
@@ -258,10 +275,15 @@ struct AssignmentView: View {
             .background(Color(UIColor.systemBackground))
 
             // 課題リスト。
-            // フィルターを切り替えると、外れたカードは沈みながら消え、入ったカードは持ち上がって現れる
+            // 利用者がフィルターを切り替えたときだけ、カードをその場でクロスフェードで入れ替える（持ち上げない）。
+            // 取り直しで課題が変わったときは動かさない
             ScrollView {
-                cardStack(for: filteredAssignments)
+                let assignments = filteredAssignments
+                cardStack(for: assignments)
                     .motionAnimation(Motion.standard, value: selectedFilter)
+                    // 取り直しで並びが変わったときは、外側の動き（失敗の知らせの出入りなど）を打ち消す。
+                    // フィルターの切り替えは内側の指定が後から効くので、そのまま動く
+                    .animation(nil, value: assignments.map(\.id))
             }
             // 引っ張って更新（一覧が出ている＝取得済みなので、スケルトンには切り替わらない）
             .refreshable {
@@ -288,7 +310,7 @@ struct AssignmentView: View {
                 ForEach(assignments) { assignment in
                     card(for: assignment)
                         .padding(.horizontal, AssignmentLayout.horizontalPadding)
-                        .motionTransition(.rise)
+                        .motionTransition(.fade)
                 }
             }
             .padding(.vertical)
@@ -365,7 +387,7 @@ struct AssignmentView: View {
         LazyVGrid(columns: gridColumns, spacing: AssignmentLayout.gridSpacing) {
             ForEach(assignments) { assignment in
                 card(for: assignment)
-                    .motionTransition(.rise)
+                    .motionTransition(.fade)
             }
         }
         .padding(.horizontal, AssignmentLayout.horizontalPadding)

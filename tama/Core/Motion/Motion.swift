@@ -5,8 +5,9 @@ import UIKit
 
 /// アプリ全体で共有するアニメーションの基準値（モーショントークン）。
 ///
-/// **方針**: 落ち着いた、ほとんど跳ねない「リニア寄り」の動き。
-/// 跳ねを持つのは `emphasized` だけ（bounce 0.08）で、それ以外は `smooth` 系で揃える。
+/// **方針**: 落ち着いた「リニア寄り」の動き。アプリ内で跳ねる（bounce する）ものは一つもなく、
+/// すべて `smooth` 系（bounce 0）で揃える。
+/// 取得したデータの到着・再読み込みでは動かさず、利用者の操作による変化だけを動かす。
 ///
 /// **視差効果を減らす（Reduce Motion）**: どのアニメーションも直接 `.animation(_:value:)` /
 /// `withAnimation` に渡さず、`motionAnimation(_:value:)` / `withMotion(_:_:)` を通すこと。
@@ -19,8 +20,9 @@ enum Motion {
     /// 内容の差し替え・絞り込み結果・ペインの入れ替え
     static let standard = Animation.smooth(duration: 0.32)
 
-    /// ログイン後のタブ表示や、画面への登場など、強調したい変化（わずかに跳ねる）
-    static let emphasized = Animation.spring(duration: 0.45, bounce: 0.08)
+    /// 少し長めに見せたい変化。跳ねない（bounce 0）。
+    /// アプリ内に跳ねるアニメーションはないため、`standard` より少しゆっくりなだけ
+    static let emphasized = Animation.smooth(duration: 0.4)
 
     /// 「視差効果を減らす」が有効なときの代わりの動き（短いクロスフェード）
     static let reduced = Animation.easeInOut(duration: 0.18)
@@ -31,25 +33,9 @@ enum Motion {
     /// スケルトンのきらめき（左から右へ一定速度で繰り返す）
     static let shimmer = Animation.linear(duration: shimmerPeriod).repeatForever(autoreverses: false)
 
-    /// 行を順に登場させるときの1行ごとの遅れ（秒）
-    static let staggerStep: Double = 0.025
-
-    /// 順に登場させるときの遅れの上限（秒）。長いリストでも最後の行を待たせない
-    static let staggerCap: Double = 0.20
-
     /// 読み込みが始まってからスケルトンを出すまでの猶予。
     /// キャッシュからすぐに表示できる場合にスケルトンが一瞬ちらつかないようにする
     static let skeletonDelay: Duration = .milliseconds(180)
-
-    /// `index` 番目の行を登場させるときの遅れ（秒）。`staggerCap` で頭打ちになる
-    ///
-    /// ```swift
-    /// row.transition(.opacity)
-    ///    .animation(Motion.standard.delay(Motion.stagger(index: i)), value: isShown)
-    /// ```
-    static func stagger(index: Int) -> Double {
-        min(Double(max(index, 0)) * staggerStep, staggerCap)
-    }
 
     /// 「視差効果を減らす」の設定を反映したアニメーションを返す
     /// - Parameters:

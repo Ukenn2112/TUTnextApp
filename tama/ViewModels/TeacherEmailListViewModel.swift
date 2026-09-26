@@ -11,6 +11,9 @@ final class TeacherEmailListViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var teachersBySection: [String: [Teacher]] = [:]
+    /// 最初の読み込みが（成功・失敗を問わず）一度でも終わったか。
+    /// 終わるまでは「読み込み中」として扱い、開いた直下に空の一覧が一瞬出ないようにする
+    @Published private(set) var hasLoadedOnce = false
 
     private let service = TeacherEmailListService()
     private var cancellables = Set<AnyCancellable>()
@@ -39,6 +42,7 @@ final class TeacherEmailListViewModel: ObservableObject {
         service.fetchTeachers()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
+                self?.hasLoadedOnce = true
                 self?.isLoading = false
                 if case .failure(let error) = completion {
                     self?.errorMessage = error.localizedDescription

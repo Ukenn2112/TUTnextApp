@@ -24,9 +24,9 @@ struct PrintSystemView: View {
 
                     if hasSelectedFile {
                         printSettingsArea
-                            .motionTransition(.rise)
+                            .motionTransition(.fade)
                         uploadButton
-                            .motionTransition(.rise)
+                            .motionTransition(.fade)
                     }
 
                     if showsRecentUploads {
@@ -39,13 +39,13 @@ struct PrintSystemView: View {
                             .foregroundStyle(.red)
                             .font(.footnote)
                             .multilineTextAlignment(.center)
-                            .motionTransition(.rise)
+                            .motionTransition(.fade)
                     }
                 }
-                // ファイルの選択・取り消しで内容が入れ替わるときと、エラーの出入りをそろえて動かす
+                // ファイルの選択・取り消しで内容が入れ替わるときと、エラーの出入りだけをフェードで動かす。
+                // 最近のアップロードの読み込み完了では動かさない（仮の行を出していたときだけ、欄の中でクロスフェードする）
                 .motionAnimation(Motion.standard, value: hasSelectedFile)
                 .motionAnimation(Motion.quick, value: viewModel.errorMessage)
-                .motionAnimation(Motion.standard, value: viewModel.isLoadingRecentUploads)
                 .padding(.horizontal)
                 .padding(.bottom, 20)
                 .readableWidth()
@@ -120,10 +120,10 @@ struct PrintSystemView: View {
                     .tint(Color.appPrimary)
                 }
                 .outlinedCard()
-                .motionTransition(.swap)
+                .motionTransition(.fade)
             } else {
                 fileSelectButton
-                    .motionTransition(.swap)
+                    .motionTransition(.fade)
             }
         }
     }
@@ -240,22 +240,32 @@ struct PrintSystemView: View {
             Text("最近のアップロード")
                 .font(.subheadline.weight(.semibold))
 
-            if viewModel.isLoadingRecentUploads {
-                // 読み込みが長引いたときだけ仮の行を出す（すぐ読み込めたときはちらつかせない）
-                DelayedSkeletonGate(isLoading: viewModel.isLoadingRecentUploads) { showsSkeleton in
-                    VStack(spacing: 12) {
-                        ForEach(0..<Self.placeholderRowCount, id: \.self) { _ in
-                            recentUploadPlaceholderRow
+            // 読み込みが長引いたときだけ仮の行を出す（すぐ読み込めたときはちらつかせない）
+            // 本物の行と仮の行を1つの入れ物にまとめ、門の `task` や動きの指定が行ごとに分かれないようにする
+            DelayedSkeletonGate(isLoading: viewModel.isLoadingRecentUploads) { showsSkeleton in
+                VStack(alignment: .leading, spacing: 12) {
+                    if viewModel.isLoadingRecentUploads {
+                        VStack(spacing: 12) {
+                            ForEach(0..<Self.placeholderRowCount, id: \.self) { _ in
+                                recentUploadPlaceholderRow
+                            }
+                        }
+                        .skeleton(showsSkeleton)
+                        .opacity(showsSkeleton ? 1 : 0)
+                    } else {
+                        ForEach(viewModel.recentUploads, id: \.printNumber) { result in
+                            recentUploadRow(result)
+                                .motionTransition(.fade)
                         }
                     }
-                    .skeleton(showsSkeleton)
-                    .opacity(showsSkeleton ? 1 : 0)
                 }
-            } else {
-                ForEach(viewModel.recentUploads, id: \.printNumber) { result in
-                    recentUploadRow(result)
-                        .motionTransition(.fade)
-                }
+                // 仮の行を実際に出していたときだけ、読み込み完了で本物の行へクロスフェードする。
+                // 読み込み完了の時点では showsSkeleton はまだ true なので値が変わり、動く。
+                // 仮の行を出す前に読み込めたときは値が false のまま変わらないので、動かさずにそのまま出す
+                .motionAnimation(
+                    Motion.standard,
+                    value: showsSkeleton && viewModel.isLoadingRecentUploads
+                )
             }
         }
         .outlinedCard()
@@ -449,11 +459,11 @@ struct PrintResultView: View {
             }
         }
         .onAppear {
-            // 「視差効果を減らす」が有効なら、描画もはずみも付けずにそのまま出す
+            // 「視差効果を減らす」が有効なら、描画もフェードも付けずにそのまま出す
             if reduceMotion {
                 showsCheckmark = true
             } else {
-                withMotion(Motion.emphasized) {
+                withMotion(Motion.standard) {
                     showsCheckmark = true
                 }
             }
@@ -461,7 +471,7 @@ struct PrintResultView: View {
     }
 
     /// 完了のチェックマーク。
-    /// iOS 26 以降は線を描くように現れ、それ以前は出たときに一度だけ弾む。
+    /// iOS 26 以降は線を描くように現れ、それ以前はフェードで現れる（弾ませない）。
     /// どちらも場所は最初から確保しておき、現れるときに周りの文字が動かないようにする
     private var completionCheckmark: some View {
         let symbol = Image(systemName: "checkmark.circle.fill")
@@ -482,8 +492,10 @@ struct PrintResultView: View {
                     }
                 }
             } else {
-                symbol
-                    .symbolEffect(.bounce, value: reduceMotion ? false : showsCheckmark)
+                if showsCheckmark {
+                    symbol
+                        .transition(.opacity)
+                }
             }
         }
     }

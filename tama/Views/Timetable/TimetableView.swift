@@ -38,7 +38,7 @@ struct TimetableView: View {
     /// 右ペインはこれを受け取って、自分の寸法を計算し直さずに左の行に揃える
     @State private var gridMetrics: TimetableGridMetrics = .unavailable
     /// セルを出し終えたか。最初の読み込みが終わるまではセルの代わりにスケルトン（空きセルの形）を描く。
-    /// 一度出したら戻さないので、タブを行き来しても登場の動きは繰り返さない
+    /// 一度出したら戻さないので、タブを行き来しても入れ替えの動きは繰り返さない
     @State private var hasRevealedCells = false
 
     // 曜日インデックスを表示用文字列に変換するヘルパー
@@ -238,10 +238,17 @@ struct TimetableView: View {
         .padding(.leading, layout.leftPadding)
         .padding(.trailing, layout.rightPadding)
         .padding(.top, layout.topPadding)
-        // 最初の読み込みが終わったら、セルを列ごとに順に出す（1回の読み込みにつき1回だけ）
-        .onChange(of: viewModel.hasLoadedOnce, initial: true) { _, loaded in
-            if loaded && !hasRevealedCells {
+        // 最初の読み込みが終わったら、スケルトンから本物のセルへ全体を1回だけクロスフェードで入れ替える。
+        // 最初のフレームからセルを出せるとき（表示した時点で読み込み済み）は動かさずにそのまま出す
+        .onChange(of: viewModel.hasLoadedOnce, initial: true) { wasLoaded, loaded in
+            guard loaded && !hasRevealedCells else { return }
+            if wasLoaded {
+                // 最初の呼び出し（initial）の時点ですでに読み込み済み＝スケルトンは見せていない
                 hasRevealedCells = true
+            } else {
+                withMotion(Motion.standard) {
+                    hasRevealedCells = true
+                }
             }
         }
     }
@@ -321,8 +328,8 @@ struct TimetableView: View {
             // セルのスケルトンは読み込み後の空きセルと同じ見た目にしたいので、中身は薄めない
             .skeleton(!hasRevealedCells, contentOpacity: 1)
         }
-        // 読み込み後の更新（学期の切り替え・前面復帰など）で表の中身や行数が変わるときは落ち着いて入れ替える
-        .motionAnimation(Motion.standard, value: viewModel.courses)
+        // 読み込み後の更新（前面復帰・再取得など）で表の中身や行数が変わっても動かさない。
+        // データが届いただけで表が揺れたり薄れたりしないよう、ここにはアニメーションを付けない
     }
 
     private func timeColumnView(
@@ -346,7 +353,7 @@ struct TimetableView: View {
     private func periodRowView(period: String, layout: LayoutMetrics) -> some View {
         let weekdays = viewModel.getWeekdays()
         return HStack(spacing: LayoutMetrics.cellSpacing) {
-            ForEach(Array(weekdays.enumerated()), id: \.element) { column, day in
+            ForEach(weekdays, id: \.self) { day in
                 TimeSlotCell(
                     dayIndex: day,
                     displayDay: weekdayString(from: day),
@@ -373,7 +380,7 @@ struct TimetableView: View {
                 )
                 .modifier(
                     CellReveal(
-                        isRevealed: hasRevealedCells, column: column,
+                        isRevealed: hasRevealedCells,
                         width: layout.cellWidth, height: layout.cellHeight))
             }
         }
@@ -553,14 +560,13 @@ private struct LayoutMetrics {
 
 // MARK: - セルの登場
 
-/// 最初の読み込みが終わったときに、スケルトン（空きセルの形）から本物のセルへ列ごとに順に入れ替える。
+/// 最初の読み込みが終わったときに、スケルトン（空きセルの形）から本物のセルへ入れ替える。
 ///
 /// スケルトンとセルを重ねておき、不透明度だけを入れ替える（間に何も無い瞬間を作らない）。
-/// 遅れは列の番号から `Motion.stagger(index:)` で決める。
-/// 「視差効果を減らす」が有効なら `motionAnimation` が遅れの無い短いクロスフェードに差し替える
+/// 全部のセルが同時に入れ替わる（列ごとに遅らせない）。動かすかどうかと速さは、
+/// `isRevealed` を変える側（`withMotion(Motion.standard)`、スケルトンを見せていたときだけ）が決める
 private struct CellReveal: ViewModifier {
     let isRevealed: Bool
-    let column: Int
     let width: CGFloat
     let height: CGFloat
 
@@ -571,7 +577,6 @@ private struct CellReveal: ViewModifier {
                 EmptyCellSkeleton(width: width, height: height)
                     .opacity(isRevealed ? 0 : 1)
             }
-            .motionAnimation(Motion.standard.delay(Motion.stagger(index: column)), value: isRevealed)
     }
 }
 

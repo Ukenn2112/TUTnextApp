@@ -22,6 +22,12 @@ final class BusScheduleViewModel: ObservableObject {
     /// 表は次のバスの時間が変わったときだけ自分でスクロールする（毎分の時計では動かさない）ので、
     /// 開いたとき・路線や駅や曜日を変えたとき・フォアグラウンドに戻ったときは、ここで明示的に頼む
     @Published private(set) var scrollRequestID = 0
+
+    /// 直近のスクロールの依頼を動かして寄せるか（`scrollRequestID` を増やす前に決める）。
+    ///
+    /// 利用者の操作（路線・駅・曜日）と現在地による路線の切り替えでは静かに寄せ、
+    /// 開いたとき・フォアグラウンド復帰・ディープリンクでは動かさずにその位置で出す
+    private(set) var scrollRequestAnimates = true
     @Published var selectedTimeEntry: BusSchedule.TimeEntry?
 
     /// 利用者が時刻表の便を押した回数（選択・解除のどちらも数える）。
@@ -158,7 +164,7 @@ final class BusScheduleViewModel: ObservableObject {
         startClock()
         checkIfWeekday()
         restoreSelectionIfNeeded()
-        requestScrollToNextBus()
+        requestScrollToNextBus(animated: false)
         setupBusParametersObserver()
 
         willEnterForegroundObserver = NotificationCenter.default.addObserver(
@@ -170,7 +176,7 @@ final class BusScheduleViewModel: ObservableObject {
                 guard let self else { return }
                 self.currentTime = Self.now()
                 self.checkIfSelectedTimePassed()
-                self.requestScrollToNextBus()
+                self.requestScrollToNextBus(animated: false)
                 self.fetchBusScheduleData()
                 // バックグラウンドの間に分の境目がずれるので、次の境目から数え直す
                 self.startClock()
@@ -247,7 +253,9 @@ final class BusScheduleViewModel: ObservableObject {
     }
 
     /// 表に次のバスの時間までスクロールし直してもらう（次のバスの時間が変わっていなくても動かす）
-    func requestScrollToNextBus() {
+    /// - Parameter animated: 静かに寄せるか。利用者の操作に応えるときだけ `true` にする
+    func requestScrollToNextBus(animated: Bool = true) {
+        scrollRequestAnimates = animated
         scrollRequestID &+= 1
     }
 
@@ -364,10 +372,9 @@ final class BusScheduleViewModel: ObservableObject {
             || (selectedTime.hour == currentHour && selectedTime.minute <= currentMinute) {
             BusLiveActivityService.shared.endActivity()
             BusSelectionStore.shared.clear()
-            withMotion(Motion.quick) {
-                selectedTimeEntry = nil
-                selectedEntryRoute = nil
-            }
+            // 時計による自動解除なので動かさない（利用者の操作ではないため、その場で消えるだけにする）
+            selectedTimeEntry = nil
+            selectedEntryRoute = nil
         }
     }
 
@@ -394,7 +401,7 @@ final class BusScheduleViewModel: ObservableObject {
             // 時間割タブの「今日」ペインからも同じ便を数えられるよう、選択を共有しておく
             BusSelectionStore.shared.select(
                 entry: time, route: route, now: Self.now())
-            // カードの「バス時刻」の行は、この変更に乗って `motionTransition(.rise)` で持ち上がる
+            // カードの「バス時刻」の行と分のチップの塗りは、この変更に乗って静かにフェードする（位置は動かさない）
             withMotion(Motion.quick) {
                 selectedTimeEntry = time
                 selectedEntryRoute = route
@@ -559,6 +566,8 @@ extension BusScheduleViewModel {
             return
         }
 
+        // 現在地による自動の切り替え。表の中身は路線ごとに入れ替わるクロスフェードだけで、
+        // 行や分のチップが動いたり、カードが持ち上がったりはしない（`BusTimeTableContent`）
         if userInSchoolArea {
             let isAlreadySchoolDeparture =
                 selectedRouteType == .fromSchoolToSeiseki
@@ -633,7 +642,8 @@ extension BusScheduleViewModel {
                 break
             }
         }
-        requestScrollToNextBus()
+        // ディープリンクで開いたときは、動かさずにその位置で出す
+        requestScrollToNextBus(animated: false)
     }
 }
 

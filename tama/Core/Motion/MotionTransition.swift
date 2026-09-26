@@ -10,15 +10,15 @@ import SwiftUI
 enum MotionTransition {
     /// 単純なフェード
     case fade
-    /// フェードしながら 8pt 下から持ち上がる（リストの行・カードの登場）
+    /// フェードしながら 6pt 下から持ち上がる。
+    /// 利用者の操作で一時的に現れる UI（トースト・バナー）専用。
+    /// 取得したデータで表示する内容（リストの行・カード・結果）には使わず、`.fade` を使うこと
     case rise
-    /// ぼかしながら入れ替わる（同じ場所で内容が差し替わるとき）
-    case swap
     /// 指定した辺から滑り込み、フェードする
     case slide(Edge)
 
     /// 持ち上がる距離（pt）
-    static let riseOffset: CGFloat = 8
+    static let riseOffset: CGFloat = 6
 
     /// 通常時のトランジション
     var transition: AnyTransition {
@@ -27,8 +27,6 @@ enum MotionTransition {
             return .opacity
         case .rise:
             return .opacity.combined(with: .offset(y: Self.riseOffset))
-        case .swap:
-            return AnyTransition(.blurReplace)
         case .slide(let edge):
             return .move(edge: edge).combined(with: .opacity)
         }
@@ -46,7 +44,7 @@ extension View {
     ///
     /// ```swift
     /// if isShown {
-    ///     Banner().motionTransition(.rise)
+    ///     Toast().motionTransition(.rise)
     /// }
     /// // 状態は withMotion(Motion.standard) { isShown = true } で変える
     /// ```

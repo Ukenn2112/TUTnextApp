@@ -85,9 +85,9 @@ struct ContentView: View {
                     .motionTransition(.fade)
             }
         }
-        // ログイン・ログアウト・セッション切れの切り替えはどれも同じ強調の動きにそろえる。
+        // ログイン・ログアウト・セッション切れの切り替えはどれも同じ落ち着いたクロスフェードにそろえる。
         // 起動時の確認（checkLoginStatus）は disablesAnimations のトランザクションで反映するため、ここでは動かない
-        .motionAnimation(Motion.emphasized, value: isLoggedIn)
+        .motionAnimation(Motion.standard, value: isLoggedIn)
         .onChange(of: isLoggedIn) {
             // ログアウト・セッション切れ後に「その他」モードやシートの状態を持ち越さない
             resetMoreMenuState()
@@ -119,7 +119,7 @@ struct ContentView: View {
         .onReceive(
             NotificationCenter.default.publisher(for: .sessionExpired)
         ) { _ in
-            withMotion(Motion.emphasized) {
+            withMotion(Motion.standard) {
                 isLoggedIn = false
             }
         }

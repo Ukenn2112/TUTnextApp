@@ -9,7 +9,12 @@ struct TeacherEmailListView: View {
     @State private var selectedSection: String?
     @State private var showSearchBar = false
     @State private var visibleSection: String?
-    @State private var isManualSelection = false
+    /// 五十音インデックスを指でなぞっている最中か（この間は指の下のグループを優先して強調する）
+    @State private var isIndexDragging = false
+    /// 読み込み中にスケルトンが実際に出たか。出ていなければ一覧は切り替えのアニメーションなしで出す
+    @State private var loadingSkeletonShown = false
+    /// 直前まで出していた本体の種類。切り替わりの瞬間に「どこから切り替わったか」を知るために持つ
+    @State private var settledPhase: ContentPhase = .loading
     @Environment(\.dismiss) private var dismiss
     
     // 五十音行
@@ -28,22 +33,21 @@ struct TeacherEmailListView: View {
     private static let visibleHeaderRange: ClosedRange<CGFloat> = -130...70
 
     // MARK: - ボディ
+    // シートの中で画面遷移はしないので NavigationStack は使わない。
+    // 使うと最初のレイアウトでナビゲーションバーの高さが確保され、バーを隠した直後に中身が上へずれる
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
-                backgroundView
+        ZStack(alignment: .top) {
+            backgroundView
 
-                VStack(spacing: 0) {
-                    headerView
-                    contentView
-                }
+            VStack(spacing: 0) {
+                headerView
+                contentView
             }
-            .overlay(
-                TeacherCopyConfirmationView(showing: showingCopyConfirmation)
-            )
-            .toolbar(.hidden, for: .navigationBar)
-            .onAppear(perform: loadInitialData)
         }
+        .overlay(
+            TeacherCopyConfirmationView(showing: showingCopyConfirmation)
+        )
+        .onAppear(perform: loadInitialData)
     }
     
     // MARK: - 背景ビュー
@@ -144,23 +148,38 @@ struct TeacherEmailListView: View {
     }
     
     // MARK: - コンテンツビュー
+    // データが届いて出てくる中身（一覧・エラー・検索結果なし）はクロスフェードだけで入れ替える
     private var contentView: some View {
         ZStack {
-            if viewModel.isLoading {
-                TeacherLoadingView()
+            switch contentPhase {
+            case .loading:
+                TeacherLoadingView(skeletonShown: $loadingSkeletonShown)
                     .motionTransition(.fade)
-            } else if let errorMessage = viewModel.errorMessage {
-                TeacherErrorView(message: errorMessage, onRetry: viewModel.loadTeachers)
-                    .motionTransition(.rise)
-            } else if viewModel.filteredTeachers.isEmpty && !viewModel.searchText.isEmpty {
+            case .failure:
+                TeacherErrorView(message: viewModel.errorMessage ?? "", onRetry: viewModel.loadTeachers)
+                    .motionTransition(.fade)
+            case .noResults:
                 TeacherEmptyResultView()
-                    .motionTransition(.rise)
-            } else {
+                    .motionTransition(.fade)
+            case .list:
                 teacherListView
                     .motionTransition(.fade)
             }
         }
+        // スケルトンが出る前に読み込みが終わったときは、切り替えをアニメーションさせずにそのまま出す。
+        // 本体の種類が変わったときだけ手を入れる（スケルトン自体の出方など、ほかの動きには触れない）
+        .transaction(value: contentPhase) { transaction in
+            if settledPhase == .loading && !loadingSkeletonShown {
+                transaction.animation = nil
+            }
+        }
         .motionAnimation(Motion.standard, value: contentPhase)
+        .onChange(of: contentPhase) { _, newPhase in
+            settledPhase = newPhase
+            if newPhase == .loading {
+                loadingSkeletonShown = false
+            }
+        }
         .zIndex(0)
     }
 
@@ -169,8 +188,9 @@ struct TeacherEmailListView: View {
         case loading, failure, noResults, list
     }
 
+    /// 最初の読み込みが終わるまでは読み込み中として扱う（開いた直後に空の一覧を一瞬出さない）
     private var contentPhase: ContentPhase {
-        if viewModel.isLoading {
+        if viewModel.isLoading || !viewModel.hasLoadedOnce {
             return .loading
         } else if viewModel.errorMessage != nil {
             return .failure
@@ -247,6 +267,11 @@ struct TeacherEmailListView: View {
             .onChange(of: selectedSection) { _, newSection in
                 scrollToSection(newSection, proxy: scrollProxy)
             }
+            .onChange(of: isIndexDragging) { _, isDragging in
+                if !isDragging {
+                    finishIndexDragging()
+                }
+            }
         }
     }
     
@@ -257,7 +282,7 @@ struct TeacherEmailListView: View {
             actualSections: getAvailableSections(),
             selectedSection: $selectedSection,
             visibleSection: visibleSection,
-            isManualSelection: $isManualSelection
+            isDragging: $isIndexDragging
         )
     }
     
@@ -268,13 +293,29 @@ struct TeacherEmailListView: View {
         width > 300 && viewModel.searchText.isEmpty
     }
     
-    /// 指定グループにスクロール
+    /// 指定グループにスクロール。
+    /// インデックスをなぞる指に一覧が遅れないよう、アニメーションなしで一気に移す（標準の索引と同じ）
     private func scrollToSection(_ section: String?, proxy: ScrollViewProxy) {
-        if let section = section {
-            withMotion(Motion.standard) {
-                // アンカーポイントにスクロールし、グループ見出しが上部に表示されるようにする
-                proxy.scrollTo("anchor_\(section)", anchor: .top)
+        guard let section else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            // アンカーポイントにスクロールし、グループ見出しが上部に表示されるようにする
+            proxy.scrollTo("anchor_\(section)", anchor: .top)
+        }
+    }
+
+    /// インデックスから指が離れたら、スクロール位置に合わせた強調へ戻す。
+    /// 指の下のグループは一覧の上端に来ているので、表示中のグループもそれに揃えてちらつかせない
+    private func finishIndexDragging() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            if let selectedSection {
+                visibleSection = selectedSection
             }
+            // 次に同じグループを選んだときもスクロールが起きるよう、選択は空に戻す
+            selectedSection = nil
         }
     }
     
@@ -287,7 +328,7 @@ struct TeacherEmailListView: View {
     
     /// 初期データを読み込む
     private func loadInitialData() {
-        if viewModel.teachers.isEmpty {
+        if viewModel.teachers.isEmpty && !viewModel.isLoading {
             viewModel.loadTeachers()
         }
     }
@@ -340,18 +381,13 @@ struct TeacherEmailListView: View {
     private func updateVisibleSection(section: String, geometry: GeometryProxy) {
         let headerY = geometry.frame(in: .named(Self.coordinateSpaceName)).minY
         // 見出しがスクロール領域の上端付近にある場合、そのグループが表示中と判断
-        if Self.visibleHeaderRange.contains(headerY) {
-            if visibleSection != section {
-                withMotion(Motion.quick) {
-                    visibleSection = section
-                }
-                // ユーザーが手動で選択していた場合、スクロール位置変更で自動追従に戻す
-                if isManualSelection {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isManualSelection = false
-                        selectedSection = nil
-                    }
-                }
+        guard Self.visibleHeaderRange.contains(headerY), visibleSection != section else { return }
+        if visibleSection == nil || isIndexDragging {
+            // 最初の1回（一覧が出た直後）とインデックスをなぞっている間は、強調を動かさずに切り替える
+            visibleSection = section
+        } else {
+            withMotion(Motion.quick) {
+                visibleSection = section
             }
         }
     }
@@ -665,77 +701,37 @@ struct TeacherSelectionBar: View {
     }
 }
 
-/// 五十音インデックスビュー
+/// 五十音インデックスビュー。
+///
+/// 標準の索引（UITableView のセクションインデックス）と同じく、指を置いた・なぞった位置のグループへ
+/// すぐに移る。ボタンは使わず、索引全体に1つだけ付けたドラッグで指の位置からグループを求める
 struct TeacherIndexView: View {
     let sections: [String]
     let actualSections: [String]
     @Binding var selectedSection: String?
     let visibleSection: String?
-    @Binding var isManualSelection: Bool
+    /// 指で索引をなぞっている最中か（親はこの間、スクロール位置による強調の切り替えをしない）
+    @Binding var isDragging: Bool
 
-    // ドラッグ状態管理
-    @State private var isDragging = false
-    @State private var dragLocation: CGPoint = .zero
+    /// 実際に描かれた索引の高さ（内側の余白を含む）。指の位置からグループを求めるのに使う
+    @State private var barHeight: CGFloat = 0
+    /// 触覚を返すきっかけ。指の下のグループが変わるたびに変わる（離しても空には戻さない）
+    @State private var hapticSection: String?
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 1文字ぶんの丸の大きさ
+    private static let itemSize: CGFloat = 28
+    /// 丸どうしの間隔
+    private static let itemSpacing: CGFloat = 3
+    /// 索引の内側の上下の余白
+    private static let innerVerticalPadding: CGFloat = 8
 
-    /// 現在のグループの丸を少しだけ大きくする倍率（「視差効果を減らす」が有効なら大きさは変えない）
-    private var currentSectionScale: CGFloat { reduceMotion ? 1.0 : 1.1 }
-
-    /// ドラッグ中に索引全体を少しだけ大きくする倍率（「視差効果を減らす」が有効なら大きさは変えない）
-    private var draggingScale: CGFloat { reduceMotion ? 1.0 : 1.05 }
-    
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: Self.itemSpacing) {
             ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
-                Button(action: {
-                    selectSection(at: index)
-                }) {
-                    Text(section)
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .foregroundStyle(isCurrentSection(index) ? Color.white : Color.primary)
-                        .background(
-                            Circle()
-                                .fill(
-                                    isCurrentSection(index) ?
-                                    LinearGradient(
-                                        colors: [Color.appPrimary, Color.appPrimary.opacity(0.8)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ) :
-                                    LinearGradient(
-                                        colors: [Color.clear, Color.clear],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(
-                                            isCurrentSection(index) ? 
-                                            Color.clear : 
-                                            Color.primary.opacity(isDragging ? 0.3 : 0.15), 
-                                            lineWidth: 1
-                                        )
-                                )
-                                .shadow(
-                                    color: isCurrentSection(index) ? 
-                                    Color.appPrimary.opacity(0.3) : 
-                                    Color.clear, 
-                                    radius: isCurrentSection(index) ? 4 : 0, 
-                                    x: 0, 
-                                    y: isCurrentSection(index) ? 2 : 0
-                                )
-                        )
-                        .scaleEffect(isCurrentSection(index) ? currentSectionScale : 1.0)
-                }
-                .motionAnimation(Motion.quick, value: selectedSection)
-                .motionAnimation(Motion.quick, value: visibleSection)
-                .motionAnimation(Motion.quick, value: isDragging)
+                indexItem(section, index: index)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, Self.innerVerticalPadding)
         .padding(.horizontal, 6)
         // 一覧の上に浮くが、輪郭はアプリ共通のカードと同じ（地の色＋1ptの枠）で取る。
         // 塗りが地の色そのものなので、下を行が流れていても読み違えない
@@ -744,96 +740,111 @@ struct TeacherIndexView: View {
                 .fill(CardSurface.pageFill)
                 .stroke(CardSurface.outlineStroke, lineWidth: CardSurface.outlineWidth)
         )
-        .scaleEffect(isDragging ? draggingScale : 1.0)
-        .padding(.trailing, 12)
-        .padding(.vertical, 16)
+        // 指の位置はこの索引自身の座標で受け取る（外側の余白を含めない）ので、測った高さとそのまま比べられる
+        .contentShape(Rectangle())
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { height in
+            barHeight = height
+        }
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
-                    handleDragChanged(value)
+                    handleDragChanged(at: value.location.y)
                 }
                 .onEnded { _ in
-                    handleDragEnded()
+                    isDragging = false
                 }
         )
-        .motionAnimation(Motion.quick, value: isDragging)
-    }
-    
-    // MARK: - ヘルパーメソッド
-
-    /// 現在のグループかどうかを判定（手動選択を優先、次に表示中のグループ）
-    private func isCurrentSection(_ index: Int) -> Bool {
-        let actualSection = actualSections[index]
-        if isManualSelection {
-            return selectedSection == actualSection
-        } else {
-            return visibleSection == actualSection
-        }
-    }
-    
-    /// 指定インデックスのグループを選択
-    private func selectSection(at index: Int) {
-        withMotion(Motion.quick) {
-            selectedSection = actualSections[index]
-            isManualSelection = true
-        }
-    }
-    
-    /// ドラッグ変化を処理
-    private func handleDragChanged(_ value: DragGesture.Value) {
-        if !isDragging {
-            withMotion(Motion.quick) {
-                isDragging = true
+        .selectionHaptic(trigger: hapticSection)
+        .onDisappear {
+            // なぞっている途中で索引が消えても（検索を始めたなど）、なぞり中のままにしない
+            if isDragging {
+                isDragging = false
             }
-            // 触覚フィードバックを追加
-            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-            impactFeedback.prepare()
-            impactFeedback.impactOccurred()
-            
-            // 手動選択状態にマーク
-            isManualSelection = true
         }
-        
-        dragLocation = value.location
-        
-        // ドラッグ位置に対応するグループを計算
-        let sectionIndex = calculateSectionIndex(for: value.location)
-        if sectionIndex >= 0 && sectionIndex < actualSections.count {
-            let newSection = actualSections[sectionIndex]
-            if selectedSection != newSection {
-                // 軽い触覚フィードバック
-                let selectionFeedback = UISelectionFeedbackGenerator()
-                selectionFeedback.prepare()
-                selectionFeedback.selectionChanged()
-                
-                withMotion(Motion.quick) {
-                    selectedSection = newSection
+        .padding(.trailing, 12)
+        .padding(.vertical, 16)
+    }
+
+    /// 索引の1文字。強調は塗りと文字色だけで示し、大きさは変えない
+    private func indexItem(_ section: String, index: Int) -> some View {
+        let isCurrent = isCurrentSection(index)
+        return Text(section)
+            .font(.system(size: 12, weight: .semibold))
+            .frame(width: Self.itemSize, height: Self.itemSize)
+            .foregroundStyle(isCurrent ? Color.white : Color.primary)
+            .background(
+                Circle()
+                    .fill(
+                        isCurrent ?
+                        LinearGradient(
+                            colors: [Color.appPrimary, Color.appPrimary.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ) :
+                        LinearGradient(
+                            colors: [Color.clear, Color.clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                // なぞっている間は枠を少し濃くする（色だけ変える）
+                                isCurrent ? Color.clear : Color.primary.opacity(isDragging ? 0.3 : 0.15),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(
+                        color: isCurrent ? Color.appPrimary.opacity(0.3) : Color.clear,
+                        radius: isCurrent ? 4 : 0,
+                        x: 0,
+                        y: isCurrent ? 2 : 0
+                    )
+            )
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                if index < actualSections.count {
+                    selectedSection = actualSections[index]
                 }
             }
-        }
     }
-    
-    /// ドラッグ終了を処理
-    private func handleDragEnded() {
-        withMotion(Motion.quick) {
-            isDragging = false
-        }
-    }
-    
-    /// ドラッグ位置からグループインデックスを計算
-    private func calculateSectionIndex(for location: CGPoint) -> Int {
-        // 各グループの高さを計算（間隔を含む）
-        let itemHeight: CGFloat = 28 + 3
-        let topPadding: CGFloat = 8
 
-        // コンテナ上部からの相対位置を計算
-        let relativeY = location.y - topPadding
-        
-        // グループインデックスを計算
-        let index = Int(relativeY / itemHeight)
-        
-        // インデックスが有効範囲内であることを確認
-        return max(0, min(index, sections.count - 1))
+    // MARK: - ヘルパーメソッド
+
+    /// 現在のグループかどうかを判定（なぞっている間は指の下のグループ、それ以外は表示中のグループ）
+    private func isCurrentSection(_ index: Int) -> Bool {
+        guard index < actualSections.count else { return false }
+        let actualSection = actualSections[index]
+        return isDragging ? selectedSection == actualSection : visibleSection == actualSection
+    }
+
+    /// 指の位置の変化を処理する。指を置いただけ（動かしていない）でも、その下のグループを選ぶ。
+    /// 強調は指にぴったり付いてくるよう、アニメーションなしで切り替える
+    private func handleDragChanged(at locationY: CGFloat) {
+        guard let index = sectionIndex(at: locationY) else { return }
+        let newSection = actualSections[index]
+        if !isDragging {
+            isDragging = true
+        }
+        if selectedSection != newSection {
+            selectedSection = newSection
+            hapticSection = newSection
+        }
+    }
+
+    /// 指の縦位置（索引自身の座標）からグループの番号を求める。範囲外は端のグループに丸める
+    private func sectionIndex(at locationY: CGFloat) -> Int? {
+        let count = actualSections.count
+        guard count > 0, barHeight > 0 else { return nil }
+        let usableHeight = barHeight - Self.innerVerticalPadding * 2
+        // 1文字ぶんの送り幅（丸＋間隔）。最後の丸の後ろにも間隔があるとみなして等分する
+        let pitch = (usableHeight + Self.itemSpacing) / CGFloat(count)
+        guard pitch > 0 else { return nil }
+        let rawIndex = Int(floor((locationY - Self.innerVerticalPadding) / pitch))
+        return min(max(rawIndex, 0), count - 1)
     }
 }
 
@@ -844,12 +855,7 @@ struct TeacherRow: View {
     let onToggle: () -> Void
     let onCopy: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    /// 選ばれたときに丸・行を少しだけ大きくする（「視差効果を減らす」が有効なら大きさは変えない）
-    private var selectedCheckScale: CGFloat { reduceMotion ? 1.0 : 1.1 }
-    private var selectedRowScale: CGFloat { reduceMotion ? 1.0 : 1.02 }
-
+    // 選ばれているかどうかは塗り・枠の色だけで示す（大きさは変えない）
     var body: some View {
         HStack(spacing: 20) {
             // 選択ボタン
@@ -872,8 +878,6 @@ struct TeacherRow: View {
                 }
             }
             .buttonStyle(BorderlessButtonStyle())
-            .scaleEffect(isSelected ? selectedCheckScale : 1.0)
-            .motionAnimation(Motion.quick, value: isSelected)
             
             // 教員情報
             VStack(alignment: .leading, spacing: 4) {
@@ -931,7 +935,6 @@ struct TeacherRow: View {
                     lineWidth: isSelected ? 1 : 0
                 )
         )
-        .scaleEffect(isSelected ? selectedRowScale : 1.0)
         .motionAnimation(Motion.quick, value: isSelected)
         .onTapGesture {
             onToggle()
@@ -980,6 +983,8 @@ struct TeacherSectionHeader: View {
 /// 教員の行と同じ形を塗りつぶしたスケルトンを並べる。読み込みが `Motion.skeletonDelay` より
 /// 長く続いたときだけ出し（すぐ読み込めたときのちらつきを防ぐ）、きらめきは入れ物に1回だけ掛ける
 struct TeacherLoadingView: View {
+    /// スケルトンを実際に出したら `true` にする（親はこれを見て、一覧への切り替えをアニメーションさせるか決める）
+    @Binding var skeletonShown: Bool
 
     /// スケルトンの仮の教員（`.redacted` で塗りつぶすので文字は画面に出ない。id は固定）
     private static let placeholderTeachers: [Teacher] = (0..<8).map { index in
@@ -1011,6 +1016,9 @@ struct TeacherLoadingView: View {
                 }
                 .scrollDisabled(true)
                 .skeleton(true)
+                .onAppear {
+                    skeletonShown = true
+                }
             } else {
                 Color.clear
             }

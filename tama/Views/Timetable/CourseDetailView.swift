@@ -87,7 +87,8 @@ struct CourseDetailView: View {
     ///
     /// 見出し（科目名・教員・教室）は手元の `CourseModel` からすぐに描く。
     /// 取得を待つ掲示・出欠・メモのカードは、読み込みが少し長引いたときだけ仮のデータをスケルトンで出し、
-    /// 届いたら `Motion.standard` で本物に入れ替える（入れ替えの速さは ViewModel の `withMotion` が決める）
+    /// 届いたら本物に入れ替える。動かすのはスケルトンを見せていたときの1回だけ（`DelayedSkeletonGate` が決める）。
+    /// スケルトンを出す前に届いたときや、引っ張って更新したときは動かさずにその場で描き替える
     private var detailScrollView: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -553,6 +554,7 @@ extension CourseDetailView {
                 // 0番（白）は見本に出さない（色が1つも無くても範囲が壊れないように indices から作る）
                 ForEach(Array(presetColors.indices.dropFirst()), id: \.self) { index in
                     Button(action: {
+                        // 選んだ見本の枠とチェックの濃さだけを素早く切り替える（大きさは変えない）
                         withMotion(Motion.quick) {
                             selectedColorIndex = index
                         }
@@ -579,10 +581,8 @@ extension CourseDetailView {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 14, weight: .bold))
                                     .foregroundStyle(Color.primary)
+                                    // 大きさは変えず、不透明度だけで出し入れする
                                     .opacity(selectedColorIndex == index ? 1 : 0)
-                                    .scaleEffect(selectedColorIndex == index ? 1 : 0.5)
-                                    // 跳ねずに素早く出す（選び直しは小さな状態の切り替え）
-                                    .motionAnimation(Motion.quick, value: selectedColorIndex)
                             )
                     }
                 }

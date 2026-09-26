@@ -103,7 +103,6 @@ struct SelectionChipRow<Item: Hashable, ChipLabel: View>: View {
                         if isSelected {
                             RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                                 .fill(tint)
-                                .shadow(color: tint.opacity(0.3), radius: 3, x: 0, y: 2)
                                 .matchedGeometryEffect(id: indicatorID(for: item), in: namespace)
                         }
                     }

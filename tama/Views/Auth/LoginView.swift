@@ -108,7 +108,7 @@ struct LoginView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
                     .padding(.bottom, 5)
-                    .motionTransition(.rise)
+                    .motionTransition(.fade)
             }
 
             // タイトル
@@ -127,7 +127,7 @@ struct LoginView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
                     .padding(.bottom, 10)
-                    .motionTransition(.rise)
+                    .motionTransition(.fade)
             }
 
             // 入力フォーム（ログインに失敗するたびに揺らしてエラーの触覚を返す）
@@ -281,8 +281,8 @@ struct LoginView: View {
             requestNotificationPermission()
             // ログイン成功の重要イベントを記録
             ratingService.recordSignificantEvent()
-            // アニメーション付きでログイン状態を更新
-            withMotion(Motion.emphasized) {
+            // 落ち着いたクロスフェードでログイン状態を更新
+            withMotion(Motion.standard) {
                 isLoggedIn = true
             }
         }

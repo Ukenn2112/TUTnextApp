@@ -115,8 +115,8 @@ struct BusTwoPaneView: View {
                 station: viewModel.selectedStation,
                 scheduleType: viewModel.selectedScheduleType,
                 columnSplit: columnSplit,
-                // 利用者がセグメントを押したときだけ呼ばれる。
-                // 左右の時刻表の行（時で識別）と分のチップ（分で識別）が、その場で形を変えて入れ替わる
+                // 利用者がセグメントを押したときだけ呼ばれる（利用者の操作なので静かに動かす）。
+                // 左右の時刻表は行やチップを動かさず、表ごとクロスフェードで入れ替わる（`BusTimeTableContent`）
                 onStationSelected: { station in
                     withMotion(Motion.standard) {
                         viewModel.selectedStation = station

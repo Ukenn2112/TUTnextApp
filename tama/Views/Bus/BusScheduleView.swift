@@ -399,7 +399,7 @@ struct BusScheduleTypeSelector: View {
             get: { selectedScheduleType },
             set: { newValue in
                 guard newValue != selectedScheduleType else { return }
-                // 時間ごとの行（時で識別）と分のチップ（分で識別）が、その場で形を変えて入れ替わる
+                // 表の中身は曜日ごとに静かにクロスフェードで入れ替わる（行やチップは動かさない）
                 withMotion(Motion.standard) {
                     selectedScheduleType = newValue
                     onChanged()
@@ -507,8 +507,8 @@ struct BusRouteTypeSelector: View {
     /// 路線の選択。
     ///
     /// 利用者がチップを押したときだけ `SelectionChipRow` から書き込まれる。
-    /// 時刻表の行（時で識別）と分のチップ（分で識別）もその場で形を変えて入れ替わるよう、
-    /// チップの塗りだけでなくページ全体を `Motion.standard` で動かす
+    /// チップの塗りが滑るのに合わせて、表の中身も `Motion.standard` のクロスフェードで入れ替える
+    /// （行や分のチップの位置は動かさない。`BusTimeTableContent` の `tableKey`）
     private var animatedSelection: Binding<BusSchedule.RouteType> {
         Binding(
             get: { selectedRouteType },
@@ -685,8 +685,9 @@ struct BusTimeCardView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.orange)
                     }
-                    // 便を選んだ変更（ViewModel の withMotion）に乗って、下から持ち上がって現れる
-                    .motionTransition(.rise)
+                    // 便を選んだ変更（ViewModel の withMotion）に乗って、その場でフェードする。
+                    // 行の高さは `reservesTallestHeight` などで確保しており、周りは動かない
+                    .motionTransition(.fade)
                 }
             }
         } else {
@@ -879,6 +880,11 @@ struct BusTimeTableContent: View {
     /// 利用者が自分でスクロールした位置を分の境目ごとに引き戻さない
     @State private var lastScrolledHour: Int?
 
+    /// この表が処理し終えたスクロールの依頼（`scrollRequestID`）。
+    /// 路線の変更で次のバスの時間とスクロールの依頼が同時に変わったとき、
+    /// 時間の変化の側で先に動かさずに飛んでしまわないよう、依頼の側に任せるために使う
+    @State private var handledScrollRequestID: Int?
+
     /// この表が見ている路線（1列表示では選択中の路線）
     private var effectiveRoute: BusSchedule.RouteType {
         route ?? viewModel.selectedRouteType
@@ -894,6 +900,17 @@ struct BusTimeTableContent: View {
     /// 開いたときに見せたい時間（次のバスの時間）
     private var targetHour: Int? {
         viewModel.scrollHour(for: effectiveRoute)
+    }
+
+    /// 表の中身の識別（路線と曜日）。変わったときは表ごとクロスフェードで入れ替える
+    private var tableKey: String {
+        "\(effectiveRoute.rawValue)_\(viewModel.selectedScheduleType.rawValue)"
+    }
+
+    /// 時間の行のスクロール先の識別。
+    /// クロスフェード中は古い表も重なって残るので、表の識別を含めて新しい表の行だけを指す
+    private func rowID(hour: Int) -> String {
+        "hour_\(tableKey)_\(hour)"
     }
 
     /// 表に並べる時間帯（バスの無い時間帯は行にしない）
@@ -912,7 +929,7 @@ struct BusTimeTableContent: View {
         if firstHour == hour {
             proxy.scrollTo(Self.tableTopID, anchor: .top)
         } else {
-            proxy.scrollTo("hour_\(hour)", anchor: .top)
+            proxy.scrollTo(rowID(hour: hour), anchor: .top)
         }
     }
 
@@ -944,24 +961,34 @@ struct BusTimeTableContent: View {
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     VStack(alignment: .center, spacing: BusLayout.Spacing.m) {
-                        scheduleRowsView(schedules, nextBus: nextBus)
-                            // 次のバスの時間が変わったときだけ動かす（例: 10:59 の次が 11:05 になった）
-                            .onChange(of: targetHour) { _, newValue in
-                                if let hour = newValue, hour != lastScrolledHour {
-                                    withMotion(Motion.standard) {
-                                        scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
-                                    }
+                        // 路線・曜日が変わったときは、行を動かして組み替えず、表ごとクロスフェードで入れ替える。
+                        // 重ねて入れ替えるので、古い表と新しい表が縦に並んで押し合うことはない
+                        ZStack(alignment: .top) {
+                            scheduleRowsView(schedules, nextBus: nextBus)
+                                .id(tableKey)
+                                .transition(.opacity)
+                        }
+                        // 次のバスの時間が時計で変わったとき（例: 10:59 の次が 11:05 になった）や、
+                        // 時刻表が届いて変わったときは、動かさずにその位置へ移すだけにする
+                        .onChange(of: targetHour) { _, newValue in
+                            guard let hour = newValue, hour != lastScrolledHour else { return }
+                            // 路線・曜日の変更と同時なら、下の依頼の側が静かに寄せる
+                            guard handledScrollRequestID == viewModel.scrollRequestID else { return }
+                            scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
+                        }
+                        // 路線・駅・曜日の変更やフォアグラウンド復帰では、時間が同じでも位置を戻す
+                        .onChange(of: viewModel.scrollRequestID) { _, newValue in
+                            handledScrollRequestID = newValue
+                            guard let hour = targetHour else { return }
+                            if viewModel.scrollRequestAnimates {
+                                // 利用者の操作では、表のクロスフェード（Motion.standard）と同じ長さで寄せる
+                                withMotion(Motion.standard) {
+                                    scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                                 }
+                            } else {
+                                scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                             }
-                            // 路線・駅・曜日の変更やフォアグラウンド復帰では、時間が同じでも位置を戻す
-                            .onChange(of: viewModel.scrollRequestID) { _, _ in
-                                if let hour = targetHour {
-                                    // 路線・曜日の変更では行の入れ替え（Motion.standard）と同じ長さで寄せる
-                                    withMotion(Motion.standard) {
-                                        scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
-                                    }
-                                }
-                            }
+                        }
 
                         if showsSpecialNotes {
                             specialNotesView
@@ -974,11 +1001,11 @@ struct BusTimeTableContent: View {
                     .id(Self.tableTopID)
                 }
                 .onAppear {
+                    handledScrollRequestID = viewModel.scrollRequestID
                     if let hour = targetHour {
+                        // 開いたときは動かさず、次のバスの時間の位置で出す
                         DispatchQueue.main.asyncAfter(deadline: .now() + Self.initialScrollDelay) {
-                            withMotion(Motion.standard) {
-                                scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
-                            }
+                            scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                         }
                     }
                 }
@@ -1131,7 +1158,7 @@ struct BusTimeTableContent: View {
             Divider()
                 .background(Color.gray.opacity(0.3))
         }
-        .id("hour_\(hourSchedule.hour)")
+        .id(rowID(hour: hourSchedule.hour))
         .background(
             (nextBus?.hour == hourSchedule.hour
                 ? Color.currentHourBackground

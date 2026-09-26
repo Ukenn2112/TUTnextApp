@@ -120,12 +120,20 @@ struct TodayPaneView: View {
                 TodayPaneHeader(date: now, isVerticalBarPose: isVerticalBarPose, metrics: metrics)
                     .frame(height: metrics.gridTop, alignment: .top)
 
-                content(board: board, classes: classes)
-                    // タイルの束は左の表とまったく同じ高さに収める（めくらない）
-                    .frame(height: metrics.gridHeight, alignment: .top)
-                    // 読み込み中は仮の盤面に、きらめきを1回だけ掛ける
-                    .skeleton(isPlaceholder)
-                    .motionAnimation(Motion.standard, value: isPlaceholder)
+                // 仮の盤面と本物の盤面は別のビューとして重ね、入れ替わりは不透明度だけでつなぐ
+                // （タイルの大きさや位置を補間して動かさない）
+                ZStack(alignment: .top) {
+                    content(board: board, classes: classes)
+                        // タイルの束は左の表とまったく同じ高さに収める（めくらない）
+                        .frame(height: metrics.gridHeight, alignment: .top)
+                        // 読み込み中は仮の盤面に、きらめきを1回だけ掛ける
+                        .skeleton(isPlaceholder)
+                        .id(isPlaceholder)
+                        .motionTransition(.fade)
+                }
+                // スケルトンから本物への1回だけのクロスフェード。
+                // 最初から本物を出せるときは `isPlaceholder` が変わらないので何も動かない
+                .motionAnimation(Motion.standard, value: isPlaceholder)
             }
             // 刻みごとに、発車した選択を片付けて時刻表を読み直す
             .onChange(of: context.date) { _, date in
@@ -195,8 +203,7 @@ struct TodayPaneView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        // 盤面の入れ替わり（時刻・課題・バスの更新、残り時間の数字）は共通の速さで動かす
-        .motionAnimation(Motion.standard, value: board)
+        // 時計の刻み・課題やバスの更新・前面復帰で盤面が変わっても動かさない（その場で描き替えるだけ）
     }
 
     private func bus(_ board: TodayBoard, layout: TodayStackLayout.Result) -> some View {

@@ -111,7 +111,9 @@ struct TodayLessonTile: View {
                         .font(.system(size: Token.Typography.key, weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(.primary)
+                        // 変わった桁だけが入れ替わる。動かすのはこの数字の Text だけ（盤面全体は動かさない）
                         .contentTransition(.numericText())
+                        .motionAnimation(Motion.quick, value: part.value)
                     Text(part.unit)
                         .font(.system(size: Token.Typography.body, weight: .semibold))
                         .foregroundStyle(.secondary)

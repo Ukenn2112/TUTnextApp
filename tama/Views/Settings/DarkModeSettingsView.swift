@@ -6,7 +6,6 @@ struct DarkModeSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var appearanceManager: AppearanceManager
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -112,15 +111,15 @@ struct DarkModeSettingsView: View {
 
                 Spacer()
 
-                // チェックマークは常に置いておき、選ばれていない行ではシンボルの消える効果で隠す。
+                // チェックマークは常に置いておき、選ばれていない行では不透明度 0 で隠す。
                 // 出し入れで行の中身が組み変わらないので、選び直したときに行の高さや位置が揺れない。
-                // 「視差効果を減らす」が有効なら、シンボルの効果は使わず不透明度だけで切り替える
+                // 拡大縮小はせず、短いフェードだけで切り替える
                 let isSelected = appearanceManager.mode == mode
                 Image(systemName: "checkmark")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.blue)
-                    .symbolEffect(.disappear, isActive: !isSelected && !reduceMotion)
-                    .opacity(reduceMotion && !isSelected ? 0 : 1)
+                    .opacity(isSelected ? 1 : 0)
+                    .motionAnimation(Motion.quick, value: isSelected)
                     .accessibilityHidden(true)
             }
         }

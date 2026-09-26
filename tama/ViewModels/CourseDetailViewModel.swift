@@ -69,18 +69,17 @@ final class CourseDetailViewModel: ObservableObject {
         CourseDetailService.shared.fetchCourseDetail(course: course) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                // 仮のデータ（スケルトン）から本物への入れ替えは共通の速さでつなぐ
-                withMotion(Motion.standard) {
-                    self.isLoading = false
-                    self.apply(result)
-                }
+                // データが届いたこと自体では動かさない。
+                // スケルトンを見せていたときの本物への入れ替えだけは、ビュー側の `DelayedSkeletonGate` がつなぐ
+                self.isLoading = false
+                self.apply(result)
             }
         }
     }
 
     /// 引っ張って更新したとき。
     ///
-    /// 表示中の内容はそのまま残し（スケルトンにしない）、届いたら入れ替える。
+    /// 表示中の内容はそのまま残し（スケルトンにしない）、届いたらその場で入れ替える（動かさない）。
     /// すでに内容が出ているときの失敗はエラー画面に切り替えず、そのままの内容を残す
     func refreshCourseDetail() async {
         guard !isPreview else { return }
@@ -89,16 +88,14 @@ final class CourseDetailViewModel: ObservableObject {
                 continuation.resume(returning: result)
             }
         }
-        withMotion(Motion.standard) {
-            switch result {
-            case .success:
-                errorMessage = nil
-                apply(result)
-            case .failure(let error):
-                print("課程詳細の更新に失敗しました: \(error.localizedDescription)")
-                if courseDetail == nil {
-                    errorMessage = error.localizedDescription
-                }
+        switch result {
+        case .success:
+            errorMessage = nil
+            apply(result)
+        case .failure(let error):
+            print("課程詳細の更新に失敗しました: \(error.localizedDescription)")
+            if courseDetail == nil {
+                errorMessage = error.localizedDescription
             }
         }
     }
