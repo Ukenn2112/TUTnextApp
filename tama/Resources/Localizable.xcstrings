@@ -45,71 +45,48 @@
         }
       }
     },
-    "%@ · あと %@" : {
-      "comment" : "「今日」ペインの課題の2段目。締切の日（今日・明日・日付）と残り時間",
+    "〜%@" : {
+      "comment" : "「今日」ペインの終了時刻",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · in %2$@"
+            "value" : "until %@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · 앞으로 %2$@"
+            "value" : "~%@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · 还有 %2$@"
+            "value" : "至%@"
           }
         }
       }
     },
-    "%d分%d秒" : {
-      "comment" : "バスのカウントダウン（分・秒）",
+    "〜%@ · %@" : {
+      "comment" : "「今日」ペインの「このあとの授業」の2段目。終了時刻と教員名",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$dm %2$ds"
+            "value" : "until %1$@ · %2$@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$d분 %2$d초"
+            "value" : "~%1$@ · %2$@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$d分%2$d秒"
-          }
-        }
-      }
-    },
-    "%d時間%d分%d秒" : {
-      "comment" : "バスのカウントダウン（時間・分・秒）",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$dh %2$dm %3$ds"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$d시간 %2$d분 %3$d초"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$d小时%2$d分%3$d秒"
+            "value" : "至%1$@ · %2$@"
           }
         }
       }
@@ -133,29 +110,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "· 明天 %lld"
-          }
-        }
-      }
-    },
-    "〜%@" : {
-      "comment" : "「今日」ペインの終了時刻",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "until %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "~%@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "至%@"
           }
         }
       }
@@ -267,6 +221,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@"
+          }
+        }
+      }
+    },
+    "%@ · あと %@" : {
+      "comment" : "「今日」ペインの課題の2段目。締切の日（今日・明日・日付）と残り時間",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · in %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 앞으로 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 还有 %2$@"
           }
         }
       }
@@ -541,6 +518,29 @@
         }
       }
     },
+    "%d分%d秒" : {
+      "comment" : "バスのカウントダウン（分・秒）",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$dm %2$ds"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d분 %2$d초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d分%2$d秒"
+          }
+        }
+      }
+    },
     "%d分後" : {
       "comment" : "「今日」ペイン",
       "localizations" : {
@@ -606,6 +606,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%d小时"
+          }
+        }
+      }
+    },
+    "%d時間%d分%d秒" : {
+      "comment" : "バスのカウントダウン（時間・分・秒）",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$dh %2$dm %3$ds"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d시간 %2$d분 %3$d초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d小时%2$d分%3$d秒"
           }
         }
       }
@@ -904,29 +927,6 @@
         }
       }
     },
-    "〜%@ · %@" : {
-      "comment" : "「今日」ペインの「このあとの授業」の2段目。終了時刻と教員名",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "until %1$@ · %2$@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "~%1$@ · %2$@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "至%1$@ · %2$@"
-          }
-        }
-      }
-    },
     "アカウント" : {
       "localizations" : {
         "en" : {
@@ -950,6 +950,7 @@
       }
     },
     "アカウント設定" : {
+      "comment" : "設定画面のセクション見出し",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1085,6 +1086,7 @@
       }
     },
     "アプリを評価" : {
+      "comment" : "設定画面の項目：App Storeでアプリを評価する",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1107,6 +1109,7 @@
       }
     },
     "アプリ設定" : {
+      "comment" : "設定画面のセクション見出し",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1151,6 +1154,7 @@
       }
     },
     "オフ" : {
+      "comment" : "設定画面の通知設定の状態：未許可",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1173,6 +1177,7 @@
       }
     },
     "オン" : {
+      "comment" : "設定画面の通知設定の状態：許可済み",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1194,31 +1199,7 @@
         }
       }
     },
-    "お待ちください" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please wait"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기다려 주세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请稍后"
-          }
-        }
-      }
-    },
-    "お知らせはまだありません" : {
-
-    },
+    "お知らせはまだありません" : {},
     "カードが見つかりませんでした。" : {
       "localizations" : {
         "en" : {
@@ -1242,6 +1223,7 @@
       }
     },
     "カレンダーAppが開き、「多摩大スケジュール」の照会を登録するか確認されます。" : {
+      "comment" : "カレンダー購読の確認アラートの本文。「多摩大スケジュール」は購読するカレンダーの名前",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1264,6 +1246,7 @@
       }
     },
     "カレンダーに登録" : {
+      "comment" : "時間割のカレンダー購読を確認するアラートのタイトル",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1376,6 +1359,7 @@
       }
     },
     "システムに従う" : {
+      "comment" : "設定画面の外観モードの状態：端末の設定に合わせる",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1510,7 +1494,7 @@
       }
     },
     "スマホサイト" : {
-      "comment" : "タブバー",
+      "comment" : "「その他」メニュー項目：T-NEXTのスマートフォン向けサイトを開く",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1533,7 +1517,7 @@
       }
     },
     "その他" : {
-      "comment" : "タブバー",
+      "comment" : "タブバー\n設定画面のセクション見出し",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1556,6 +1540,7 @@
       }
     },
     "ダーク" : {
+      "comment" : "設定画面の外観モードの状態：ダークモード",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1578,6 +1563,7 @@
       }
     },
     "ダークモード" : {
+      "comment" : "設定画面の項目：外観モード（ライト／ダーク）の設定を開く",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1622,7 +1608,7 @@
       }
     },
     "たまゆに" : {
-      "comment" : "タブバー",
+      "comment" : "「その他」メニュー項目：Webサイト「たまゆに」（tamauniv.jp）を開く。サービス名のため固有名詞として扱う",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1763,6 +1749,7 @@
       }
     },
     "パスワード変更" : {
+      "comment" : "設定画面の項目：大学アカウントのパスワード変更ページを開く",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1851,6 +1838,7 @@
       }
     },
     "フィードバック" : {
+      "comment" : "設定画面の項目：開発者へフィードバックのメールを送る",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1873,6 +1861,7 @@
       }
     },
     "プライバシーポリシー" : {
+      "comment" : "設定画面の項目：プライバシーポリシーを開く",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2051,6 +2040,7 @@
       }
     },
     "ライト" : {
+      "comment" : "設定画面の外観モードの状態：ライトモード",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2117,6 +2107,7 @@
       }
     },
     "ログアウト" : {
+      "comment" : "設定画面のログアウトボタン",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2514,52 +2505,6 @@
         }
       }
     },
-    "学内にいるときに表示します" : {
-      "comment" : "「今日」ペインの帰りのバスのタイル。学外に居るので帰りの便を出さないときの一言",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shown while you're on campus"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "교내에 있을 때 표시됩니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在校内时显示"
-          }
-        }
-      }
-    },
-    "授業中 · %lld限" : {
-      "comment" : "「今日」ペインの授業のタイルの見出し。授業中の時限",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In class · Period %lld"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "수업 중 · %lld교시"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上课中 · 第%lld节"
-          }
-        }
-      }
-    },
     "最終授業のあと" : {
       "comment" : "「今日」ペイン",
       "localizations" : {
@@ -2717,6 +2662,7 @@
       }
     },
     "利用規約" : {
+      "comment" : "設定画面の項目：利用規約を開く",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2783,7 +2729,7 @@
       }
     },
     "印刷システム" : {
-      "comment" : "タブバー",
+      "comment" : "「その他」メニュー項目：学内のプリンターで印刷するファイルをアップロードする画面を開く",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2987,6 +2933,29 @@
         }
       }
     },
+    "学内にいるときに表示します" : {
+      "comment" : "「今日」ペインの帰りのバスのタイル。学外に居るので帰りの便を出さないときの一言",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shown while you're on campus"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교내에 있을 때 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在校内时显示"
+          }
+        }
+      }
+    },
     "学校から駅へ" : {
       "comment" : "バスの向き",
       "localizations" : {
@@ -3143,30 +3112,6 @@
         }
       }
     },
-    "年間予定" : {
-      "comment" : "タブバー",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schedule"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "연간 계획"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "学年计划"
-          }
-        }
-      }
-    },
     "手入力" : {
       "localizations" : {
         "en" : {
@@ -3292,25 +3237,25 @@
         }
       }
     },
-    "授業中" : {
-      "comment" : "「今日」ペイン",
+    "授業中 · %lld限" : {
+      "comment" : "「今日」ペインの授業のタイルの見出し。授業中の時限",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In class"
+            "value" : "In class · Period %lld"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "수업 중"
+            "value" : "수업 중 · %lld교시"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上课中"
+            "value" : "上课中 · 第%lld节"
           }
         }
       }
@@ -3522,7 +3467,7 @@
       }
     },
     "教師メール" : {
-      "comment" : "タブバー",
+      "comment" : "「その他」メニュー項目：教員のメールアドレス一覧を開く",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3562,28 +3507,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "教师名或电子邮件地址进行搜索"
-          }
-        }
-      }
-    },
-    "教師情報を読み込んでいます..." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading teacher information..."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "교사 정보를 읽어들이고 있습니다..."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在获取教师信息…"
           }
         }
       }
@@ -3747,6 +3670,7 @@
       }
     },
     "時間割をカレンダーへ" : {
+      "comment" : "設定画面の項目：時間割をカレンダーAppに購読登録する",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4033,29 +3957,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下一辆巴士将于"
-          }
-        }
-      }
-    },
-    "次の授業" : {
-      "comment" : "「今日」ペイン",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next class"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다음 수업"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下节课"
           }
         }
       }
@@ -4370,6 +4271,7 @@
       }
     },
     "登録する" : {
+      "comment" : "カレンダー購読の確認アラートで登録を実行するボタン",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4540,6 +4442,7 @@
       }
     },
     "言語" : {
+      "comment" : "設定画面の項目：アプリの表示言語",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4585,6 +4488,7 @@
       }
     },
     "設定中..." : {
+      "comment" : "設定画面の通知設定の状態：許可済みだが登録処理中",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4887,6 +4791,7 @@
       }
     },
     "通知設定" : {
+      "comment" : "設定画面の項目：通知の許可状態",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4998,7 +4903,7 @@
       }
     },
     "閉じる" : {
-      "comment" : "シートや詳細画面を閉じるボタン",
+      "comment" : "科目詳細を閉じる",
       "localizations" : {
         "en" : {
           "stringUnit" : {
