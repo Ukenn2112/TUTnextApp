@@ -10,6 +10,10 @@ final class CourseDetailViewModel: ObservableObject {
     @Published var memo: String = ""
     var isMemoChanged = false
 
+    /// 最後にサーバーから受け取った、または保存したメモ。
+    /// 取得したメモを入れたことで「変更あり」にならないよう、入力の比較に使う
+    private(set) var savedMemo: String = ""
+
     private let course: CourseModel
     private let isPreview: Bool
 
@@ -36,9 +40,13 @@ final class CourseDetailViewModel: ObservableObject {
             self.isPreview = true
             self.courseDetail = mock
             self.memo = mock.memo
+            self.savedMemo = mock.memo
         } else {
             self.isPreview = false
             self.memo = ""
+            // 表示と同時に取得を始めるので、最初の1フレームから「読み込み中」にしておく
+            // （空の状態の「掲示はありません」などが一瞬見えないように）
+            self.isLoading = true
         }
     }
 
@@ -48,6 +56,7 @@ final class CourseDetailViewModel: ObservableObject {
         self.isPreview = true
         self.courseDetail = previewDetail
         self.memo = previewDetail.memo
+        self.savedMemo = previewDetail.memo
         self.isLoading = false
     }
 
@@ -60,32 +69,69 @@ final class CourseDetailViewModel: ObservableObject {
         CourseDetailService.shared.fetchCourseDetail(course: course) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.isLoading = false
-
-                switch result {
-                case .success(let detailResponse):
-                    self.courseDetail = detailResponse
-                    self.memo = detailResponse.memo
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    print("課程詳細の取得に失敗しました: \(error.localizedDescription)")
+                // 仮のデータ（スケルトン）から本物への入れ替えは共通の速さでつなぐ
+                withMotion(Motion.standard) {
+                    self.isLoading = false
+                    self.apply(result)
                 }
             }
         }
     }
 
+    /// 引っ張って更新したとき。
+    ///
+    /// 表示中の内容はそのまま残し（スケルトンにしない）、届いたら入れ替える。
+    /// すでに内容が出ているときの失敗はエラー画面に切り替えず、そのままの内容を残す
+    func refreshCourseDetail() async {
+        guard !isPreview else { return }
+        let result = await withCheckedContinuation { continuation in
+            CourseDetailService.shared.fetchCourseDetail(course: course) { result in
+                continuation.resume(returning: result)
+            }
+        }
+        withMotion(Motion.standard) {
+            switch result {
+            case .success:
+                errorMessage = nil
+                apply(result)
+            case .failure(let error):
+                print("課程詳細の更新に失敗しました: \(error.localizedDescription)")
+                if courseDetail == nil {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    /// 取得の結果を反映する
+    private func apply(_ result: Result<CourseDetailResponse, Error>) {
+        switch result {
+        case .success(let detailResponse):
+            courseDetail = detailResponse
+            savedMemo = detailResponse.memo
+            // 編集中のメモは、届いた内容で上書きしない
+            if !isMemoChanged {
+                memo = detailResponse.memo
+            }
+        case .failure(let error):
+            errorMessage = error.localizedDescription
+            print("課程詳細の取得に失敗しました: \(error.localizedDescription)")
+        }
+    }
+
     // メモを保存
+    // （読み込み中の表示＝スケルトンに切り替えないよう、`isLoading` には触れない）
     func saveMemo() {
-        isLoading = true
+        let memoToSave = memo
         errorMessage = nil
 
-        CourseDetailService.shared.saveMemo(course: course, memo: memo) { [weak self] result in
+        CourseDetailService.shared.saveMemo(course: course, memo: memoToSave) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.isLoading = false
 
                 switch result {
                 case .success:
+                    self.savedMemo = memoToSave
                     print("メモを保存しました")
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
@@ -97,7 +143,12 @@ final class CourseDetailViewModel: ObservableObject {
 
     // 出欠データを取得
     var attendanceData: [AttendanceData] {
-        guard let detail = courseDetail else {
+        Self.attendanceData(for: courseDetail)
+    }
+
+    /// その詳細の出欠データ（読み込み中の仮のデータにも使う）
+    static func attendanceData(for detail: CourseDetailResponse?) -> [AttendanceData] {
+        guard let detail else {
             return [
                 AttendanceData(type: NSLocalizedString("出席", comment: ""), count: 0, color: .green),
                 AttendanceData(type: NSLocalizedString("欠席", comment: ""), count: 0, color: .red),
@@ -130,6 +181,11 @@ final class CourseDetailViewModel: ObservableObject {
     // 合計出欠回数
     var totalAttendance: Int {
         return attendanceData.reduce(0) { $0 + $1.count }
+    }
+
+    /// メモの入力が、最後に受け取った・保存した内容から変わったかを反映する
+    func memoDidChange(to newValue: String) {
+        isMemoChanged = newValue != savedMemo
     }
 
     // MARK: - URL生成
@@ -235,7 +291,8 @@ enum TNextWebLink {
 
 /// 出欠情報の表示用モデル
 struct AttendanceData: Identifiable {
-    let id = UUID()
+    /// 種別がそのまま識別子になる（描き直すたびに変わる UUID だと、入れ替えの動きで毎回出入りしてしまう）
+    var id: String { type }
     let type: String
     let count: Int
     let color: Color

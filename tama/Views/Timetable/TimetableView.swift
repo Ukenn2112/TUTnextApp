@@ -37,6 +37,9 @@ struct TimetableView: View {
     /// 左ペインが解いた時間割の縦の目盛り。
     /// 右ペインはこれを受け取って、自分の寸法を計算し直さずに左の行に揃える
     @State private var gridMetrics: TimetableGridMetrics = .unavailable
+    /// セルを出し終えたか。最初の読み込みが終わるまではセルの代わりにスケルトンの塊を描く。
+    /// 一度出したら戻さないので、タブを行き来しても登場の動きは繰り返さない
+    @State private var hasRevealedCells = false
 
     // 曜日インデックスを表示用文字列に変換するヘルパー
     private func weekdayString(from index: String) -> String {
@@ -213,41 +216,57 @@ struct TimetableView: View {
         }
     }
 
-    /// タイトルの下に置く本体（読み込み中・エラー・時間割）
+    /// タイトルの下に置く本体（エラー・時間割）。
+    ///
+    /// 最初の読み込み中も表の枠（曜日の行と時限の列）はそのまま描き、セルだけをスケルトンにする。
+    /// エラーと表の入れ替わりはフェードでつなぐ
     @ViewBuilder private func contentView(layout: LayoutMetrics) -> some View {
-        VStack(spacing: 0) {
-            if viewModel.isLoading {
-                ProgressView("読み込み中...")
-                    .progressViewStyle(CircularProgressViewStyle())
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let errorMessage = viewModel.errorMessage {
-                VStack {
-                    Text("エラーが発生しました")
-                        .font(.headline)
-                        .padding(.bottom, 8)
-
-                    Text(errorMessage)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-
-                    Button("再読み込み") {
-                        // データを再取得
-                        viewModel.fetchTimetableData()
-                    }
-                    .padding(.top, 16)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ZStack(alignment: .top) {
+            if let errorMessage = viewModel.errorMessage {
+                errorView(message: errorMessage)
+                    .motionTransition(.fade)
             } else {
-                weekdayHeaderView(layout: layout)
-                timeTableGridView(layout: layout)
+                VStack(spacing: 0) {
+                    weekdayHeaderView(layout: layout)
+                    timeTableGridView(layout: layout)
+                }
+                .motionTransition(.fade)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .motionAnimation(Motion.standard, value: viewModel.errorMessage != nil)
         .padding(.leading, layout.leftPadding)
         .padding(.trailing, layout.rightPadding)
         .padding(.top, layout.topPadding)
+        // 最初の読み込みが終わったら、セルを列ごとに順に出す（1回の読み込みにつき1回だけ）
+        .onChange(of: viewModel.hasLoadedOnce, initial: true) { _, loaded in
+            if loaded && !hasRevealedCells {
+                hasRevealedCells = true
+            }
+        }
     }
+
+    private func errorView(message: String) -> some View {
+        VStack {
+            Text("エラーが発生しました")
+                .font(.headline)
+                .padding(.bottom, 8)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Button("再読み込み") {
+                // データを再取得
+                viewModel.fetchTimetableData()
+            }
+            .padding(.top, 16)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private func weekdayHeaderView(layout: LayoutMetrics) -> some View {
         HStack(spacing: LayoutMetrics.cellSpacing) {
             Text("")
@@ -280,16 +299,29 @@ struct TimetableView: View {
         .frame(width: width, height: height)
     }
 
+    /// 時間割の表。
+    ///
+    /// 時限の列とセルの束を左右に分けて組む（行の高さはどちらも `cellHeight` なので、行ごとに組んだときと同じ見た目）。
+    /// 分けてあるのは、スケルトンのきらめきをセルの束だけに1回掛け、時限の列は読み込み中も読めるようにするため
     private func timeTableGridView(layout: LayoutMetrics) -> some View {
-        VStack(spacing: LayoutMetrics.cellSpacing) {
-            ForEach(viewModel.getPeriods(), id: \.0) { period, startTime, endTime in
-                HStack(spacing: LayoutMetrics.cellSpacing) {
+        let periods = viewModel.getPeriods()
+        return HStack(alignment: .top, spacing: LayoutMetrics.cellSpacing) {
+            VStack(spacing: LayoutMetrics.cellSpacing) {
+                ForEach(periods, id: \.0) { period, startTime, endTime in
                     timeColumnView(
                         period: period, startTime: startTime, endTime: endTime, layout: layout)
+                }
+            }
+
+            VStack(spacing: LayoutMetrics.cellSpacing) {
+                ForEach(periods, id: \.0) { period, _, _ in
                     periodRowView(period: period, layout: layout)
                 }
             }
+            .skeleton(!hasRevealedCells)
         }
+        // 読み込み後の更新（学期の切り替え・前面復帰など）で表の中身や行数が変わるときは落ち着いて入れ替える
+        .motionAnimation(Motion.standard, value: viewModel.courses)
     }
 
     private func timeColumnView(
@@ -311,8 +343,9 @@ struct TimetableView: View {
     }
 
     private func periodRowView(period: String, layout: LayoutMetrics) -> some View {
-        HStack(spacing: LayoutMetrics.cellSpacing) {
-            ForEach(viewModel.getWeekdays(), id: \.self) { day in
+        let weekdays = viewModel.getWeekdays()
+        return HStack(spacing: LayoutMetrics.cellSpacing) {
+            ForEach(Array(weekdays.enumerated()), id: \.element) { column, day in
                 TimeSlotCell(
                     dayIndex: day,
                     displayDay: weekdayString(from: day),
@@ -330,9 +363,17 @@ struct TimetableView: View {
                     isSelected: selection == CourseSelection(day: day, period: period),
                     // 2ペインのときは右ペインへ出すので、セルからシートは出さない
                     onSelect: isTwoPane
-                        ? { selection = CourseSelection(day: day, period: period) }
+                        ? {
+                            withMotion(Motion.standard) {
+                                selection = CourseSelection(day: day, period: period)
+                            }
+                        }
                         : nil
                 )
+                .modifier(
+                    CellReveal(
+                        isRevealed: hasRevealedCells, column: column,
+                        width: layout.cellWidth, height: layout.cellHeight))
             }
         }
     }
@@ -509,6 +550,89 @@ private struct LayoutMetrics {
     }
 }
 
+// MARK: - セルの登場
+
+/// 最初の読み込みが終わったときに、スケルトンの塊から本物のセルへ列ごとに順に入れ替える。
+///
+/// 塊とセルを重ねておき、不透明度だけを入れ替える（間に何も無い瞬間を作らない）。
+/// 遅れは列の番号から `Motion.stagger(index:)` で決める。
+/// 「視差効果を減らす」が有効なら `motionAnimation` が遅れの無い短いクロスフェードに差し替える
+private struct CellReveal: ViewModifier {
+    let isRevealed: Bool
+    let column: Int
+    let width: CGFloat
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isRevealed ? 1 : 0)
+            .background {
+                SkeletonBlock(width: width, height: height, cornerRadius: TimeSlotCell.cornerRadius)
+                    .opacity(isRevealed ? 0 : 1)
+            }
+            .motionAnimation(Motion.standard.delay(Motion.stagger(index: column)), value: isRevealed)
+    }
+}
+
+// MARK: - セルを押したときの沈み込み
+
+/// 押しているあいだセルを少しだけ縮める（跳ねない）。
+/// 「視差効果を減らす」が有効なら縮めずに、わずかに薄くするだけにする
+private struct CellPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        CellPressBody(label: configuration.label, isPressed: configuration.isPressed)
+    }
+}
+
+private struct CellPressBody<Label: View>: View {
+    let label: Label
+    let isPressed: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// 押しているあいだの縮み具合
+    private static var pressedScale: CGFloat { 0.97 }
+
+    /// 「視差効果を減らす」が有効なときの、押しているあいだの不透明度
+    private static var pressedOpacity: Double { 0.8 }
+
+    var body: some View {
+        label
+            .scaleEffect(isPressed && !reduceMotion ? Self.pressedScale : 1)
+            .opacity(isPressed && reduceMotion ? Self.pressedOpacity : 1)
+            .motionAnimation(Motion.quick, value: isPressed)
+    }
+}
+
+// MARK: - 科目詳細へのズーム
+
+/// セルから科目詳細のシートへズームでつなぐ（iOS 18 以降）。iOS 17 では通常のシートのまま
+private struct ZoomSource: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.matchedTransitionSource(id: id, in: namespace)
+        } else {
+            content
+        }
+    }
+}
+
+private struct ZoomDestination: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.navigationTransition(.zoom(sourceID: id, in: namespace))
+        } else {
+            content
+        }
+    }
+}
+
 // MARK: - 時限セル
 /// 授業セルビュー
 struct TimeSlotCell: View {
@@ -536,6 +660,15 @@ struct TimeSlotCell: View {
 
     @State private var showingDetail = false
 
+    /// セルを押した回数（選択の触覚を返すきっかけ）
+    @State private var tapCount = 0
+
+    /// シートへズームでつなぐための名前空間（セルごとに1つ）
+    @Namespace private var zoomNamespace
+
+    /// ズームの元と先を結ぶ識別子
+    private static let zoomID = "course-cell"
+
     /// 科目に付けた色（セルの塗り）。
     ///
     /// 先頭のプリセット（＝色を付けていない状態）だけは、固定の白ではなくページの地の色にする。
@@ -561,6 +694,45 @@ struct TimeSlotCell: View {
     }
 
     var body: some View {
+        Group {
+            if course != nil {
+                Button(action: select) {
+                    cellContent
+                }
+                .buttonStyle(CellPressStyle())
+                .modifier(ZoomSource(id: Self.zoomID, namespace: zoomNamespace))
+                .selectionHaptic(trigger: tapCount)
+            } else {
+                cellContent
+            }
+        }
+        .sheet(isPresented: $showingDetail) {
+            if let course = course {
+                CourseDetailView(
+                    course: course,
+                    presetColors: presetColors,
+                    selectedColorIndex: course.colorIndex,
+                    onColorChange: onColorChange
+                )
+                .modifier(ZoomDestination(id: Self.zoomID, namespace: zoomNamespace))
+            }
+        }
+    }
+
+    /// セルを押したとき（2ペインなら右ペインへ、1ペインならシートで科目詳細を出す）
+    private func select() {
+        guard course != nil else { return }
+        if let onSelect {
+            // 選び済みのセルをもう一度押しただけのときは触覚を返さない
+            if !isSelected { tapCount += 1 }
+            onSelect()
+        } else {
+            tapCount += 1
+            showingDetail = true
+        }
+    }
+
+    private var cellContent: some View {
         ZStack {
             // 背景色
             RoundedRectangle(cornerRadius: Self.cornerRadius)
@@ -569,6 +741,8 @@ struct TimeSlotCell: View {
                     RoundedRectangle(cornerRadius: Self.cornerRadius)
                         .stroke(border.color, lineWidth: border.width)
                 )
+                // 選択の枠は小さな状態の切り替えなので素早く動かす
+                .motionAnimation(Motion.quick, value: isSelected)
 
             if let course = course {
                 // 授業情報テキスト
@@ -614,24 +788,7 @@ struct TimeSlotCell: View {
             }
         }
         .frame(width: cellWidth, height: cellHeight)
-        .onTapGesture {
-            guard course != nil else { return }
-            if let onSelect {
-                onSelect()
-            } else {
-                showingDetail = true
-            }
-        }
-        .sheet(isPresented: $showingDetail) {
-            if let course = course {
-                CourseDetailView(
-                    course: course,
-                    presetColors: presetColors,
-                    selectedColorIndex: course.colorIndex,
-                    onColorChange: onColorChange
-                )
-            }
-        }
+        .contentShape(RoundedRectangle(cornerRadius: Self.cornerRadius))
     }
 }
 

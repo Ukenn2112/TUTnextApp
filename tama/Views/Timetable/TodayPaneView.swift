@@ -38,6 +38,10 @@ struct TodayPaneView: View {
     /// `TimetableViewModel.getPeriods()` が返す（時限, 開始, 終了）の一覧
     let periods: [(String, String, String)]
 
+    /// 時間割の最初の読み込みを待っているあいだか。
+    /// そのあいだは本物の授業が無いので、仮の盤面をスケルトンで描く（見出しの日付はそのまま出す）
+    var isPlaceholder = false
+
     /// システムのバーが縦バーとして表示されているか（見出しの上端の取り方が変わる）
     let isVerticalBarPose: Bool
 
@@ -58,8 +62,6 @@ struct TodayPaneView: View {
     @ObservedObject private var presence = CampusPresenceService.shared
     @ObservedObject private var noticeStore = CourseNoticeStore.shared
     @ObservedObject private var assignmentStore = AssignmentStore.shared
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Safariで開いている掲示
     @State private var noticeURL: NoticeLink?
@@ -107,15 +109,23 @@ struct TodayPaneView: View {
         // 分の変わり目ちょうどに描き直す（`.periodic(from: .now, by: 60)` だと開いた秒数だけずれる）
         TimelineView(.everyMinute) { context in
             let now = clock.now(context.date)
-            let classes = TodaySchedule.todayClasses(on: now, courses: courses, periods: periods)
+            let classes = isPlaceholder
+                ? []
+                : TodaySchedule.todayClasses(on: now, courses: courses, periods: periods)
+            let board = isPlaceholder
+                ? TodayBoard.placeholder(now: now)
+                : self.board(now: now, classes: classes)
 
             VStack(spacing: 0) {
                 TodayPaneHeader(date: now, isVerticalBarPose: isVerticalBarPose, metrics: metrics)
                     .frame(height: metrics.gridTop, alignment: .top)
 
-                content(board: board(now: now, classes: classes), classes: classes)
+                content(board: board, classes: classes)
                     // タイルの束は左の表とまったく同じ高さに収める（めくらない）
                     .frame(height: metrics.gridHeight, alignment: .top)
+                    // 読み込み中は仮の盤面に、きらめきを1回だけ掛ける
+                    .skeleton(isPlaceholder)
+                    .motionAnimation(Motion.standard, value: isPlaceholder)
             }
             // 刻みごとに、発車した選択を片付けて時刻表を読み直す
             .onChange(of: context.date) { _, date in
@@ -185,7 +195,8 @@ struct TodayPaneView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: board)
+        // 盤面の入れ替わり（時刻・課題・バスの更新、残り時間の数字）は共通の速さで動かす
+        .motionAnimation(Motion.standard, value: board)
     }
 
     private func bus(_ board: TodayBoard, layout: TodayStackLayout.Result) -> some View {

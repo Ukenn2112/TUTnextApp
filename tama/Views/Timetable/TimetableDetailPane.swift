@@ -40,7 +40,16 @@ struct TimetableDetailPane: View {
             .background(Color(UIColor.systemBackground))
     }
 
-    @ViewBuilder private var content: some View {
+    /// 「今日」と科目詳細の入れ替え（別の授業への切り替えを含む）はフェードでつなぐ。
+    /// 速さは選択を変える側の `withMotion(Motion.standard)` で決める
+    private var content: some View {
+        ZStack(alignment: .top) {
+            pane
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder private var pane: some View {
         if let selection, let course = course(for: selection) {
             CourseDetailView(
                 course: course,
@@ -50,23 +59,30 @@ struct TimetableDetailPane: View {
                     viewModel.updateCourseColor(
                         day: selection.day, period: selection.period, colorIndex: colorIndex)
                 },
-                onInlineClose: { self.selection = nil }
+                onInlineClose: {
+                    withMotion(Motion.standard) { self.selection = nil }
+                }
             )
             // 科目は init でしか渡らないので、別の授業を選んだら作り直す
             .id(selection)
             .safeAreaPadding(.top, paneTopMargin)
+            .motionTransition(.fade)
         } else {
             TodayPaneView(
                 courses: viewModel.courses,
                 periods: viewModel.getPeriods(),
+                isPlaceholder: viewModel.isAwaitingFirstLoad,
                 isVerticalBarPose: isVerticalBarPose,
                 metrics: gridMetrics,
                 onSelect: { period in
-                    selection = CourseSelection(day: todayWeekday, period: period)
+                    withMotion(Motion.standard) {
+                        selection = CourseSelection(day: todayWeekday, period: period)
+                    }
                 },
                 onOpenBus: onOpenBus,
                 onOpenAssignments: onOpenAssignments
             )
+            .motionTransition(.fade)
         }
     }
 

@@ -50,31 +50,16 @@ struct CourseDetailView: View {
     }
 
     var body: some View {
-        Group {
-            if viewModel.isLoading {
-                loadingView
-            } else if let errorMessage = viewModel.errorMessage {
+        ZStack {
+            if let errorMessage = viewModel.errorMessage {
                 errorView(message: errorMessage)
+                    .motionTransition(.fade)
             } else {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        heroHeaderSection
-                        announcementsCard
-                        attendanceCard
-                        memoCard
-                        linksCard
-                        colorPickerCard
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
-                    .readableWidth()
-                }
-                .simultaneousGesture(TapGesture().onEnded {
-                    isMemoFocused = false
-                })
+                detailScrollView
+                    .motionTransition(.fade)
             }
         }
+        .motionAnimation(Motion.standard, value: viewModel.errorMessage != nil)
         // ページの中に直接置くときは、地の色は右ペイン側（`TimetableDetailPane`）が塗る。
         // シートで出すときも他のページと同じ白い地にする
         .background(isInline ? Color.clear : CardSurface.pageFill)
@@ -95,6 +80,48 @@ struct CourseDetailView: View {
                 viewModel.saveMemo()
                 viewModel.isMemoChanged = false
             }
+        }
+    }
+
+    /// 科目詳細の本体。
+    ///
+    /// 見出し（科目名・教員・教室）は手元の `CourseModel` からすぐに描く。
+    /// 取得を待つ掲示・出欠・メモのカードは、読み込みが少し長引いたときだけ仮のデータをスケルトンで出し、
+    /// 届いたら `Motion.standard` で本物に入れ替える（入れ替えの速さは ViewModel の `withMotion` が決める）
+    private var detailScrollView: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                heroHeaderSection
+
+                DelayedSkeletonGate(isLoading: viewModel.isLoading) { showsSkeleton in
+                    let detail = showsSkeleton ? CourseDetailResponse.placeholder : viewModel.courseDetail
+                    // スケルトンを出すまでの短い猶予のあいだは、空の状態（「掲示はありません」など）を
+                    // 本物のように見せないよう、カードを隠しておく
+                    let isHidden = viewModel.isLoading && !showsSkeleton
+                    VStack(spacing: 16) {
+                        announcementsCard(detail: detail)
+                        attendanceCard(detail: detail)
+                        memoCard
+                    }
+                    .skeleton(showsSkeleton)
+                    .opacity(isHidden ? 0 : 1)
+                    .allowsHitTesting(!isHidden)
+                }
+
+                linksCard
+                colorPickerCard
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+            .readableWidth()
+        }
+        .simultaneousGesture(TapGesture().onEnded {
+            isMemoFocused = false
+        })
+        // 引っ張って更新（表示中の内容は残したまま取り直す）
+        .refreshable {
+            await viewModel.refreshCourseDetail()
         }
     }
 
@@ -274,15 +301,15 @@ extension CourseDetailView {
 
     // MARK: - 掲示情報
 
-    private var announcementsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func announcementsCard(detail: CourseDetailResponse?) -> some View {
+        let announcements = detail?.announcements ?? []
+        return VStack(alignment: .leading, spacing: 12) {
             sectionHeader(
                 icon: "doc.text", title: "掲示情報",
-                trailing: Text("\(viewModel.announcementCount)件"))
+                trailing: Text("\(announcements.count)件"))
 
-            if viewModel.announcementCount > 0 {
+            if !announcements.isEmpty {
                 VStack(spacing: 0) {
-                    let announcements = viewModel.courseDetail?.announcements ?? []
                     ForEach(Array(announcements.enumerated()), id: \.element.id) {
                         index, announcement in
                         Button(action: {
@@ -328,15 +355,17 @@ extension CourseDetailView {
 
     // MARK: - 出欠情報
 
-    private var attendanceCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func attendanceCard(detail: CourseDetailResponse?) -> some View {
+        let attendanceData = CourseDetailViewModel.attendanceData(for: detail)
+        let totalAttendance = attendanceData.reduce(0) { $0 + $1.count }
+        return VStack(alignment: .leading, spacing: 12) {
             sectionHeader(
                 icon: "person.crop.circle.badge.checkmark", title: "出欠情報",
-                trailing: Text("全\(viewModel.totalAttendance)回"))
+                trailing: Text("全\(totalAttendance)回"))
 
-            if viewModel.totalAttendance > 0 {
+            if totalAttendance > 0 {
                 HStack(spacing: 0) {
-                    ForEach(viewModel.attendanceData) { data in
+                    ForEach(attendanceData) { data in
                         VStack(spacing: 4) {
                             Text("\(data.count)")
                                 .font(.system(size: 30, weight: .bold))
@@ -353,7 +382,7 @@ extension CourseDetailView {
 
                 GeometryReader { geometry in
                     HStack(spacing: 2) {
-                        ForEach(viewModel.attendanceData) { data in
+                        ForEach(attendanceData) { data in
                             if data.count > 0 {
                                 RoundedRectangle(cornerRadius: 4)
                                     .fill(data.color.opacity(0.8))
@@ -361,7 +390,7 @@ extension CourseDetailView {
                                         width: max(
                                             4,
                                             CGFloat(data.count)
-                                                / CGFloat(viewModel.totalAttendance)
+                                                / CGFloat(totalAttendance)
                                                 * geometry.size.width
                                                 - 2
                                         )
@@ -378,13 +407,13 @@ extension CourseDetailView {
                 )
 
                 HStack(spacing: 0) {
-                    ForEach(viewModel.attendanceData) { data in
+                    ForEach(attendanceData) { data in
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(data.color)
                                 .frame(width: 8, height: 8)
                             Text(
-                                "\(data.type) \(data.percentage(total: viewModel.totalAttendance))"
+                                "\(data.type) \(data.percentage(total: totalAttendance))"
                             )
                             .font(.system(size: 14))
                             .foregroundStyle(Color.secondary)
@@ -428,10 +457,10 @@ extension CourseDetailView {
                             .padding(.vertical, 5)
                             .background(Capsule().fill(Color.appPrimary))
                     }
-                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                    .motionTransition(.fade)
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: isMemoFocused || viewModel.isMemoChanged)
+            .motionAnimation(Motion.quick, value: isMemoFocused || viewModel.isMemoChanged)
 
             ZStack(alignment: .topLeading) {
                 if viewModel.memo.isEmpty && !isMemoFocused {
@@ -449,8 +478,9 @@ extension CourseDetailView {
                     .foregroundStyle(Color.primary)
                     .frame(minHeight: 60)
                     .focused($isMemoFocused)
-                    .onChange(of: viewModel.memo) { _, _ in
-                        viewModel.isMemoChanged = true
+                    .onChange(of: viewModel.memo) { _, newValue in
+                        // 取得したメモが入っただけのときは「変更あり」にしない
+                        viewModel.memoDidChange(to: newValue)
                     }
                     .onChange(of: isMemoFocused) { _, newValue in
                         if !newValue && viewModel.isMemoChanged {
@@ -523,7 +553,7 @@ extension CourseDetailView {
                 // 0番（白）は見本に出さない（色が1つも無くても範囲が壊れないように indices から作る）
                 ForEach(Array(presetColors.indices.dropFirst()), id: \.self) { index in
                     Button(action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
+                        withMotion(Motion.quick) {
                             selectedColorIndex = index
                         }
                         onColorChange(index)
@@ -551,26 +581,19 @@ extension CourseDetailView {
                                     .foregroundStyle(Color.primary)
                                     .opacity(selectedColorIndex == index ? 1 : 0)
                                     .scaleEffect(selectedColorIndex == index ? 1 : 0.5)
-                                    .animation(
-                                        .spring(response: 0.3, dampingFraction: 0.6),
-                                        value: selectedColorIndex
-                                    )
+                                    // 跳ねずに素早く出す（選び直しは小さな状態の切り替え）
+                                    .motionAnimation(Motion.quick, value: selectedColorIndex)
                             )
                     }
                 }
             }
             .padding(.vertical, 4)
+            .selectionHaptic(trigger: selectedColorIndex)
         }
         .cardSurface(fill: CardSurface.raisedFill, outlined: true)
     }
 
-    // MARK: - ローディング・エラー
-
-    private var loadingView: some View {
-        ProgressView("読み込み中...")
-            .progressViewStyle(CircularProgressViewStyle())
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
+    // MARK: - エラー
 
     private func errorView(message: String) -> some View {
         VStack(spacing: 16) {

@@ -10,18 +10,28 @@ final class TimetableViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var currentSemester: Semester = .current
 
+    /// 時間割の取得に一度でも成功したか。
+    ///
+    /// 成功するまでは表の枠だけをスケルトンで描き、「今日」ペインも仮のタイルにする。
+    /// 見本のデータを本物のように見せないため、`courses` は空から始める
+    @Published private(set) var hasLoadedOnce = false
+
+    /// 最初の読み込みを待っているところか（まだ成功しておらず、失敗もしていない）
+    var isAwaitingFirstLoad: Bool {
+        !hasLoadedOnce && errorMessage == nil
+    }
+
     // MARK: - プライベートプロパティ
     private var cancellables = Set<AnyCancellable>()
     private let timetableService = TimetableService.shared
-    private var hasLoadedOnce = false
 
     // MARK: - 初期化
     init() {
-        // Xcode Preview では numeric キーのプレビュー用データを初期値にする
+        // Xcode Preview では numeric キーのプレビュー用データを初期値にし、読み込み済みとして扱う。
+        // それ以外は空から始め、最初の取得が終わるまではスケルトンを出す
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             self.courses = CourseModel.previewCourses
-        } else {
-            self.courses = CourseModel.sampleCourses
+            self.hasLoadedOnce = true
         }
 
         // TimetableServiceからの学期情報を監視
@@ -53,11 +63,12 @@ final class TimetableViewModel: ObservableObject {
                 switch result {
                 case .success(let timetableData):
                     // 取得に成功したときだけ「読み込み済み」にする。
-                    // 失敗のあとに再試行したときは、見本のデータではなく読み込み表示を出す
-                    self.hasLoadedOnce = true
-                    if !timetableData.isEmpty {
+                    // 失敗のあとに再試行したときは、スケルトンの表をもう一度出す。
+                    // 空の結果でも、最初の取得なら空の表として確定させる（以前の結果があれば残す）
+                    if !timetableData.isEmpty || !self.hasLoadedOnce {
                         self.courses = timetableData
                     }
+                    self.hasLoadedOnce = true
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     print("時間割データの取得に失敗しました: \(error.localizedDescription)")

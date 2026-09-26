@@ -63,6 +63,32 @@ struct CourseDetailResponse {
     }
 }
 
+// MARK: - 読み込み中の仮のデータ
+
+extension CourseDetailResponse {
+
+    /// 科目詳細の読み込み中に、スケルトンの下へ敷く仮のデータ。
+    ///
+    /// 文字は `.redacted` で塗りの形に置き換わるので利用者には読まれない（ローカライズもしない）。
+    /// 掲示・出欠のカードが読み込み後とおおよそ同じ高さになるよう、件数だけ本物らしくしてある
+    static let placeholder = CourseDetailResponse(
+        announcements: (1...3).map { index in
+            AnnouncementModel(
+                id: -index,
+                title: "掲示のタイトルを読み込んでいます",
+                date: 0,
+                torkDate: nil
+            )
+        },
+        attendance: AttendanceModel(
+            present: 10, absent: 1, late: 1, early: 0, sick: 0, unregistered: 0
+        ),
+        memo: "",
+        syllabusPubFlg: false,
+        syuKetuKanriFlg: false
+    )
+}
+
 // MARK: - 掲示情報モデル
 
 /// 掲示情報を表すモデル

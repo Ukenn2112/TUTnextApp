@@ -655,3 +655,89 @@ enum TodayFormat {
         durationParts(remaining).map { $0.value + $0.unit }.joined()
     }
 }
+
+// MARK: - 読み込み中の仮の盤面
+
+extension TodayBoard {
+
+    /// 時間割の最初の読み込みが終わるまで、スケルトンの下に敷く仮の盤面。
+    ///
+    /// 文字はすべて `.redacted` で塗りの形に置き換わるので利用者には読まれない
+    /// （ローカライズもしない）。本物の盤面とタイルの並び・行数の目安を揃え、
+    /// 読み込み後に入れ替わっても形が大きく跳ねないようにしてある
+    static func placeholder(now: Date) -> TodayBoard {
+        let target = now.addingTimeInterval(placeholderRemaining)
+        let lesson = TodayLessonTileModel.Lesson(
+            state: .next,
+            period: "0",
+            periodNumber: 1,
+            courseName: "授業名を読み込み中",
+            room: "000",
+            previousRoom: nil,
+            teacher: "担当教員",
+            remaining: placeholderRemaining,
+            systemTarget: target,
+            progress: nil,
+            startTime: "9:00",
+            endTime: "10:30",
+            unreadCount: 0,
+            notice: nil,
+            showsNotice: false)
+
+        let upcoming = TodayUpcomingTileModel(
+            rows: (1...2).map { index in
+                TodayUpcomingTileModel.Row(
+                    id: "placeholder-\(index)",
+                    time: "00:00",
+                    periodLabel: "0限",
+                    courseName: "授業名を読み込み中",
+                    detail: "〜00:00 · 担当教員",
+                    room: "000",
+                    isRoomChanged: false,
+                    accessibilityLabel: "")
+            })
+
+        let bus = TodayBusTileModel(
+            isTowardSchool: true,
+            rows: (1...3).map { index in
+                TodayBusTileModel.Row(
+                    id: "placeholder-\(index)",
+                    time: "00:00",
+                    note: nil,
+                    name: "行き先を読み込み中",
+                    status: "00分後",
+                    statusStyle: .plain,
+                    isKey: index == 1,
+                    urgency: nil,
+                    remaining: placeholderRemaining,
+                    systemTarget: target)
+            },
+            emptyText: nil,
+            route: .fromSeisekiToSchool)
+
+        let assignments = TodayAssignmentTileModel(
+            isLoaded: false,
+            todayCount: 0,
+            tomorrowCount: 0,
+            isUrgent: false,
+            items: (1...3).map { index in
+                TodayAssignmentTileModel.Item(
+                    id: "placeholder-\(index)",
+                    title: "課題名を読み込み中",
+                    detail: "今日 · あと 0時間",
+                    isAccented: false,
+                    url: "")
+            },
+            emptyText: nil,
+            totalPending: 0)
+
+        return TodayBoard(
+            lesson: TodayLessonTileModel(content: .lesson(lesson)),
+            upcoming: upcoming,
+            bus: bus,
+            assignments: assignments)
+    }
+
+    /// 仮の盤面に入れておく残り時間（10分より長くして、秒まで動く表示にしない）
+    private static let placeholderRemaining: TimeInterval = 60 * 60
+}
