@@ -37,7 +37,7 @@ struct TimetableView: View {
     /// 左ペインが解いた時間割の縦の目盛り。
     /// 右ペインはこれを受け取って、自分の寸法を計算し直さずに左の行に揃える
     @State private var gridMetrics: TimetableGridMetrics = .unavailable
-    /// セルを出し終えたか。最初の読み込みが終わるまではセルの代わりにスケルトンの塊を描く。
+    /// セルを出し終えたか。最初の読み込みが終わるまではセルの代わりにスケルトン（空きセルの形）を描く。
     /// 一度出したら戻さないので、タブを行き来しても登場の動きは繰り返さない
     @State private var hasRevealedCells = false
 
@@ -552,9 +552,9 @@ private struct LayoutMetrics {
 
 // MARK: - セルの登場
 
-/// 最初の読み込みが終わったときに、スケルトンの塊から本物のセルへ列ごとに順に入れ替える。
+/// 最初の読み込みが終わったときに、スケルトン（空きセルの形）から本物のセルへ列ごとに順に入れ替える。
 ///
-/// 塊とセルを重ねておき、不透明度だけを入れ替える（間に何も無い瞬間を作らない）。
+/// スケルトンとセルを重ねておき、不透明度だけを入れ替える（間に何も無い瞬間を作らない）。
 /// 遅れは列の番号から `Motion.stagger(index:)` で決める。
 /// 「視差効果を減らす」が有効なら `motionAnimation` が遅れの無い短いクロスフェードに差し替える
 private struct CellReveal: ViewModifier {
@@ -567,10 +567,35 @@ private struct CellReveal: ViewModifier {
         content
             .opacity(isRevealed ? 1 : 0)
             .background {
-                SkeletonBlock(width: width, height: height, cornerRadius: TimeSlotCell.cornerRadius)
+                EmptyCellSkeleton(width: width, height: height)
                     .opacity(isRevealed ? 0 : 1)
             }
             .motionAnimation(Motion.standard.delay(Motion.stagger(index: column)), value: isRevealed)
+    }
+}
+
+/// 読み込み中のセル。読み込み後の空きセル（地の色＋1pt の区切り線の枠）と同じ形に、
+/// ごく薄い `quaternarySystemFill` を重ねただけのもの。
+///
+/// 表全体が「空の時間割に薄いきらめきが流れている」ように見え、本物のセルへ入れ替わってもほとんど動かない
+private struct EmptyCellSkeleton: View {
+    let width: CGFloat
+    let height: CGFloat
+
+    var body: some View {
+        // 角の形も `TimeSlotCell` の空きセルと揃える
+        RoundedRectangle(cornerRadius: TimeSlotCell.cornerRadius)
+            .fill(Color(UIColor.systemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: TimeSlotCell.cornerRadius)
+                    .fill(Color(UIColor.quaternarySystemFill))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: TimeSlotCell.cornerRadius)
+                    .stroke(Color(UIColor.separator), lineWidth: 1)
+            )
+            .frame(width: width, height: height)
+            .accessibilityHidden(true)
     }
 }
 
