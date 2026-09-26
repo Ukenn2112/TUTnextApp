@@ -26,6 +26,9 @@ struct DuoDivision: Equatable {
     ///
     /// 横向きの折り目（テーブルトップ）は上下に分けるものなので、ここでは対象にしない
     static func verticalFold(in proxy: GeometryProxy) -> DuoDivision? {
+        // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外しており、
+        // そのときは折り目が無いもの（nil）として扱う
+        #if DUO_SDK
         guard #available(iOS 27.1, *) else { return nil }
 
         // `.mirrors`（既定値）では枠も余白も書字方向に合わせて反転した座標で返るため、
@@ -43,6 +46,9 @@ struct DuoDivision: Equatable {
             start: region.frame.minX - region.margins.leading,
             end: region.frame.maxX + region.margins.trailing
         )
+        #else
+        return nil
+        #endif
     }
 }
 

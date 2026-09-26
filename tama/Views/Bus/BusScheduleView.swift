@@ -85,6 +85,9 @@ struct BusScheduleView: View {
     // MARK: - ボディ
     var body: some View {
         Group {
+            // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外しており、
+            // そのときは常に1列
+            #if DUO_SDK
             if #available(iOS 27.1, *), isTwoPane {
                 BusTwoPaneView(
                     viewModel: viewModel,
@@ -94,6 +97,9 @@ struct BusScheduleView: View {
             } else {
                 singleColumnContent
             }
+            #else
+            singleColumnContent
+            #endif
         }
         .background(
             Color.clear

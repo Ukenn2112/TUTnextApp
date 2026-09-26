@@ -141,9 +141,12 @@ private struct DuoMetricsProbeLayer: View {
     /// toolbarVerticalEdge を読み取るための不可視ビュー（iOS 27.1以降のみ）
     @ViewBuilder
     private var toolbarEdgeReader: some View {
+        // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外している
+        #if DUO_SDK
         if #available(iOS 27.1, *) {
             DuoToolbarEdgeReader(edgeName: $toolbarEdge)
         }
+        #endif
     }
 }
 
@@ -249,9 +252,12 @@ private struct DuoMetricsLayer: View {
     /// toolbarVerticalEdge を読み取るための不可視ビュー（iOS 27.1以降のみ）
     @ViewBuilder
     private var toolbarEdgeReader: some View {
+        // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外している
+        #if DUO_SDK
         if #available(iOS 27.1, *) {
             DuoToolbarEdgeReader(edgeName: $toolbarEdge)
         }
+        #endif
     }
 
     // MARK: - プライベートメソッド
@@ -272,6 +278,8 @@ private struct DuoMetricsLayer: View {
 
     /// 予約領域（遮蔽物・分割）を非アクティブも含めて取得する
     private static func regions(proxy: GeometryProxy) -> [DuoRegionInfo] {
+        // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外している
+        #if DUO_SDK
         guard #available(iOS 27.1, *) else { return [] }
 
         let occlusions = proxy.reservedRegions(kind: .occlusion, options: .includeInactive)
@@ -288,6 +296,9 @@ private struct DuoMetricsLayer: View {
                     isActive: entry.0.isActive
                 )
             }
+        #else
+        return []
+        #endif
     }
 }
 
@@ -304,6 +315,8 @@ private enum DuoMetricsFormat {
     }
 }
 
+// DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外している
+#if DUO_SDK
 /// `toolbarVerticalEdge` を親へ伝えるだけの不可視ビュー
 @available(iOS 27.1, *)
 private struct DuoToolbarEdgeReader: View {
@@ -326,6 +339,7 @@ private struct DuoToolbarEdgeReader: View {
         }
     }
 }
+#endif
 
 // MARK: - UIKit側の余白の読み取り
 

@@ -1,5 +1,9 @@
 import SwiftUI
 
+// DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外しており、
+// そのときはこのファイルごとコンパイルしない（`BusScheduleView` は常に1列）
+#if DUO_SDK
+
 // MARK: - バスの2列表示
 
 /// バスタブの2列表示（iPhone Duoの内側ディスプレイ・横向き）。
@@ -302,3 +306,5 @@ private struct BusLoadFailureView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+#endif

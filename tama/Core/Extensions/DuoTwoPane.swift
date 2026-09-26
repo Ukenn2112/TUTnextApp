@@ -23,8 +23,14 @@ enum DuoTwoPane {
     static func isEnabled(
         containerSize: CGSize, horizontalSizeClass: UserInterfaceSizeClass?
     ) -> Bool {
+        // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外しており、
+        // そのときは2列の組み方（`ArrangementView`）自体が無いので常に1列
+        #if DUO_SDK
         guard #available(iOS 27.1, *) else { return false }
         guard horizontalSizeClass == .regular else { return false }
         return containerSize.height > 0 && containerSize.width > containerSize.height
+        #else
+        return false
+        #endif
     }
 }

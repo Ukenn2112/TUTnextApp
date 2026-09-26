@@ -61,11 +61,17 @@ struct TimetableView: View {
     // MARK: - ボディ
     var body: some View {
         Group {
+            // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外しており、
+            // そのときは常に1ペイン
+            #if DUO_SDK
             if #available(iOS 27.1, *), isTwoPane {
                 twoPaneLayout
             } else {
                 gridPane
             }
+            #else
+            gridPane
+            #endif
         }
         // 縦バーのポーズではウィンドウの上端・下端まで内容を広げ、
         // 上下とも VerticalBarLayout.edgeMargin だけ端から離した位置に内容を置く
@@ -145,9 +151,8 @@ struct TimetableView: View {
     /// 内側の縦向き・外側ディスプレイ・Split View・通常のiPhoneは従来どおり1ペイン＋シート。
     /// `ArrangementView` の内部状態は読めないので、判定はここで自分の大きさから行う
     private var isTwoPane: Bool {
-        guard #available(iOS 27.1, *) else { return false }
-        guard horizontalSizeClass == .regular else { return false }
-        return containerSize.height > 0 && containerSize.width > containerSize.height
+        // 条件（DUO_SDK・iOS 27.1以降・幅・向き）はバス・課題タブと共通の `DuoTwoPane` に置いてある
+        DuoTwoPane.isEnabled(containerSize: containerSize, horizontalSizeClass: horizontalSizeClass)
     }
 
     /// 右ペインの内容の上端に取る余白（縦バーのポーズではウィンドウ上端を基準にしているため必要）
@@ -161,6 +166,8 @@ struct TimetableView: View {
     ///
     /// `ArrangementView` は折りたたみに合わせて継ぎ目をヒンジに揃えてくれる。
     /// ナビゲーションの入れ物（`NavigationStack`）はこの外側（`ContentView`）にある
+    // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外している
+    #if DUO_SDK
     @available(iOS 27.1, *)
     private var twoPaneLayout: some View {
         ArrangementView {
@@ -170,6 +177,7 @@ struct TimetableView: View {
         }
         .arrangementViewStyle(.split.axes(.horizontal))
     }
+    #endif
 
     /// 右ペイン。授業を選んでいればその科目詳細を、選んでいなければ「今日」を出す
     private var detailPane: some View {
