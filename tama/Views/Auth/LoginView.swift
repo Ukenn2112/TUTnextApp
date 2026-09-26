@@ -180,7 +180,9 @@ struct LoginView: View {
                         Text("学生証スキャン")
                             .font(.system(size: 12))
                     }
-                    .foregroundStyle(.secondary)
+                    // `.secondary`（層の様式）だとボタンの前景色＝アプリの主色を継いで薄い主色になるため、
+                    // 固定の灰色 `Color.secondary` にする
+                    .foregroundStyle(Color.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
