@@ -318,7 +318,8 @@ struct TimetableView: View {
                     periodRowView(period: period, layout: layout)
                 }
             }
-            .skeleton(!hasRevealedCells)
+            // セルのスケルトンは読み込み後の空きセルと同じ見た目にしたいので、中身は薄めない
+            .skeleton(!hasRevealedCells, contentOpacity: 1)
         }
         // 読み込み後の更新（学期の切り替え・前面復帰など）で表の中身や行数が変わるときは落ち着いて入れ替える
         .motionAnimation(Motion.standard, value: viewModel.courses)
@@ -574,21 +575,25 @@ private struct CellReveal: ViewModifier {
     }
 }
 
-/// 読み込み中のセル。読み込み後の空きセル（地の色＋1pt の区切り線の枠）と同じ形に、
-/// ごく薄い `quaternarySystemFill` を重ねただけのもの。
+/// 読み込み中のセル。読み込み後の空きセル（地の色＋1pt の区切り線の枠）とほぼ同じもので、
+/// 気づくか気づかないか程度の `Color.primary` 2% を重ねただけ。
 ///
-/// 表全体が「空の時間割に薄いきらめきが流れている」ように見え、本物のセルへ入れ替わってもほとんど動かない
+/// 読み込み中であることは、上を流れる光の帯（`skeleton(_:)` のきらめき）だけで伝える。
+/// 本物のセルへ入れ替わっても見た目はほとんど変わらない
 private struct EmptyCellSkeleton: View {
     let width: CGFloat
     let height: CGFloat
 
+    /// 地の色に重ねるごく薄い色の濃さ
+    private static let tintOpacity: Double = 0.02
+
     var body: some View {
-        // 角の形も `TimeSlotCell` の空きセルと揃える
+        // 角の形・地の色・枠は `TimeSlotCell` の空きセルと揃える
         RoundedRectangle(cornerRadius: TimeSlotCell.cornerRadius)
             .fill(Color(UIColor.systemBackground))
             .overlay(
                 RoundedRectangle(cornerRadius: TimeSlotCell.cornerRadius)
-                    .fill(Color(UIColor.quaternarySystemFill))
+                    .fill(Color.primary.opacity(Self.tintOpacity))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: TimeSlotCell.cornerRadius)

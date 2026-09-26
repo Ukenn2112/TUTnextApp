@@ -6,17 +6,21 @@ extension View {
 
     /// 読み込み中のスケルトン表示に切り替える。
     ///
-    /// - `.redacted(reason: .placeholder)` で文字や画像を塗りつぶしの形に置き換える
-    /// - その上から、左から右へ流れるきらめき（不透明度 1 → 0.6 → 1）を**1枚だけ**重ねる。
-    ///   ふだんはそのままの濃さで、帯が通るところだけ少し地の色に溶かす（暗くする帯にはしない）。
-    ///   行ごとではなく、リストや時間割などの入れ物に1回だけ付けること
+    /// - `.redacted(reason: .placeholder)` で文字や画像を塗りつぶしの形に置き換え、
+    ///   中身全体を `contentOpacity`（既定 0.5）まで薄くして、灰色の棒をごく淡くする
+    /// - その上から、左から右へ流れる淡い光の帯を**1枚だけ**重ねる。帯は中身の形の内側だけを
+    ///   明るくする（暗くすることはない）。行ごとではなく、リストや時間割などの入れ物に1回だけ付けること
     /// - 「視差効果を減らす」が有効なとき、またはアプリが前面にないときはきらめかない（静止）
     /// - 表示中は操作を受け付けず、VoiceOver には中身ではなく「読み込み中...」とだけ読ませる
     ///
     /// 中身のビューの同一性は変えないので、切り替えても子の状態は失われない。
+    /// 表示中でないときは薄めも帯も掛けないので、本物の中身の見た目は変わらない。
     /// キャッシュからすぐ表示できる可能性があるときは `skeletonDelayed(_:)` を使う
-    func skeleton(_ isActive: Bool) -> some View {
-        modifier(SkeletonModifier(isActive: isActive))
+    ///
+    /// - Parameter contentOpacity: 表示中の中身の不透明度。時間割のように「読み込み後と同じ形」を
+    ///   そのまま出したいときは 1 にする
+    func skeleton(_ isActive: Bool, contentOpacity: Double = SkeletonStyle.contentOpacity) -> some View {
+        modifier(SkeletonModifier(isActive: isActive, contentOpacity: contentOpacity))
     }
 
     /// 読み込みが `Motion.skeletonDelay` より長く続いたときだけスケルトンにする。
@@ -73,10 +77,30 @@ struct DelayedSkeletonGate<Content: View>: View {
     }
 }
 
+// MARK: - 見た目の値
+
+/// スケルトンの濃さ。どれも `Color.primary` 基準なので、暗い外観でも自然に反転する
+enum SkeletonStyle {
+    /// 表示中の中身（`.redacted` の灰色の棒など）の不透明度
+    static let contentOpacity: Double = 0.5
+    /// `SkeletonBlock` の塗りの濃さ（`Color.primary` に対する不透明度）
+    static let blockFillOpacity: Double = 0.05
+    /// きらめきの帯の中心の白の不透明度（明るい外観）
+    static let shimmerOpacityLight: Double = 0.5
+    /// きらめきの帯の中心の白の不透明度（暗い外観）
+    static let shimmerOpacityDark: Double = 0.08
+}
+
+private extension EnvironmentValues {
+    /// 外側の `skeleton(_:)` が中身に掛けている不透明度（`SkeletonBlock` が打ち消すのに使う）
+    @Entry var skeletonContentOpacity: Double = 1
+}
+
 // MARK: - 本体
 
 private struct SkeletonModifier: ViewModifier {
     let isActive: Bool
+    let contentOpacity: Double
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -86,17 +110,25 @@ private struct SkeletonModifier: ViewModifier {
         isActive && !reduceMotion && scenePhase == .active
     }
 
+    private var appliedOpacity: Double {
+        isActive ? contentOpacity : 1
+    }
+
     func body(content: Content) -> some View {
         content
             .redacted(reason: isActive ? .placeholder : [])
-            .mask {
-                // 流さないときは素通しの黒。流す部品ごと外すので、繰り返しのアニメーションも残らない
+            .environment(\.skeletonContentOpacity, appliedOpacity)
+            .opacity(appliedOpacity)
+            .overlay {
+                // 流さないときは部品ごと外すので、繰り返しのアニメーションも残らない。
+                // `sourceAtop` で中身が描かれているところにだけ光を乗せる（形の外にははみ出さない）
                 if sweeps {
                     ShimmerSweep()
-                } else {
-                    Color.black
+                        .blendMode(.sourceAtop)
+                        .allowsHitTesting(false)
                 }
             }
+            .compositingGroup()
             .allowsHitTesting(!isActive)
             .accessibilityHidden(isActive)
             .overlay {
@@ -109,17 +141,17 @@ private struct SkeletonModifier: ViewModifier {
     }
 }
 
-/// 左から右へ流れるきらめきのマスク。表示されている間だけ `Motion.shimmer` で動き続ける
+/// 左から右へ流れる淡い光の帯。表示されている間だけ `Motion.shimmer` で動き続ける。
+///
+/// 白から透明へのグラデーションを重ねるだけなので、帯の外は元の見た目のまま、帯の中は少し明るくなるだけで、
+/// 暗くなることはない
 private struct ShimmerSweep: View {
     @State private var phase: CGFloat = 0
+    @Environment(\.colorScheme) private var colorScheme
 
-    /// 帯が通るところの不透明度。
-    ///
-    /// ふだん（帯の外）は 1 のまま＝塗りもセルの枠もそのままの濃さで、読み込み後の見た目とずれない。
-    /// 帯の中だけ中身を少し薄くして地の色に近づける。塗りはもともと薄い
-    /// `quaternarySystemFill` なので、明るい外観では白く抜ける光の帯、暗い外観では控えめに沈む帯になり、
-    /// どちらでも塊が濃く点滅するようには見えない
-    private static let bandOpacity: Double = 0.6
+    private var bandOpacity: Double {
+        colorScheme == .dark ? SkeletonStyle.shimmerOpacityDark : SkeletonStyle.shimmerOpacityLight
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -128,9 +160,9 @@ private struct ShimmerSweep: View {
             // 帯の中心が内容の左外（-0.5w）から右外（1.5w）まで通り抜ける
             LinearGradient(
                 stops: [
-                    .init(color: .black, location: 0.35),
-                    .init(color: .black.opacity(Self.bandOpacity), location: 0.5),
-                    .init(color: .black, location: 0.65),
+                    .init(color: .white.opacity(0), location: 0.35),
+                    .init(color: .white.opacity(bandOpacity), location: 0.5),
+                    .init(color: .white.opacity(0), location: 0.65),
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -138,6 +170,7 @@ private struct ShimmerSweep: View {
             .frame(width: width * 3, height: proxy.size.height)
             .offset(x: -2 * width + phase * 2 * width)
         }
+        .accessibilityHidden(true)
         .onAppear {
             withAnimation(Motion.shimmer) {
                 phase = 1
@@ -150,17 +183,24 @@ private struct ShimmerSweep: View {
 
 /// スケルトン用の塗りつぶしブロック。
 ///
-/// `.redacted` では形が出ないもの（時間割のセル・色の帯・アイコンの枠など）の代わりに置く。
+/// `.redacted` では形が出ないもの（色の帯・アイコンの枠など）の代わりに置く。
 /// きらめきは入れ物側の `skeleton(_:)` が1回だけ掛けるので、これ自体は静止した塗りだけ。
-/// 塗りはいちばん薄い `quaternarySystemFill`（暗い外観にも合わせて変わる）にして、重い灰色の壁にしない
+/// 塗りは `Color.primary` の 5%（暗い外観では白の 5%）。入れ物が中身を薄めていても、
+/// その分を打ち消して見た目の濃さは 5% に揃える
 struct SkeletonBlock: View {
     var width: CGFloat?
     var height: CGFloat?
     var cornerRadius: CGFloat = 6
 
+    @Environment(\.skeletonContentOpacity) private var containerOpacity
+
+    private var fillOpacity: Double {
+        min(1, SkeletonStyle.blockFillOpacity / max(containerOpacity, 0.01))
+    }
+
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(Color(UIColor.quaternarySystemFill))
+            .fill(Color.primary.opacity(fillOpacity))
             .frame(width: width, height: height)
             .accessibilityHidden(true)
     }
