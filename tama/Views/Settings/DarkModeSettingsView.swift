@@ -6,6 +6,7 @@ struct DarkModeSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var appearanceManager: AppearanceManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -96,7 +97,7 @@ struct DarkModeSettingsView: View {
         mode: AppearanceManager.AppearanceMode
     ) -> some View {
         Button {
-            withAnimation { appearanceManager.setMode(mode) }
+            withMotion(Motion.standard) { appearanceManager.setMode(mode) }
         } label: {
             HStack {
                 Image(systemName: icon)
@@ -111,13 +112,19 @@ struct DarkModeSettingsView: View {
 
                 Spacer()
 
-                if appearanceManager.mode == mode {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.blue)
-                }
+                // チェックマークは常に置いておき、選ばれていない行ではシンボルの消える効果で隠す。
+                // 出し入れで行の中身が組み変わらないので、選び直したときに行の高さや位置が揺れない。
+                // 「視差効果を減らす」が有効なら、シンボルの効果は使わず不透明度だけで切り替える
+                let isSelected = appearanceManager.mode == mode
+                Image(systemName: "checkmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.blue)
+                    .symbolEffect(.disappear, isActive: !isSelected && !reduceMotion)
+                    .opacity(reduceMotion && !isSelected ? 0 : 1)
+                    .accessibilityHidden(true)
             }
         }
         .tint(.primary)
+        .accessibilityAddTraits(appearanceManager.mode == mode ? .isSelected : [])
     }
 }

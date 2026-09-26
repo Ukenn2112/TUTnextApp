@@ -17,8 +17,12 @@ struct LoginView: View {
         case password
     }
 
-    // NFCボタンのシマーアニメーション
-    @State private var nfcShimmer = false
+    /// 画面に出しているエラーメッセージ。
+    /// ViewModel の値をそのまま使うと出入りを `withMotion` で動かせないため、変化のたびにここへ写す
+    @State private var displayedErrorMessage: String?
+
+    /// ログインに失敗した回数。入力欄を揺らし、エラーの触覚を返すきっかけにする
+    @State private var loginFailureCount = 0
 
     // MARK: - 計算プロパティ
     private var errorColor: Color { .red }
@@ -57,7 +61,10 @@ struct LoginView: View {
         } message: {
             Text("学生証をスキャンして自動入力するか、手動でアカウントを入力することができます。")
         }
-        .onAppear(perform: viewModel.checkAndShowNFCTip)
+        .onAppear {
+            displayedErrorMessage = viewModel.combinedErrorMessage
+            viewModel.checkAndShowNFCTip()
+        }
         .onChange(of: viewModel.nfcReader.studentID) { _, newValue in
             viewModel.handleStudentIDChange(newValue)
             if !newValue.isEmpty {
@@ -68,7 +75,7 @@ struct LoginView: View {
             }
         }
         .onChange(of: viewModel.nfcReader.userName) { _, newValue in
-            withAnimation(.easeInOut) {
+            withMotion(Motion.standard) {
                 viewModel.userName = newValue
             }
         }
@@ -80,6 +87,12 @@ struct LoginView: View {
         .onChange(of: viewModel.loginErrorMessage) { _, newValue in
             if newValue != nil {
                 focusedField = .account
+                loginFailureCount += 1
+            }
+        }
+        .onChange(of: viewModel.combinedErrorMessage) { _, newValue in
+            withMotion(Motion.quick) {
+                displayedErrorMessage = newValue
             }
         }
     }
@@ -95,7 +108,7 @@ struct LoginView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
                     .padding(.bottom, 5)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .motionTransition(.rise)
             }
 
             // タイトル
@@ -107,17 +120,20 @@ struct LoginView: View {
                 .padding(.bottom, 30)
 
             // エラーメッセージ
-            if let errorMessage = viewModel.combinedErrorMessage {
+            if let errorMessage = displayedErrorMessage {
                 Text(errorMessage)
                     .foregroundStyle(errorColor)
                     .font(.system(size: 14))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 30)
                     .padding(.bottom, 10)
+                    .motionTransition(.rise)
             }
 
-            // 入力フォーム
+            // 入力フォーム（ログインに失敗するたびに揺らしてエラーの触覚を返す）
             inputFields
+                .shake(trigger: loginFailureCount)
+                .errorHaptic(trigger: loginFailureCount)
 
             // ログインボタン
             loginButton
@@ -140,7 +156,7 @@ struct LoginView: View {
                             .stroke(
                                 focusedField == .account ? Color.primary : Color.gray.opacity(0.3),
                                 lineWidth: 1)
-                            .animation(.easeOut(duration: 0.2), value: focusedField)
+                            .motionAnimation(Motion.quick, value: focusedField)
                     )
                     .textContentType(.username)
                     .keyboardType(.asciiCapable)
@@ -171,32 +187,10 @@ struct LoginView: View {
                         RoundedRectangle(cornerRadius: 5)
                             .fill(Color(UIColor.secondarySystemFill))
                     )
-                    .overlay(
-                        GeometryReader { geo in
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .clear, location: 0),
-                                    .init(color: .white.opacity(0.15), location: 0.4),
-                                    .init(color: .white.opacity(0.55), location: 0.5),
-                                    .init(color: .white.opacity(0.15), location: 0.6),
-                                    .init(color: .clear, location: 1),
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                            .frame(width: geo.size.width * 2)
-                            .offset(x: nfcShimmer ? geo.size.width : -geo.size.width * 2)
-                            .animation(
-                                .linear(duration: 1.8)
-                                    .repeatForever(autoreverses: false),
-                                value: nfcShimmer
-                            )
-                        }
-                    )
+                    .overlay { NFCButtonShimmer() }
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                 }
                 .padding(.trailing, 6)
-                .onAppear { nfcShimmer = true }
             }
 
             // パスワード入力フィールド
@@ -208,7 +202,7 @@ struct LoginView: View {
                         .stroke(
                             focusedField == .password ? Color.primary : Color.gray.opacity(0.3),
                             lineWidth: 1)
-                        .animation(.easeOut(duration: 0.2), value: focusedField)
+                        .motionAnimation(Motion.quick, value: focusedField)
                 )
                 .textContentType(.password)
                 .font(.system(size: 18))
@@ -243,8 +237,10 @@ struct LoginView: View {
                         ProgressView()
                             .controlSize(.regular)
                             .tint(Color(UIColor.systemBackground))
+                            .motionTransition(.fade)
                     }
                 }
+                .motionAnimation(Motion.quick, value: viewModel.isLoading)
         }
         .prominentLoginButtonStyle()
         .buttonBorderShape(.capsule)
@@ -286,7 +282,7 @@ struct LoginView: View {
             // ログイン成功の重要イベントを記録
             ratingService.recordSignificantEvent()
             // アニメーション付きでログイン状態を更新
-            withAnimation(.easeInOut(duration: 0.3)) {
+            withMotion(Motion.emphasized) {
                 isLoggedIn = true
             }
         }
@@ -303,6 +299,51 @@ struct LoginView: View {
                     notificationService.requestAuthorization()
                 default:
                     break
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 学生証スキャンボタンのきらめき
+
+/// 学生証スキャンボタンの上を左から右へ流れるきらめき（注目を引くため）。
+/// 「視差効果を減らす」が有効なとき、またはアプリが前面にないときは何も描かない（静止）。
+/// 流れる帯ごと外すので、繰り返しのアニメーションも残らない
+private struct NFCButtonShimmer: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        if !reduceMotion && scenePhase == .active {
+            Sweep()
+        }
+    }
+
+    private struct Sweep: View {
+        @State private var isSweeping = false
+
+        var body: some View {
+            GeometryReader { geo in
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .white.opacity(0.15), location: 0.4),
+                        .init(color: .white.opacity(0.55), location: 0.5),
+                        .init(color: .white.opacity(0.15), location: 0.6),
+                        .init(color: .clear, location: 1),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: geo.size.width * 2)
+                .offset(x: isSweeping ? geo.size.width : -geo.size.width * 2)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onAppear {
+                withAnimation(Motion.shimmer) {
+                    isSweeping = true
                 }
             }
         }

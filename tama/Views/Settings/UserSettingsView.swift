@@ -313,7 +313,7 @@ struct UserSettingsView: View {
             UserService.shared.clearDeviceToken()
             dismiss()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                withAnimation(.easeInOut(duration: 0.5)) {
+                withMotion(Motion.emphasized) {
                     isLoggedIn = false
                 }
             }

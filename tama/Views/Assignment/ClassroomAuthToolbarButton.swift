@@ -19,6 +19,7 @@ struct ClassroomAuthToolbarButton: View {
     // MARK: - プロパティ
 
     @EnvironmentObject private var oauthService: GoogleOAuthService
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// 認証取り消しの確認アラートを出すかどうか（アラート自体は呼び出し側にある）
     @Binding var showRevokeConfirmation: Bool
@@ -52,7 +53,8 @@ struct ClassroomAuthToolbarButton: View {
                 NSLocalizedString("認証中", comment: "認証中ステータス"),
                 systemImage: "books.vertical"
             )
-            .symbolEffect(.pulse, isActive: true)
+            // 「視差効果を減らす」が有効なら点滅させず、シンボルと文言だけで伝える
+            .symbolEffect(.pulse, isActive: !reduceMotion)
         } else if oauthService.isAuthorized {
             Label(
                 NSLocalizedString("認証済み", comment: "認証済みステータス"),

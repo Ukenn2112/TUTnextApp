@@ -79,13 +79,15 @@ struct ContentView: View {
         Group {
             if !isLoggedIn {
                 LoginView(isLoggedIn: $isLoggedIn)
-                    .transition(.opacity)
+                    .motionTransition(.fade)
             } else {
                 mainTabView
-                    .transition(.opacity)
+                    .motionTransition(.fade)
             }
         }
-        .animation(.easeInOut(duration: 0.5), value: isLoggedIn)
+        // ログイン・ログアウト・セッション切れの切り替えはどれも同じ強調の動きにそろえる。
+        // 起動時の確認（checkLoginStatus）は disablesAnimations のトランザクションで反映するため、ここでは動かない
+        .motionAnimation(Motion.emphasized, value: isLoggedIn)
         .onChange(of: isLoggedIn) {
             // ログアウト・セッション切れ後に「その他」モードやシートの状態を持ち越さない
             resetMoreMenuState()
@@ -117,7 +119,7 @@ struct ContentView: View {
         .onReceive(
             NotificationCenter.default.publisher(for: .sessionExpired)
         ) { _ in
-            withAnimation(.easeInOut(duration: 0.5)) {
+            withMotion(Motion.emphasized) {
                 isLoggedIn = false
             }
         }

@@ -261,6 +261,7 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
                     if let unreadBadgeText {
                         Text(unreadBadgeText)
                             .font(.system(size: 7, weight: .bold))
+                            .contentTransition(.numericText())
                             .foregroundStyle(.white)
                             .frame(minWidth: 16, minHeight: 16)
                             .background(
@@ -273,9 +274,11 @@ private struct MainToolbarModifier<Extra: View>: ViewModifier {
                                     .stroke(Color.white, lineWidth: 1)
                             )
                             .offset(x: 8, y: -8)
-                            .animation(.spring(), value: unreadBadgeText)
+                            .motionTransition(.fade)
                     }
                 }
+                // 件数の変化は数字の差し替えで、バッジの出入りはフェードで静かに見せる
+                .motionAnimation(Motion.quick, value: unreadBadgeText)
             }
             .toolbarItemTint()
         }

@@ -14,6 +14,8 @@ final class PrintSystemViewModel: ObservableObject {
     @Published var showFileSelector = false
     @Published var showResultView = false
     @Published var recentUploads: [PrintResult] = []
+    /// 最近のアップロード履歴をまだ読み込んでいないか（ログインの完了を待っている間は `true`）
+    @Published var isLoadingRecentUploads = true
 
     // PIN番号
     @Published var pinCode: String = ""
@@ -82,6 +84,8 @@ final class PrintSystemViewModel: ObservableObject {
 
                 if !success {
                     self?.errorMessage = error?.localizedDescription ?? "ログインに失敗しました"
+                    // 履歴は読み込まれないため、仮の行を出したままにしない
+                    self?.isLoadingRecentUploads = false
                     completion(false)
                 } else {
                     completion(true)
@@ -157,6 +161,7 @@ final class PrintSystemViewModel: ObservableObject {
     // SwiftDataから最近のアップロード履歴を読み込み（期限切れを除外）
     func loadRecentUploads() {
         let context = modelContext
+        defer { isLoadingRecentUploads = false }
 
         do {
             let descriptor = FetchDescriptor<PrintUploadRecord>(

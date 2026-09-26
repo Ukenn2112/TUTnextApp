@@ -7,6 +7,14 @@ struct PrintSystemView: View {
     @StateObject private var viewModel = PrintSystemViewModel()
     @Environment(\.dismiss) private var dismiss
 
+    /// ファイルを選んであるか。ファイル本体（タプル）は比較できないので、アニメーションの基準にはこれを使う
+    private var hasSelectedFile: Bool { viewModel.selectedFile != nil }
+
+    /// 最近のアップロード欄を出すか（読み込み中は仮の行を出す）
+    private var showsRecentUploads: Bool {
+        !hasSelectedFile && (viewModel.isLoadingRecentUploads || !viewModel.recentUploads.isEmpty)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -14,13 +22,16 @@ struct PrintSystemView: View {
                     fileSelectionArea
                         .padding(.top, 20)
 
-                    if viewModel.selectedFile != nil {
+                    if hasSelectedFile {
                         printSettingsArea
+                            .motionTransition(.rise)
                         uploadButton
+                            .motionTransition(.rise)
                     }
 
-                    if viewModel.selectedFile == nil && !viewModel.recentUploads.isEmpty {
+                    if showsRecentUploads {
                         recentUploadsArea
+                            .motionTransition(.fade)
                     }
 
                     if let errorMessage = viewModel.errorMessage {
@@ -28,8 +39,13 @@ struct PrintSystemView: View {
                             .foregroundStyle(.red)
                             .font(.footnote)
                             .multilineTextAlignment(.center)
+                            .motionTransition(.rise)
                     }
                 }
+                // ファイルの選択・取り消しで内容が入れ替わるときと、エラーの出入りをそろえて動かす
+                .motionAnimation(Motion.standard, value: hasSelectedFile)
+                .motionAnimation(Motion.quick, value: viewModel.errorMessage)
+                .motionAnimation(Motion.standard, value: viewModel.isLoadingRecentUploads)
                 .padding(.horizontal)
                 .padding(.bottom, 20)
                 .readableWidth()
@@ -65,9 +81,13 @@ struct PrintSystemView: View {
             }
         }
         .overlay {
-            if viewModel.isLoading {
-                LoadingView()
+            ZStack {
+                if viewModel.isLoading {
+                    LoadingView()
+                        .motionTransition(.fade)
+                }
             }
+            .motionAnimation(Motion.quick, value: viewModel.isLoading)
         }
     }
 
@@ -100,8 +120,10 @@ struct PrintSystemView: View {
                     .tint(Color.appPrimary)
                 }
                 .outlinedCard()
+                .motionTransition(.swap)
             } else {
                 fileSelectButton
+                    .motionTransition(.swap)
             }
         }
     }
@@ -218,32 +240,76 @@ struct PrintSystemView: View {
             Text("最近のアップロード")
                 .font(.subheadline.weight(.semibold))
 
-            ForEach(viewModel.recentUploads, id: \.printNumber) { result in
-                HStack {
-                    Image(systemName: "doc.fill")
-                        .foregroundStyle(Color.appPrimary)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(result.fileName)
-                            .font(.subheadline.weight(.medium))
-                            .lineLimit(1)
-
-                        Text("予約番号: \(result.printNumber)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            if viewModel.isLoadingRecentUploads {
+                // 読み込みが長引いたときだけ仮の行を出す（すぐ読み込めたときはちらつかせない）
+                DelayedSkeletonGate(isLoading: viewModel.isLoadingRecentUploads) { showsSkeleton in
+                    VStack(spacing: 12) {
+                        ForEach(0..<Self.placeholderRowCount, id: \.self) { _ in
+                            recentUploadPlaceholderRow
+                        }
                     }
-
-                    Spacer()
-
-                    Text(result.formattedExpiryDate)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    .skeleton(showsSkeleton)
+                    .opacity(showsSkeleton ? 1 : 0)
                 }
-                .padding()
-                .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+            } else {
+                ForEach(viewModel.recentUploads, id: \.printNumber) { result in
+                    recentUploadRow(result)
+                        .motionTransition(.fade)
+                }
             }
         }
         .outlinedCard()
+    }
+
+    /// 読み込み中に出す仮の行の数
+    private static let placeholderRowCount = 2
+
+    private func recentUploadRow(_ result: PrintResult) -> some View {
+        HStack {
+            Image(systemName: "doc.fill")
+                .foregroundStyle(Color.appPrimary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(result.fileName)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+
+                Text("予約番号: \(result.printNumber)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text(result.formattedExpiryDate)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// 読み込み中の仮の行（本物の行と同じ形。文字は `.redacted` で塗りつぶされる）
+    private var recentUploadPlaceholderRow: some View {
+        HStack {
+            SkeletonBlock(width: 18, height: 22, cornerRadius: 4)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: "Document.pdf")
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+
+                Text(verbatim: "000000000")
+                    .font(.caption)
+            }
+
+            Spacer()
+
+            Text(verbatim: "0000/00/00")
+                .font(.caption2)
+        }
+        .padding()
+        .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
     }
 
     // MARK: - Upload Button
@@ -285,15 +351,20 @@ struct PrintResultView: View {
     let result: PrintResult
     let onDismiss: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showCopiedAlert = false
+
+    /// 完了のチェックマークを描き始めたか（画面に出たときに一度だけ動かす）
+    @State private var showsCheckmark = false
+
+    /// 「コピーしました」を出しておく時間
+    private static let copiedToastDuration: Duration = .seconds(1.5)
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
                 VStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 60))
-                        .foregroundStyle(.green)
+                    completionCheckmark
                         .padding(.bottom, 10)
 
                     Text("印刷ファイルのアップロードが完了しました")
@@ -321,7 +392,9 @@ struct PrintResultView: View {
 
                             Button {
                                 UIPasteboard.general.string = result.printNumber
-                                showCopiedAlert = true
+                                withMotion(Motion.quick) {
+                                    showCopiedAlert = true
+                                }
                             } label: {
                                 Image(systemName: "doc.on.doc")
                                     .font(.subheadline)
@@ -364,15 +437,53 @@ struct PrintResultView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
-                        .transition(.opacity)
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                withAnimation {
-                                    showCopiedAlert = false
-                                }
+                        .motionTransition(.fade)
+                        .task {
+                            try? await Task.sleep(for: Self.copiedToastDuration)
+                            guard !Task.isCancelled else { return }
+                            withMotion(Motion.quick) {
+                                showCopiedAlert = false
                             }
                         }
                 }
+            }
+        }
+        .onAppear {
+            // 「視差効果を減らす」が有効なら、描画もはずみも付けずにそのまま出す
+            if reduceMotion {
+                showsCheckmark = true
+            } else {
+                withMotion(Motion.emphasized) {
+                    showsCheckmark = true
+                }
+            }
+        }
+    }
+
+    /// 完了のチェックマーク。
+    /// iOS 26 以降は線を描くように現れ、それ以前は出たときに一度だけ弾む。
+    /// どちらも場所は最初から確保しておき、現れるときに周りの文字が動かないようにする
+    private var completionCheckmark: some View {
+        let symbol = Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 60))
+            .foregroundStyle(.green)
+            .accessibilityHidden(true)
+
+        return ZStack {
+            symbol.hidden()
+
+            if #available(iOS 26.0, *) {
+                if showsCheckmark {
+                    if reduceMotion {
+                        symbol
+                    } else {
+                        symbol
+                            .transition(.symbolEffect(.drawOn))
+                    }
+                }
+            } else {
+                symbol
+                    .symbolEffect(.bounce, value: reduceMotion ? false : showsCheckmark)
             }
         }
     }
