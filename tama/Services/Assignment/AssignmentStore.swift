@@ -39,6 +39,8 @@ final class AssignmentStore: ObservableObject {
     /// `clear()` のたびに進める世代番号。ログアウト前に始まった取得の結果を捨てるために使う
     private var generation = 0
     private var observers: [NSObjectProtocol] = []
+    /// `refresh()` で取り直しの終わりを待っている呼び出し元（引っ張って更新のくるくる）
+    private var refreshWaiters: [CheckedContinuation<Void, Never>] = []
 
     private init() {
         // Xcode Preview ではモックデータを初期値にして、ネットワークには出ない
@@ -87,6 +89,7 @@ final class AssignmentStore: ObservableObject {
                 guard let self else { return }
                 // ログアウト（clear）後に届いた前のユーザーの結果は捨てる
                 guard requestGeneration == self.generation else { return }
+                defer { self.resumeRefreshWaiters() }
                 self.inFlight = false
                 self.isLoading = false
                 self.hasLoadedOnce = true
@@ -95,12 +98,24 @@ final class AssignmentStore: ObservableObject {
                 switch result {
                 case .success(let assignments):
                     // 締切日が近い順にソート
-                    self.assignments = assignments.sorted { $0.dueDate < $1.dueDate }
+                    self.assignments = Self.carryingOverIDs(from: self.assignments, to: assignments)
+                        .sorted { $0.dueDate < $1.dueDate }
                 case .failure(let error):
                     // 取れなかったときは前回の控えをそのまま残す
                     self.errorMessage = error.localizedDescription
                 }
             }
+        }
+    }
+
+    /// 取り直して、終わる（成功・失敗・ログアウトで打ち切り）まで待つ（課題タブの引っ張って更新）。
+    ///
+    /// 取得中ならその取得の終わりを待つ。プレビュー・モックのようにすぐ終わる場合は待たずに戻る
+    func refresh() async {
+        reload()
+        guard inFlight else { return }
+        await withCheckedContinuation { continuation in
+            refreshWaiters.append(continuation)
         }
     }
 
@@ -110,6 +125,8 @@ final class AssignmentStore: ObservableObject {
     func clear() {
         generation += 1
         inFlight = false
+        // 前のユーザーの取得の結果は捨てるので、その終わりを待っている引っ張って更新はここで終わらせる
+        resumeRefreshWaiters()
         assignments = []
         isLoading = false
         errorMessage = nil
@@ -118,6 +135,49 @@ final class AssignmentStore: ObservableObject {
     }
 
     // MARK: - プライベート
+
+    /// 取り直しの終わりを待っている呼び出し元をすべて再開する
+    private func resumeRefreshWaiters() {
+        let waiters = refreshWaiters
+        refreshWaiters = []
+        waiters.forEach { $0.resume() }
+    }
+
+    /// 取り直した課題のうち、前回と同じ課題には前回の id を引き継ぐ。
+    ///
+    /// API の課題には id が無く、変換のたびに新しい UUID が振られる。
+    /// そのままだと取り直すたびに全カードが別物として作り直され、
+    /// 絞り込みの出入りのアニメーションやスクロール位置が乱れるため、
+    /// 講義・題名・締切・URL が同じものは同じ課題とみなして id を揃える
+    private static func carryingOverIDs(from previous: [Assignment], to fetched: [Assignment]) -> [Assignment] {
+        guard !previous.isEmpty else { return fetched }
+
+        var idsByKey: [String: [String]] = [:]
+        for assignment in previous {
+            idsByKey[identityKey(of: assignment), default: []].append(assignment.id)
+        }
+
+        return fetched.map { assignment in
+            var assignment = assignment
+            let key = identityKey(of: assignment)
+            // 同じ内容の課題が複数あっても、1つの id を2回使わないよう先頭から順に割り当てる
+            if var ids = idsByKey[key], !ids.isEmpty {
+                assignment.id = ids.removeFirst()
+                idsByKey[key] = ids
+            }
+            return assignment
+        }
+    }
+
+    /// 同じ課題かどうかを見分けるための値
+    private static func identityKey(of assignment: Assignment) -> String {
+        [
+            assignment.courseId,
+            assignment.title,
+            assignment.url,
+            String(assignment.dueDate.timeIntervalSinceReferenceDate)
+        ].joined(separator: "\u{1F}")
+    }
 
     /// モックデータをそのまま控えに流し込む
     private func apply(_ mock: [Assignment]) {

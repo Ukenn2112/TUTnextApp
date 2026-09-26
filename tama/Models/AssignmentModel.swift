@@ -135,6 +135,45 @@ extension Assignment {
     }
 }
 
+// MARK: - スケルトン用の仮データ
+
+extension Assignment {
+    /// 初回の読み込み中にスケルトン（塗りつぶしの形）として並べる仮の課題。
+    ///
+    /// `.redacted(reason: .placeholder)` で塗りつぶして形だけを見せるので、文字は画面に出ない。
+    /// 文字数だけ実際の課題に近づけ、カードの高さがばらけて見えるようにしている。
+    /// id は固定（`ForEach` の同一性を保つため）
+    static var placeholderAssignments: [Assignment] {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // 期限は数日先にして、残り時間の帯を急ぎ・期限切れの色にしない
+        func placeholder(_ index: Int, title: String, courseName: String, description: String) -> Assignment {
+            Assignment(
+                id: "placeholder-\(index)",
+                title: title,
+                courseId: "",
+                courseName: courseName,
+                dueDate: calendar.date(byAdding: .day, value: 3 + index, to: now) ?? now,
+                description: description,
+                status: .pending,
+                url: ""
+            )
+        }
+
+        return [
+            placeholder(0, title: "第4回 演習レポート", courseName: "データベースII",
+                        description: "演習問題を解いて提出してください。"),
+            placeholder(1, title: "基礎課題の提出", courseName: "Webプログラミング入門",
+                        description: "指示に従って作成し、ファイルを提出。"),
+            placeholder(2, title: "レポート課題", courseName: "消費心理学",
+                        description: "配布資料を踏まえて考察をまとめる。"),
+            placeholder(3, title: "中間レポート", courseName: "現代メディア論",
+                        description: "任意のテーマを取り上げて分析。")
+        ]
+    }
+}
+
 // MARK: - 課題ステータス
 
 /// 課題の状態

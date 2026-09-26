@@ -51,9 +51,28 @@ struct AssignmentView: View {
     /// 縦バーのポーズで、ページ内タイトルの下に空ける余白
     private static let verticalBarTitleBottomSpacing: CGFloat = 8
 
-    enum AssignmentFilter {
+    enum AssignmentFilter: CaseIterable {
         case all, today, thisWeek, thisMonth, overdue
+
+        /// フィルターのチップに出す名前
+        var title: String {
+            switch self {
+            case .all: NSLocalizedString("すべて", comment: "")
+            case .today: NSLocalizedString("今日", comment: "")
+            case .thisWeek: NSLocalizedString("今週", comment: "")
+            case .thisMonth: NSLocalizedString("今月", comment: "")
+            case .overdue: NSLocalizedString("期限切れ", comment: "")
+            }
+        }
     }
+
+    /// タイトルの下の本体に何を出しているか（切り替わりのアニメーションのきっかけにする）
+    private enum ContentPhase: Equatable {
+        case loading, failure, empty, list
+    }
+
+    /// 初回の読み込み中に並べるスケルトンのカード（中身は塗りつぶされて見えない）
+    private static let placeholderAssignments = Assignment.placeholderAssignments
 
     var body: some View {
         ZStack {
@@ -128,65 +147,86 @@ struct AssignmentView: View {
     ///
     /// 取り直しに失敗しても前回の控えが残っていれば、全面のエラーではなく一覧を出したまま
     /// 上に小さな知らせを出す（全面のエラーは、見せる課題が1件も無いときだけ）
-    @ViewBuilder private var contentView: some View {
-        if viewModel.isLoading {
-            ProgressView("読み込み中...")
-                .progressViewStyle(CircularProgressViewStyle())
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if viewModel.assignments.isEmpty {
-            if let errorMessage = viewModel.errorMessage {
-                loadFailureView(message: errorMessage)
-            } else {
+    ///
+    /// 読み込み中（初回の取得の前だけ）はスケルトンのカードを、空・失敗は下から持ち上げて出す
+    private var contentView: some View {
+        ZStack {
+            switch contentPhase {
+            case .loading:
+                loadingPlaceholder
+                    .motionTransition(.fade)
+            case .failure:
+                loadFailureView(message: viewModel.errorMessage ?? "")
+                    .motionTransition(.rise)
+            case .empty:
                 emptyView
+                    .motionTransition(.rise)
+            case .list:
+                assignmentList
+                    .motionTransition(.fade)
             }
-        } else {
-            assignmentList
         }
+        .motionAnimation(Motion.standard, value: contentPhase)
+    }
+
+    private var contentPhase: ContentPhase {
+        if viewModel.isLoading {
+            return .loading
+        } else if viewModel.assignments.isEmpty {
+            return viewModel.errorMessage == nil ? .empty : .failure
+        } else {
+            return .list
+        }
+    }
+
+    /// 初回の読み込み中のスケルトン。
+    ///
+    /// キャッシュが無く取得に `Motion.skeletonDelay` より長くかかったときだけ出す
+    /// （すぐに取れたときに一瞬だけ塗りつぶしが見えるのを防ぐ）。きらめきは入れ物に1回だけ掛ける
+    private var loadingPlaceholder: some View {
+        DelayedSkeletonGate(isLoading: true) { showsSkeleton in
+            if showsSkeleton {
+                ScrollView {
+                    cardStack(for: Self.placeholderAssignments)
+                }
+                .scrollDisabled(true)
+                .skeleton(true)
+            } else {
+                Color.clear
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// 取得に失敗し、見せる課題も無いとき
     private func loadFailureView(message: String) -> some View {
-        VStack {
-            Text("エラーが発生しました")
-                .font(.headline)
-
+        ContentUnavailableView {
+            Label("エラーが発生しました", systemImage: "exclamationmark.triangle")
+        } description: {
             Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding()
-
-            Button {
+        } actions: {
+            Button("再読み込み") {
                 viewModel.loadAssignments()
-            } label: {
-                Text("再読み込み")
             }
         }
-        .padding()
     }
 
     /// 課題が1件も無いとき
     private var emptyView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 60))
-                .foregroundStyle(.green)
-
-            Text("課題はありません")
-                .font(.title2)
-
+        ContentUnavailableView {
+            Label {
+                Text("課題はありません")
+            } icon: {
+                Image(systemName: "checkmark.circle")
+                    .foregroundStyle(.green)
+            }
+        } description: {
             Text("現在提出すべき課題はありません。")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button {
+        } actions: {
+            Button("再読み込み") {
                 viewModel.loadAssignments()
-            } label: {
-                Text("再読み込み")
             }
         }
-        .padding()
     }
 
     /// 課題の一覧（取り直しの失敗の知らせ・フィルター・カード）
@@ -198,21 +238,15 @@ struct AssignmentView: View {
                     .padding(.top, AssignmentLayout.Spacing.xs)
                     .frame(maxWidth: leadingColumnMaxWidth, alignment: .leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .motionTransition(.rise)
             }
 
-            // フィルターセグメントコントロール。
+            // フィルターのチップ（選択中の塗りがチップの間を滑って移る・選び直すと触覚を返す）。
             // 本のポーズでは左の列（ヒンジの手前）に収め、チップが折り目をまたいでスクロールしないようにする
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 15) {
-                    filterButton(title: NSLocalizedString("すべて", comment: ""), filter: .all)
-                    filterButton(
-                        title: NSLocalizedString("今日", comment: ""), filter: .today)
-                    filterButton(
-                        title: NSLocalizedString("今週", comment: ""), filter: .thisWeek)
-                    filterButton(
-                        title: NSLocalizedString("今月", comment: ""), filter: .thisMonth)
-                    filterButton(
-                        title: NSLocalizedString("期限切れ", comment: ""), filter: .overdue)
+                SelectionChipRow(AssignmentFilter.allCases, selection: $selectedFilter) { filter in
+                    Text(filter.title)
+                        .font(.system(size: 14, weight: .medium))
                 }
                 .padding(.horizontal, AssignmentLayout.horizontalPadding)
                 .padding(.vertical, 5)
@@ -223,25 +257,41 @@ struct AssignmentView: View {
             .padding(.vertical, 8)
             .background(Color(UIColor.systemBackground))
 
-            // 課題リスト
+            // 課題リスト。
+            // フィルターを切り替えると、外れたカードは沈みながら消え、入ったカードは持ち上がって現れる
             ScrollView {
-                if isTwoPane {
-                    twoColumnGrid
-                } else {
-                    LazyVStack(spacing: AssignmentLayout.cardSpacing) {
-                        ForEach(filteredAssignments) { assignment in
-                            card(for: assignment)
-                                .padding(.horizontal, AssignmentLayout.horizontalPadding)
-                        }
-                    }
-                    .padding(.vertical)
-                }
+                cardStack(for: filteredAssignments)
+                    .motionAnimation(Motion.standard, value: selectedFilter)
+            }
+            // 引っ張って更新（一覧が出ている＝取得済みなので、スケルトンには切り替わらない）
+            .refreshable {
+                await viewModel.refresh()
             }
             // 折り目はスクロールしない入れ物（＝このスクロールビューの枠）の座標で読む
             .onGeometryChange(for: DuoColumnSplit?.self) { proxy in
                 DuoColumnSplit.make(
                     proxy: proxy, padding: AssignmentLayout.horizontalPadding)
             } action: { columnSplit = $0 }
+        }
+        // 取り直しの失敗の知らせの出入り
+        .motionAnimation(Motion.standard, value: viewModel.errorMessage != nil)
+    }
+
+    /// カードの並び（1列なら縦に、2つのペインなら2列のグリッドに）。
+    /// 課題の一覧と、初回の読み込み中のスケルトンで同じ並べ方を使う
+    @ViewBuilder
+    private func cardStack(for assignments: [Assignment]) -> some View {
+        if isTwoPane {
+            twoColumnGrid(for: assignments)
+        } else {
+            LazyVStack(spacing: AssignmentLayout.cardSpacing) {
+                ForEach(assignments) { assignment in
+                    card(for: assignment)
+                        .padding(.horizontal, AssignmentLayout.horizontalPadding)
+                        .motionTransition(.rise)
+                }
+            }
+            .padding(.vertical)
         }
     }
 
@@ -311,10 +361,11 @@ struct AssignmentView: View {
     /// （引き伸ばして高さを合わせると、短い課題のカードに空白が溜まってしまう）。
     /// 折りたたんでいないときは等幅、折り目が有効なときは左右の領域そのものの幅にして、
     /// 列と列の間（＝折り目の帯とその余白）にはカードを1枚も置かない
-    private var twoColumnGrid: some View {
+    private func twoColumnGrid(for assignments: [Assignment]) -> some View {
         LazyVGrid(columns: gridColumns, spacing: AssignmentLayout.gridSpacing) {
-            ForEach(filteredAssignments) { assignment in
+            ForEach(assignments) { assignment in
                 card(for: assignment)
+                    .motionTransition(.rise)
             }
         }
         .padding(.horizontal, AssignmentLayout.horizontalPadding)
@@ -348,32 +399,6 @@ struct AssignmentView: View {
         case .overdue:
             return viewModel.overdueAssignments
         }
-    }
-
-    private func filterButton(title: String, filter: AssignmentFilter) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selectedFilter = filter
-            }
-        } label: {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .padding(.vertical, 10)
-                .padding(.horizontal, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(
-                            selectedFilter == filter
-                                ? Color.blue.opacity(0.9)
-                                : Color(UIColor.secondarySystemFill)
-                        )
-                        .shadow(
-                            color: selectedFilter == filter ? Color.blue.opacity(0.3) : Color.clear,
-                            radius: 3, x: 0, y: 2)
-                )
-                .foregroundStyle(selectedFilter == filter ? .white : .primary)
-        }
-        .buttonStyle(PlainButtonStyle())
     }
 }
 

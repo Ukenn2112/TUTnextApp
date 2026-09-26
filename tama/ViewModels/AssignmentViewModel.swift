@@ -68,6 +68,12 @@ final class AssignmentViewModel: ObservableObject {
         store.reload()
     }
 
+    /// 引っ張って更新用。取り直しが終わる（成功・失敗・ログアウトで打ち切り）まで待つ。
+    /// 一覧が出ている＝一度は取得できているので、読み込み中のスケルトンには切り替わらない
+    func refresh() async {
+        await store.refresh()
+    }
+
     // 期限切れの課題をフィルタリング
     var overdueAssignments: [Assignment] {
         return assignments.filter { $0.isOverdue && $0.isPending }

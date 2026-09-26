@@ -4,6 +4,8 @@ import SwiftUI
 struct TeacherEmailListView: View {
     @StateObject private var viewModel = TeacherEmailListViewModel()
     @State private var showingCopyConfirmation = false
+    /// 「コピーしました」を隠すタイマー。続けてコピーしたら前のタイマーを取り消し、表示時間を数え直す
+    @State private var copyConfirmationTask: Task<Void, Never>?
     @State private var selectedSection: String?
     @State private var showSearchBar = false
     @State private var visibleSection: String?
@@ -77,15 +79,12 @@ struct TeacherEmailListView: View {
     private var searchBarView: some View {
         HStack {
             TeacherSearchBar(text: $viewModel.searchText) {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                withMotion(Motion.standard) {
                     showSearchBar = false
                     viewModel.searchText = ""
                 }
             }
-            .transition(.asymmetric(
-                insertion: .move(edge: .trailing).combined(with: .opacity),
-                removal: .move(edge: .trailing).combined(with: .opacity)
-            ))
+            .motionTransition(.slide(.trailing))
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
@@ -131,10 +130,7 @@ struct TeacherEmailListView: View {
         .padding(.horizontal, 20)
         .padding(.top, 20)
         .padding(.bottom, 16)
-        .transition(.asymmetric(
-            insertion: .move(edge: .leading).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
-        ))
+        .motionTransition(.slide(.leading))
     }
     
     // MARK: - 選択バービュー
@@ -144,10 +140,7 @@ struct TeacherEmailListView: View {
             onCopy: copySelectedEmails,
             onClear: clearSelectionWithAnimation
         )
-        .transition(.asymmetric(
-            insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
-            removal: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95))
-        ))
+        .motionTransition(.rise)
     }
     
     // MARK: - コンテンツビュー
@@ -155,15 +148,37 @@ struct TeacherEmailListView: View {
         ZStack {
             if viewModel.isLoading {
                 TeacherLoadingView()
+                    .motionTransition(.fade)
             } else if let errorMessage = viewModel.errorMessage {
                 TeacherErrorView(message: errorMessage, onRetry: viewModel.loadTeachers)
+                    .motionTransition(.rise)
             } else if viewModel.filteredTeachers.isEmpty && !viewModel.searchText.isEmpty {
                 TeacherEmptyResultView()
+                    .motionTransition(.rise)
             } else {
                 teacherListView
+                    .motionTransition(.fade)
             }
         }
+        .motionAnimation(Motion.standard, value: contentPhase)
         .zIndex(0)
+    }
+
+    /// 本体に何を出しているか（切り替わりのアニメーションのきっかけにする）
+    private enum ContentPhase: Equatable {
+        case loading, failure, noResults, list
+    }
+
+    private var contentPhase: ContentPhase {
+        if viewModel.isLoading {
+            return .loading
+        } else if viewModel.errorMessage != nil {
+            return .failure
+        } else if viewModel.filteredTeachers.isEmpty && !viewModel.searchText.isEmpty {
+            return .noResults
+        } else {
+            return .list
+        }
     }
     
     // MARK: - 教員一覧ビュー
@@ -256,7 +271,7 @@ struct TeacherEmailListView: View {
     /// 指定グループにスクロール
     private func scrollToSection(_ section: String?, proxy: ScrollViewProxy) {
         if let section = section {
-            withAnimation(.easeInOut(duration: 0.6)) {
+            withMotion(Motion.standard) {
                 // アンカーポイントにスクロールし、グループ見出しが上部に表示されるようにする
                 proxy.scrollTo("anchor_\(section)", anchor: .top)
             }
@@ -265,7 +280,7 @@ struct TeacherEmailListView: View {
     
     /// 検索バーをアニメーション付きで表示
     private func showSearchWithAnimation() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withMotion(Motion.standard) {
             showSearchBar = true
         }
     }
@@ -291,24 +306,32 @@ struct TeacherEmailListView: View {
     
     /// コピー確認を表示
     private func showCopyConfirmation() {
-        showingCopyConfirmation = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation(.spring()) {
+        withMotion(Motion.standard) {
+            showingCopyConfirmation = true
+        }
+        copyConfirmationTask?.cancel()
+        copyConfirmationTask = Task { @MainActor in
+            try? await Task.sleep(for: Self.copyConfirmationDuration)
+            guard !Task.isCancelled else { return }
+            withMotion(Motion.standard) {
                 showingCopyConfirmation = false
             }
         }
     }
+
+    /// 「コピーしました」を出しておく時間
+    private static let copyConfirmationDuration: Duration = .seconds(2.5)
     
     /// アニメーション付きで選択をクリア
     private func clearSelectionWithAnimation() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withMotion(Motion.quick) {
             viewModel.clearSelection()
         }
     }
     
     /// 教員の選択状態を切り替え
     private func toggleTeacherSelection(_ teacher: Teacher) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withMotion(Motion.quick) {
             viewModel.toggleSelection(for: teacher)
         }
     }
@@ -319,7 +342,7 @@ struct TeacherEmailListView: View {
         // 見出しがスクロール領域の上端付近にある場合、そのグループが表示中と判断
         if Self.visibleHeaderRange.contains(headerY) {
             if visibleSection != section {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withMotion(Motion.quick) {
                     visibleSection = section
                 }
                 // ユーザーが手動で選択していた場合、スクロール位置変更で自動追従に戻す
@@ -539,8 +562,8 @@ struct TeacherSearchBar: View {
                     .focused($isTextFieldFocused)
                 
                 if !text.isEmpty {
-                    Button(action: { 
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                    Button(action: {
+                        withMotion(Motion.quick) {
                             text = ""
                         }
                     }) {
@@ -548,7 +571,7 @@ struct TeacherSearchBar: View {
                             .foregroundStyle(.secondary)
                             .font(.system(size: 16))
                     }
-                    .transition(.scale.combined(with: .opacity))
+                    .motionTransition(.fade)
                 }
             }
             .padding(.horizontal, 16)
@@ -590,6 +613,9 @@ struct TeacherSelectionBar: View {
                 Text("\(selectedCount)人の教師を選択しました")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(.primary)
+                    // 人数が変わると数字だけが入れ替わる
+                    .contentTransition(.numericText())
+                    .motionAnimation(Motion.quick, value: selectedCount)
             }
             
             Spacer()
@@ -612,8 +638,6 @@ struct TeacherSelectionBar: View {
                         )
                         .foregroundStyle(.white)
                 }
-                .scaleEffect(1.0)
-                .animation(.easeInOut(duration: 0.15), value: selectedCount)
                 
                 Button(action: onClear) {
                     Image(systemName: "xmark")
@@ -652,6 +676,14 @@ struct TeacherIndexView: View {
     // ドラッグ状態管理
     @State private var isDragging = false
     @State private var dragLocation: CGPoint = .zero
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// 現在のグループの丸を少しだけ大きくする倍率（「視差効果を減らす」が有効なら大きさは変えない）
+    private var currentSectionScale: CGFloat { reduceMotion ? 1.0 : 1.1 }
+
+    /// ドラッグ中に索引全体を少しだけ大きくする倍率（「視差効果を減らす」が有効なら大きさは変えない）
+    private var draggingScale: CGFloat { reduceMotion ? 1.0 : 1.05 }
     
     var body: some View {
         VStack(spacing: 3) {
@@ -696,11 +728,11 @@ struct TeacherIndexView: View {
                                     y: isCurrentSection(index) ? 2 : 0
                                 )
                         )
-                        .scaleEffect(isCurrentSection(index) ? 1.1 : 1.0)
+                        .scaleEffect(isCurrentSection(index) ? currentSectionScale : 1.0)
                 }
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedSection)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: visibleSection)
-                .animation(.easeInOut(duration: 0.2), value: isDragging)
+                .motionAnimation(Motion.quick, value: selectedSection)
+                .motionAnimation(Motion.quick, value: visibleSection)
+                .motionAnimation(Motion.quick, value: isDragging)
             }
         }
         .padding(.vertical, 8)
@@ -712,7 +744,7 @@ struct TeacherIndexView: View {
                 .fill(CardSurface.pageFill)
                 .stroke(CardSurface.outlineStroke, lineWidth: CardSurface.outlineWidth)
         )
-        .scaleEffect(isDragging ? 1.05 : 1.0)
+        .scaleEffect(isDragging ? draggingScale : 1.0)
         .padding(.trailing, 12)
         .padding(.vertical, 16)
         .gesture(
@@ -724,7 +756,7 @@ struct TeacherIndexView: View {
                     handleDragEnded()
                 }
         )
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
+        .motionAnimation(Motion.quick, value: isDragging)
     }
     
     // MARK: - ヘルパーメソッド
@@ -741,7 +773,7 @@ struct TeacherIndexView: View {
     
     /// 指定インデックスのグループを選択
     private func selectSection(at index: Int) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withMotion(Motion.quick) {
             selectedSection = actualSections[index]
             isManualSelection = true
         }
@@ -750,7 +782,7 @@ struct TeacherIndexView: View {
     /// ドラッグ変化を処理
     private func handleDragChanged(_ value: DragGesture.Value) {
         if !isDragging {
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withMotion(Motion.quick) {
                 isDragging = true
             }
             // 触覚フィードバックを追加
@@ -774,7 +806,7 @@ struct TeacherIndexView: View {
                 selectionFeedback.prepare()
                 selectionFeedback.selectionChanged()
                 
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                withMotion(Motion.quick) {
                     selectedSection = newSection
                 }
             }
@@ -783,7 +815,7 @@ struct TeacherIndexView: View {
     
     /// ドラッグ終了を処理
     private func handleDragEnded() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withMotion(Motion.quick) {
             isDragging = false
         }
     }
@@ -812,6 +844,12 @@ struct TeacherRow: View {
     let onToggle: () -> Void
     let onCopy: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// 選ばれたときに丸・行を少しだけ大きくする（「視差効果を減らす」が有効なら大きさは変えない）
+    private var selectedCheckScale: CGFloat { reduceMotion ? 1.0 : 1.1 }
+    private var selectedRowScale: CGFloat { reduceMotion ? 1.0 : 1.02 }
+
     var body: some View {
         HStack(spacing: 20) {
             // 選択ボタン
@@ -834,8 +872,8 @@ struct TeacherRow: View {
                 }
             }
             .buttonStyle(BorderlessButtonStyle())
-            .scaleEffect(isSelected ? 1.1 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            .scaleEffect(isSelected ? selectedCheckScale : 1.0)
+            .motionAnimation(Motion.quick, value: isSelected)
             
             // 教員情報
             VStack(alignment: .leading, spacing: 4) {
@@ -868,8 +906,6 @@ struct TeacherRow: View {
                             )
                     }
                     .buttonStyle(BorderlessButtonStyle())
-                    .scaleEffect(1.0)
-                    .animation(.easeInOut(duration: 0.15), value: teacher.id)
                 }
             }
             
@@ -895,8 +931,8 @@ struct TeacherRow: View {
                     lineWidth: isSelected ? 1 : 0
                 )
         )
-        .scaleEffect(isSelected ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .scaleEffect(isSelected ? selectedRowScale : 1.0)
+        .motionAnimation(Motion.quick, value: isSelected)
         .onTapGesture {
             onToggle()
         }
@@ -939,53 +975,53 @@ struct TeacherSectionHeader: View {
     }
 }
 
-/// 読み込みビュー
+/// 読み込みビュー。
+///
+/// 教員の行と同じ形を塗りつぶしたスケルトンを並べる。読み込みが `Motion.skeletonDelay` より
+/// 長く続いたときだけ出し（すぐ読み込めたときのちらつきを防ぐ）、きらめきは入れ物に1回だけ掛ける
 struct TeacherLoadingView: View {
-    @State private var isAnimating = false
-    
+
+    /// スケルトンの仮の教員（`.redacted` で塗りつぶすので文字は画面に出ない。id は固定）
+    private static let placeholderTeachers: [Teacher] = (0..<8).map { index in
+        Teacher(
+            id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index)) ?? UUID(),
+            name: index.isMultiple(of: 2) ? "多摩 太郎" : "聖蹟 花子",
+            furigana: index.isMultiple(of: 2) ? "たま たろう" : "せいせき はなこ",
+            email: index.isMultiple(of: 2) ? "tama.taro@tama.ac.jp" : "seiseki@tama.ac.jp"
+        )
+    }
+
     var body: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .stroke(.quaternary, lineWidth: 4)
-                    .frame(width: 50, height: 50)
-                
-                Circle()
-                    .trim(from: 0, to: 0.3)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.appPrimary, Color.appPrimary.opacity(0.3)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                    )
-                    .frame(width: 50, height: 50)
-                    .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                    .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isAnimating)
-            }
-            
-            VStack(spacing: 8) {
-                Text("教師情報を読み込んでいます...")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.primary)
-                
-                Text("お待ちください")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+        DelayedSkeletonGate(isLoading: true) { showsSkeleton in
+            if showsSkeleton {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        TeacherSectionHeader(title: "あ")
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 8)
+
+                        ForEach(Self.placeholderTeachers) { teacher in
+                            TeacherRow(teacher: teacher, isSelected: false, onToggle: {}, onCopy: {})
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 8)
+                        }
+                    }
+                    .padding(.top, 16)
+                    .readableWidth()
+                }
+                .scrollDisabled(true)
+                .skeleton(true)
+            } else {
+                Color.clear
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            isAnimating = true
-        }
     }
 }
 
 /// コピー確認表示
 struct TeacherCopyConfirmationView: View {
     let showing: Bool
-    @State private var scale: CGFloat = 0.8
     
     var body: some View {
         VStack {
@@ -1008,20 +1044,9 @@ struct TeacherCopyConfirmationView: View {
                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                         .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 6)
                 )
-                .scaleEffect(scale)
                 .padding(.bottom, 60)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale),
-                    removal: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale)
-                ))
-                .onAppear {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                        scale = 1.0
-                    }
-                }
-                .onDisappear {
-                    scale = 0.8
-                }
+                // 表示・非表示の速さは呼び出し側の withMotion で決める
+                .motionTransition(.rise)
             }
         }
     }
