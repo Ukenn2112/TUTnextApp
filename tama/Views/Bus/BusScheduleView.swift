@@ -103,6 +103,9 @@ struct BusScheduleView: View {
                 }
         )
         .background(Color(UIColor.systemBackground))
+        // 便を押したときの触覚はページで1回だけ返す（2列表示で左右の表が同時に鳴らないように）。
+        // 発車による自動解除や選択の復元では鳴らさない
+        .selectionHaptic(trigger: viewModel.timeEntryTapCount)
         .ignoresSafeArea(edges: .bottom)
         // 縦バーのポーズでは空のナビゲーションバー帯の分だけ上が空くため、ウィンドウ上端まで広げる。
         // 下端はスクロールする内容なのでシステムに任せる（横バーのポーズでは何もしない）
@@ -190,11 +193,101 @@ struct BusScheduleView: View {
                     .padding(.top, 16)
                 }
             } else {
-                ProgressView("読み込み中...")
-                    .progressViewStyle(CircularProgressViewStyle())
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // キャッシュからすぐ出せることが多いので、読み込みが長引いたときだけスケルトンを出す
+                BusLoadingPlaceholder(columnCount: 1)
+                    .padding(.top, Self.timeCardTopInset)
             }
         }
+    }
+}
+
+// MARK: - 読み込み中のスケルトン
+
+/// 時刻表を読み込んでいる間の仮の姿（時刻カード＋表の見出し＋数行）。
+///
+/// 読み込みが `Motion.skeletonDelay` より長引いたときだけ形を出し、それまでは何も描かない。
+/// キャッシュから時刻表をすぐ出せる普段の起動では、スケルトンが一瞬ちらつくことはない
+struct BusLoadingPlaceholder: View {
+
+    /// 並べる列の数（1列表示は1、2列表示は2）
+    let columnCount: Int
+
+    /// 左右の列の間（2列表示のときだけ使う）
+    var columnSpacing: CGFloat = BusLayout.TwoPane.columnGutter
+
+    /// 仮に並べる表の行の数
+    private static let rowCount = 5
+
+    /// 1行に並べる仮の分チップの数
+    private static let minuteCount = 4
+
+    var body: some View {
+        DelayedSkeletonGate(isLoading: true) { showsSkeleton in
+            Group {
+                if showsSkeleton {
+                    HStack(alignment: .top, spacing: columnSpacing) {
+                        ForEach(0..<max(columnCount, 1), id: \.self) { _ in
+                            column
+                        }
+                    }
+                    .padding(.horizontal, BusLayout.horizontalPadding)
+                    .skeleton(true)
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    /// 1列分（時刻カード・表の見出し・行）
+    private var column: some View {
+        VStack(spacing: BusLayout.Spacing.m) {
+            timeCard
+            table
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// 時刻カードの形（左に現在時刻、右に残り時間）
+    private var timeCard: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: BusLayout.Spacing.xs) {
+                SkeletonBlock(width: 56, height: 12)
+                SkeletonBlock(width: 72, height: 22)
+            }
+            Spacer(minLength: BusLayout.Spacing.m)
+            VStack(alignment: .trailing, spacing: BusLayout.Spacing.xs) {
+                SkeletonBlock(width: 72, height: 12)
+                SkeletonBlock(width: 104, height: 22)
+            }
+        }
+        .outlinedCard()
+    }
+
+    /// 表の見出しと数行
+    private var table: some View {
+        VStack(spacing: 0) {
+            SkeletonBlock(height: 44, cornerRadius: 0)
+            ForEach(0..<Self.rowCount, id: \.self) { _ in
+                HStack(spacing: BusLayout.Spacing.m) {
+                    SkeletonBlock(width: 28, height: 20)
+                        .frame(width: 70 - BusLayout.Spacing.m)
+                    HStack(spacing: BusLayout.Spacing.s) {
+                        ForEach(0..<Self.minuteCount, id: \.self) { _ in
+                            SkeletonBlock(width: 36, height: 36)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, BusLayout.Spacing.s)
+            }
+        }
+        .clipShape(.rect(cornerRadius: CardSurface.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: CardSurface.cornerRadius)
+                .strokeBorder(CardSurface.outlineStroke, lineWidth: CardSurface.outlineWidth)
+        )
     }
 }
 
@@ -306,8 +399,11 @@ struct BusScheduleTypeSelector: View {
             get: { selectedScheduleType },
             set: { newValue in
                 guard newValue != selectedScheduleType else { return }
-                selectedScheduleType = newValue
-                onChanged()
+                // 時間ごとの行（時で識別）と分のチップ（分で識別）が、その場で形を変えて入れ替わる
+                withMotion(Motion.standard) {
+                    selectedScheduleType = newValue
+                    onChanged()
+                }
             }
         )
     }
@@ -373,8 +469,9 @@ struct BusRouteTypeSelector: View {
             }
             .clippedToHorizontalSafeArea(contentInset: BusLayout.horizontalPadding)
             .onChange(of: selectedRouteType) { _, newValue in
-                withAnimation {
-                    scrollProxy.scrollTo(newValue.rawValue, anchor: .center)
+                // チップの id は路線そのもの（`SelectionChipRow` が付ける）
+                withMotion(Motion.standard) {
+                    scrollProxy.scrollTo(newValue, anchor: .center)
                 }
             }
         }
@@ -382,33 +479,72 @@ struct BusRouteTypeSelector: View {
 
     // MARK: - 共通のチップの並び
 
-    /// 4つのチップと区切り線の並び（どちらの並べ方でも同じ間隔・同じチップ）
+    /// 4つのチップと区切り線の並び（どちらの並べ方でも同じ間隔・同じチップ）。
+    /// 選択中の塗りはチップの間を滑って移り、押したときだけ触覚を返す（`SelectionChipRow`）
     private func chipRow(fillsWidth: Bool) -> some View {
-        HStack(spacing: Self.chipSpacing) {
-            chip(for: Self.routes[0], fillsWidth: fillsWidth)
-            chip(for: Self.routes[1], fillsWidth: fillsWidth)
-
-            Divider()
-                .frame(height: Self.dividerHeight)
-                .background(Color.gray.opacity(0.3))
-
-            chip(for: Self.routes[2], fillsWidth: fillsWidth)
-            chip(for: Self.routes[3], fillsWidth: fillsWidth)
+        SelectionChipRow(
+            Self.routes,
+            selection: animatedSelection,
+            spacing: Self.chipSpacing,
+            fillsWidth: fillsWidth,
+            // 「発」と「行」の間に区切り線を入れる
+            separatorBefore: [Self.routes[2]],
+            separatorHeight: Self.dividerHeight,
+            onSelect: { _ in
+                withMotion(Motion.standard) {
+                    onChanged()
+                }
+            }
+        ) { type in
+            Self.chipLabel(
+                title: Self.title(for: type),
+                // 均等幅のときは、どのチップもいちばん長い路線名の幅を本来の幅として持つ
+                sizingTitles: fillsWidth ? Self.routes.map(Self.title(for:)) : nil
+            )
         }
     }
 
-    private func chip(for type: BusSchedule.RouteType, fillsWidth: Bool) -> some View {
-        BusRouteChip(
-            title: Self.title(for: type),
-            // 均等幅のときは、どのチップもいちばん長い路線名の幅を本来の幅として持つ
-            sizingTitles: fillsWidth ? Self.routes.map(Self.title(for:)) : nil,
-            isSelected: selectedRouteType == type,
-            fillsWidth: fillsWidth
-        ) {
-            selectedRouteType = type
-            onChanged()
+    /// 路線の選択。
+    ///
+    /// 利用者がチップを押したときだけ `SelectionChipRow` から書き込まれる。
+    /// 時刻表の行（時で識別）と分のチップ（分で識別）もその場で形を変えて入れ替わるよう、
+    /// チップの塗りだけでなくページ全体を `Motion.standard` で動かす
+    private var animatedSelection: Binding<BusSchedule.RouteType> {
+        Binding(
+            get: { selectedRouteType },
+            set: { newValue in
+                withMotion(Motion.standard) {
+                    selectedRouteType = newValue
+                }
+            }
+        )
+    }
+
+    /// チップの文字。
+    ///
+    /// 均等幅のときは、すべての路線名を隠したまま重ねるので、
+    /// どのチップの本来の幅もいちばん長い路線名の幅になる。
+    /// `ViewThatFits` はその幅で収まるかどうかを測るため、
+    /// 均等に分けたときに文字が切れたり縮んだりすることがない
+    private static func chipLabel(title: String, sizingTitles: [String]?) -> some View {
+        ZStack {
+            if let sizingTitles {
+                ForEach(sizingTitles, id: \.self) { sizingTitle in
+                    chipText(sizingTitle)
+                        .hidden()
+                        .accessibilityHidden(true)
+                }
+            }
+
+            chipText(title)
         }
-        .id(type.rawValue)
+    }
+
+    private static func chipText(_ value: String) -> some View {
+        Text(value)
+            .font(.system(size: 14, weight: .medium))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     /// 路線の表示名
@@ -423,74 +559,6 @@ struct BusRouteTypeSelector: View {
         case .fromSchoolToNagayama:
             return NSLocalizedString("永山駅行", comment: "")
         }
-    }
-}
-
-// MARK: - 路線チップ
-
-/// 路線チップ1つ。均等幅でも横スクロールでも、この1つのビューで同じ見た目を描く
-private struct BusRouteChip: View {
-    let title: String
-
-    /// 幅を揃えるために本来の幅として確保する路線名の一覧。
-    /// 均等幅のときだけ渡し、横スクロールのときは nil（＝自分の文字の幅そのまま）
-    let sizingTitles: [String]?
-
-    let isSelected: Bool
-
-    /// 与えられた幅いっぱいに広がるかどうか
-    let fillsWidth: Bool
-
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            label
-                .padding(.vertical, 10)
-                .padding(.horizontal, 14)
-                .frame(maxWidth: fillsWidth ? .infinity : nil)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(
-                            isSelected
-                                ? Color.appPrimary
-                                : Color(UIColor.secondarySystemFill)
-                        )
-                        .shadow(
-                            color: isSelected ? Color.appPrimary.opacity(0.3) : Color.clear,
-                            radius: 3, x: 0, y: 2)
-                )
-                .foregroundStyle(isSelected ? .white : .primary)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
-    }
-
-    /// チップの文字。
-    ///
-    /// 均等幅のときは、すべての路線名を隠したまま重ねるので、
-    /// どのチップの本来の幅もいちばん長い路線名の幅になる。
-    /// `ViewThatFits` はその幅で収まるかどうかを測るため、
-    /// 均等に分けたときに文字が切れたり縮んだりすることがない
-    private var label: some View {
-        ZStack {
-            if let sizingTitles {
-                ForEach(sizingTitles, id: \.self) { sizingTitle in
-                    text(sizingTitle)
-                        .hidden()
-                        .accessibilityHidden(true)
-                }
-            }
-
-            text(title)
-        }
-    }
-
-    private func text(_ value: String) -> some View {
-        Text(value)
-            .font(.system(size: 14, weight: .medium))
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
     }
 }
 
@@ -538,7 +606,8 @@ struct BusTimeCardView: View {
         .outlinedCard()
         .contentShape(Rectangle())
         .onTapGesture {}
-        .animation(.easeInOut(duration: 0.2), value: viewModel.selectedTimeEntry)
+        // カードには `.animation` を付けない（中の `TimelineView` が毎秒描き直すため）。
+        // 選択の変化は ViewModel の `withMotion` に乗って動き、毎秒の変化は数字の `Text` だけが動く
     }
 
     /// 現在時刻と、次のバス（または選んだ便）までの残り時間の行
@@ -589,8 +658,7 @@ struct BusTimeCardView: View {
                     .transition(.opacity)
 
                 HStack(spacing: 4) {
-                    Text(viewModel.getCountdownText(to: nextBus, now: now))
-                        .font(.system(size: 22, weight: .bold))
+                    countdownValue(viewModel.getCountdownText(to: nextBus, now: now))
                         .foregroundStyle(entry != nil ? .orange : .green)
                         .transition(.opacity)
 
@@ -617,9 +685,8 @@ struct BusTimeCardView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.orange)
                     }
-                    .opacity(viewModel.cardInfoAppeared ? 1 : 0)
-                    .offset(y: viewModel.cardInfoAppeared ? 0 : 5)
-                    .transition(.opacity)
+                    // 便を選んだ変更（ViewModel の withMotion）に乗って、下から持ち上がって現れる
+                    .motionTransition(.rise)
                 }
             }
         } else {
@@ -627,6 +694,27 @@ struct BusTimeCardView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// 残り時間（"12分34秒" など）を、数字と単位に分けて描く。
+    ///
+    /// 数字だけを `numericText(countsDown:)` で入れ替えるので、毎秒の変化は変わった桁だけが下へ流れる。
+    /// アニメーションはこの数字の `Text` にだけ付け、カードや `TimelineView` の外側には付けない。
+    /// VoiceOver には分けずに元の1つの文として読ませる
+    private func countdownValue(_ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            ForEach(BusCountdownPart.parts(of: text)) { part in
+                Text(verbatim: part.value)
+                    .monospacedDigit()
+                    .contentTransition(.numericText(countsDown: true))
+                    .motionAnimation(Motion.quick, value: part.value)
+                Text(verbatim: part.unit)
+            }
+        }
+        .font(.system(size: 22, weight: .bold))
+        .lineLimit(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: text))
     }
 
     /// いちばん背の高い場面（見出し・残り時間・バス時刻の3行）と同じ文字・同じ間隔の見えない型。
@@ -644,6 +732,52 @@ struct BusTimeCardView: View {
         }
         .hidden()
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - 残り時間の数字と単位
+
+/// 残り時間の文の、数字1つとその後ろの単位（"12" と "分"、"34" と "秒"）。
+///
+/// 文そのものは従来どおりの翻訳（`%d分%d秒` / `%d時間%d分%d秒`）で作り、
+/// できあがった文を数字の並びとそれ以外で切り分ける。どの言語でも数字が単位より前に来るので、
+/// 新しい翻訳の項目を増やさずに、数字だけを入れ替えるアニメーションができる
+struct BusCountdownPart: Identifiable, Equatable {
+
+    /// 末尾から数えた位置（秒が0、分が1、時間が2）。
+    /// 時間の桁が消えたり増えたりしても、秒と分の数字は同じビューのまま入れ替わる
+    let id: Int
+
+    /// 数字（先頭に数字の無い文なら空）
+    let value: String
+
+    /// 数字の後ろの文字（単位と区切りの空白）
+    let unit: String
+
+    /// 文を「数字＋単位」の組に切り分ける
+    static func parts(of text: String) -> [BusCountdownPart] {
+        var pairs: [(value: String, unit: String)] = []
+        var value = ""
+        var unit = ""
+        for character in text {
+            if character.isASCII, character.isNumber {
+                if !unit.isEmpty {
+                    pairs.append((value, unit))
+                    value = ""
+                    unit = ""
+                }
+                value.append(character)
+            } else {
+                unit.append(character)
+            }
+        }
+        if !value.isEmpty || !unit.isEmpty {
+            pairs.append((value, unit))
+        }
+        let count = pairs.count
+        return pairs.enumerated().map { index, pair in
+            BusCountdownPart(id: count - 1 - index, value: pair.value, unit: pair.unit)
+        }
     }
 }
 
@@ -731,6 +865,9 @@ struct BusTimeTableContent: View {
     /// 自動スクロールの行き先にする「行のいちばん上」（スクロールする内容の先頭）
     private static let tableTopID = "bus_table_top"
 
+    /// 開いたときの自動スクロールを、表の配置が済むまで待つ時間（秒）
+    private static let initialScrollDelay: Double = 0.5
+
     /// 表の輪郭の角丸。
     /// 上の2つの角は固定された見出しが、下の2つの角はスクロールする行の入れ物が受け持つ
     private static let tableCornerRadius = CardSurface.cornerRadius
@@ -811,7 +948,7 @@ struct BusTimeTableContent: View {
                             // 次のバスの時間が変わったときだけ動かす（例: 10:59 の次が 11:05 になった）
                             .onChange(of: targetHour) { _, newValue in
                                 if let hour = newValue, hour != lastScrolledHour {
-                                    withAnimation {
+                                    withMotion(Motion.standard) {
                                         scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                                     }
                                 }
@@ -819,7 +956,8 @@ struct BusTimeTableContent: View {
                             // 路線・駅・曜日の変更やフォアグラウンド復帰では、時間が同じでも位置を戻す
                             .onChange(of: viewModel.scrollRequestID) { _, _ in
                                 if let hour = targetHour {
-                                    withAnimation {
+                                    // 路線・曜日の変更では行の入れ替え（Motion.standard）と同じ長さで寄せる
+                                    withMotion(Motion.standard) {
                                         scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                                     }
                                 }
@@ -837,8 +975,8 @@ struct BusTimeTableContent: View {
                 }
                 .onAppear {
                     if let hour = targetHour {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            withAnimation {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + Self.initialScrollDelay) {
+                            withMotion(Motion.standard) {
                                 scrollToTarget(hour, firstHour: firstHour, proxy: scrollProxy)
                             }
                         }
@@ -995,12 +1133,20 @@ struct BusTimeTableContent: View {
         }
         .id("hour_\(hourSchedule.hour)")
         .background(
-            nextBus?.hour == hourSchedule.hour
+            (nextBus?.hour == hourSchedule.hour
                 ? Color.currentHourBackground
                 : (rowIndex % 2 == 0
                     ? Color(UIColor.systemBackground)
-                    : Color(UIColor.quaternarySystemFill))
+                    : Color(UIColor.quaternarySystemFill)))
+                // 次のバスの時間が移ったときは、行の塗りも静かに移す
+                .motionAnimation(Motion.quick, value: nextBus?.hour == hourSchedule.hour)
         )
+    }
+
+    /// 分のチップの塗りの状態（次のバス→選んだ便の切り替えも塗りの変化として動かす）
+    private struct ChipHighlight: Equatable {
+        let isNextBus: Bool
+        let selected: Bool
     }
 
     private func timeEntryView(_ time: BusSchedule.TimeEntry, isNextBus: Bool) -> some View {
@@ -1018,6 +1164,8 @@ struct BusTimeTableContent: View {
                                 : (isNextBus ? Color.appPrimary : Color.clear)
                         )
                 )
+                // 次のバス・選んだ便の塗りは、チップごとに同時に（順番に遅らせず）切り替える
+                .motionAnimation(Motion.quick, value: ChipHighlight(isNextBus: isNextBus, selected: selected))
 
             if let note = time.specialNote {
                 Text(note)

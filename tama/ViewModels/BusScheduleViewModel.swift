@@ -23,7 +23,13 @@ final class BusScheduleViewModel: ObservableObject {
     /// 開いたとき・路線や駅や曜日を変えたとき・フォアグラウンドに戻ったときは、ここで明示的に頼む
     @Published private(set) var scrollRequestID = 0
     @Published var selectedTimeEntry: BusSchedule.TimeEntry?
-    @Published var cardInfoAppeared: Bool = false
+
+    /// 利用者が時刻表の便を押した回数（選択・解除のどちらも数える）。
+    ///
+    /// 触覚のきっかけにだけ使う。`selectedTimeEntry` を見張ると、発車による自動解除や
+    /// 起動時の選択の復元のように利用者が触っていない変化でも鳴り、
+    /// 2列表示では左右の表が同時に鳴ってしまうため、押したときだけ増やすこの番号を見る
+    @Published private(set) var timeEntryTapCount = 0
     @Published var busSchedule: BusSchedule?
     @Published var errorMessage: String?
     @Published var userInSchoolArea: Bool = false
@@ -358,10 +364,9 @@ final class BusScheduleViewModel: ObservableObject {
             || (selectedTime.hour == currentHour && selectedTime.minute <= currentMinute) {
             BusLiveActivityService.shared.endActivity()
             BusSelectionStore.shared.clear()
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withMotion(Motion.quick) {
                 selectedTimeEntry = nil
                 selectedEntryRoute = nil
-                cardInfoAppeared = false
             }
         }
     }
@@ -373,13 +378,13 @@ final class BusScheduleViewModel: ObservableObject {
     /// 選択はアプリ全体で1つ（ライブアクティビティも1つ）なので、2列表示でどちらの列を押しても
     /// ここへ来る。どの列で押したのかは `route` で区別し、同じ便をもう一度押したときだけ解除する
     func handleTimeEntryTap(_ time: BusSchedule.TimeEntry, on route: BusSchedule.RouteType) {
+        timeEntryTapCount &+= 1
         if selectedTimeEntry == time && selectedEntryRoute == route {
             BusLiveActivityService.shared.endActivity()
             BusSelectionStore.shared.clear()
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withMotion(Motion.quick) {
                 selectedTimeEntry = nil
                 selectedEntryRoute = nil
-                cardInfoAppeared = false
             }
         } else {
             BusLiveActivityService.shared.startActivity(
@@ -389,15 +394,10 @@ final class BusScheduleViewModel: ObservableObject {
             // 時間割タブの「今日」ペインからも同じ便を数えられるよう、選択を共有しておく
             BusSelectionStore.shared.select(
                 entry: time, route: route, now: Self.now())
-            withAnimation(.easeInOut(duration: 0.2)) {
+            // カードの「バス時刻」の行は、この変更に乗って `motionTransition(.rise)` で持ち上がる
+            withMotion(Motion.quick) {
                 selectedTimeEntry = time
                 selectedEntryRoute = route
-                cardInfoAppeared = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        self.cardInfoAppeared = true
-                    }
-                }
             }
         }
     }
@@ -408,10 +408,9 @@ final class BusScheduleViewModel: ObservableObject {
         guard selectedTimeEntry != nil else { return }
         BusLiveActivityService.shared.endActivity()
         BusSelectionStore.shared.clear()
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withMotion(Motion.quick) {
             selectedTimeEntry = nil
             selectedEntryRoute = nil
-            cardInfoAppeared = false
         }
     }
 
@@ -431,7 +430,6 @@ final class BusScheduleViewModel: ObservableObject {
         selectedStation = BusStation.station(of: departure.route)
         selectedTimeEntry = departure.entry
         selectedEntryRoute = departure.route
-        cardInfoAppeared = true
     }
 
     /// 利用者が曜日セレクタを押したとき（プログラムからの変更では呼ばない）
@@ -566,7 +564,7 @@ extension BusScheduleViewModel {
                 selectedRouteType == .fromSchoolToSeiseki
                 || selectedRouteType == .fromSchoolToNagayama
             if !isAlreadySchoolDeparture {
-                withAnimation {
+                withMotion(Motion.standard) {
                     selectedRouteType = .fromSchoolToNagayama
                     requestScrollToNextBus()
                 }
@@ -576,7 +574,7 @@ extension BusScheduleViewModel {
                 selectedRouteType == .fromSeisekiToSchool
                 || selectedRouteType == .fromNagayamaToSchool
             if !isAlreadyStationDeparture {
-                withAnimation {
+                withMotion(Motion.standard) {
                     selectedRouteType = .fromSeisekiToSchool
                     requestScrollToNextBus()
                 }

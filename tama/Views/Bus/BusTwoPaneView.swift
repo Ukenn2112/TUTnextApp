@@ -70,9 +70,9 @@ struct BusTwoPaneView: View {
                     viewModel.fetchBusScheduleData()
                 }
             } else {
-                ProgressView("読み込み中...")
-                    .progressViewStyle(CircularProgressViewStyle())
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // 読み込みが長引いたときだけ、左右2列分の時刻カードと表の形を出す
+                BusLoadingPlaceholder(columnCount: 2)
+                    .padding(.top, BusLayout.TwoPane.bandBottomSpacing)
             }
         }
         // 折り目はページのローカル座標で読む（起動直後は報告されないので nil のまま＝平らと同じ扱い）
@@ -115,13 +115,19 @@ struct BusTwoPaneView: View {
                 station: viewModel.selectedStation,
                 scheduleType: viewModel.selectedScheduleType,
                 columnSplit: columnSplit,
+                // 利用者がセグメントを押したときだけ呼ばれる。
+                // 左右の時刻表の行（時で識別）と分のチップ（分で識別）が、その場で形を変えて入れ替わる
                 onStationSelected: { station in
-                    viewModel.selectedStation = station
-                    viewModel.onStationChanged()
+                    withMotion(Motion.standard) {
+                        viewModel.selectedStation = station
+                        viewModel.onStationChanged()
+                    }
                 },
                 onScheduleTypeSelected: { scheduleType in
-                    viewModel.selectedScheduleType = scheduleType
-                    viewModel.onScheduleTypeChanged()
+                    withMotion(Motion.standard) {
+                        viewModel.selectedScheduleType = scheduleType
+                        viewModel.onScheduleTypeChanged()
+                    }
                 }
             )
             .padding(.horizontal, BusLayout.horizontalPadding)
