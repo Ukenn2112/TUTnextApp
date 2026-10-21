@@ -41,17 +41,12 @@ private struct VerticalBarEdgeReader: View {
     let action: (Bool) -> Void
 
     var body: some View {
-        // DUO_SDK＝SDKにDuoのAPIがある（27.1以降）。27.0のSDKではターゲットのビルド設定で外している。
-        // 外したときは何も描かず `action` も呼ばない（呼び出し側は横バーのまま扱う）
-        #if DUO_SDK
         if #available(iOS 27.1, *) {
             VerticalBarEdgeProbe(action: action)
         }
-        #endif
     }
 }
 
-#if DUO_SDK
 /// `toolbarVerticalEdge` を監視して、縦バーかどうかだけを通知する不可視ビュー
 @available(iOS 27.1, *)
 private struct VerticalBarEdgeProbe: View {
@@ -68,4 +63,3 @@ private struct VerticalBarEdgeProbe: View {
             }
     }
 }
-#endif
