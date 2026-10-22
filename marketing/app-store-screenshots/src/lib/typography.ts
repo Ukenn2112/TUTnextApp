@@ -28,6 +28,14 @@ export function cleanTypography(raw: SlideTypography | undefined): SlideTypograp
     const value = clampFontScale(raw[key]);
     if (value !== FONT_SCALE_DEFAULT) out[key] = value;
   }
+  if (raw.captionAlign === "left" || raw.captionAlign === "center") out.captionAlign = raw.captionAlign;
+  if (raw.localeScale && typeof raw.localeScale === "object") {
+    const scales = Object.fromEntries(
+      Object.entries(raw.localeScale).filter(([, v]) => typeof v === "number" && Number.isFinite(v) && v > 0).map(([k, v]) => [k, Math.min(2, Math.max(0.5, v))]),
+    );
+    if (Object.keys(scales).length) out.localeScale = scales;
+  }
+  if (raw.palt === true) out.palt = true;
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

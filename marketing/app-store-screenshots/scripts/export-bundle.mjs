@@ -42,7 +42,12 @@ const outDir = path.resolve(ROOT, option("--out") || path.join("exports", stamp)
 // Only ever clear a previous run inside exports/; refuse anything else that exists.
 const exportsRoot = path.join(ROOT, "exports") + path.sep;
 if (outDir.startsWith(exportsRoot)) {
-  rmSync(outDir, { recursive: true, force: true });
+  // Keep concept boards (render-creative-concepts.mjs) across release runs.
+  if (existsSync(outDir)) {
+    for (const entry of readdirSync(outDir)) {
+      if (entry !== "creative-concepts") rmSync(path.join(outDir, entry), { recursive: true, force: true });
+    }
+  }
 } else if (existsSync(outDir) && readdirSync(outDir).length) {
   throw new Error(`--out ${outDir} is not empty and not under exports/; pick an empty folder`);
 }
@@ -74,6 +79,86 @@ async function contactSheet(device, files) {
   }
   layers.unshift({ input: svg(labels), left: 0, top: 0 });
   return sharp({ create: { width: W, height: H, channels: 3, background: "#F4F3EF" } }).composite(layers).png().toBuffer();
+}
+
+// App Store creative assets (dedicated header + search results).
+// Per locale: <out>/creative/<locale>/<name>-<WxH>.png, plus <name>-<WxH>-safe-outline.png
+// (Apple's art safe area drawn on top) and <name>-<WxH>-safe-crop.png (only the
+// safe area: the worst-case crop). One sheet with every locale: creative/contact-sheet.png.
+const CREATIVES = {
+  "creative-header": { name: "header", w: 3840, h: 1646, safe: { left: 1097, top: 493, width: 1646, height: 661 } },
+  "creative-search": { name: "search", w: 3840, h: 2560, safe: { left: 836, top: 765, width: 2168, height: 1030 } },
+};
+const creativeRows = {}; // locale -> [{ label, buffer }]
+
+async function creativeOutputs(device, files) {
+  const spec = CREATIVES[device];
+  const size = `${spec.w}x${spec.h}`;
+  const slides = project.slidesByDevice[device];
+  for (const [index, slide] of slides.entries()) {
+    // Several slides = several concepts: suffix each output with the slide's concept key.
+    const key = slides.length > 1 ? `-${slide.id.replace(`${device}-`, "")}` : "";
+    const prefix = `${String(index + 1).padStart(2, "0")}-`;
+    for (const locale of locales) {
+      const file = files.find((f) => f.locale === locale && f.size === size && f.name.startsWith(prefix));
+      if (!file) { problems.push(`${device} ${slide.id} ${locale}: no ${size} render`); continue; }
+      const meta = await sharp(file.buffer).metadata();
+      if (meta.width !== spec.w || meta.height !== spec.h || meta.hasAlpha || meta.channels !== 3) {
+        problems.push(`${device} ${slide.id} ${locale}: ${meta.width}x${meta.height}, ${meta.channels} channels`);
+      }
+      const dir = path.join(outDir, "creative", locale);
+      mkdirSync(dir, { recursive: true });
+      const base = path.join(dir, `${spec.name}-${size}${key}`);
+      writeFileSync(`${base}.png`, file.buffer);
+      const { left, top, width, height } = spec.safe;
+      const stroke = Math.round(spec.w / 400);
+      const outline = await sharp(file.buffer)
+        .composite([{
+          input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${spec.w}" height="${spec.h}">
+            <rect x="${left}" y="${top}" width="${width}" height="${height}" fill="none" stroke="#1FA34A" stroke-width="${stroke}" stroke-dasharray="${stroke * 4} ${stroke * 2}"/></svg>`),
+          left: 0, top: 0,
+        }])
+        .png().toBuffer();
+      const crop = await sharp(file.buffer).extract(spec.safe).png().toBuffer();
+      writeFileSync(`${base}-safe-outline.png`, outline);
+      writeFileSync(`${base}-safe-crop.png`, crop);
+      (creativeRows[locale] ||= []).push(
+        { label: `${spec.name}${key}`, buffer: outline },
+        { label: `${spec.name}${key} · safe area`, buffer: crop },
+      );
+    }
+  }
+}
+
+async function creativeSheet() {
+  const locs = locales.filter((l) => creativeRows[l]?.length);
+  if (!locs.length) return;
+  const thumbH = 440, GAP = 28, PAD = 48, LABEL = 150, HEAD = 130;
+  const first = creativeRows[locs[0]];
+  const metas = await Promise.all(first.map((c) => sharp(c.buffer).metadata()));
+  const widths = metas.map((m) => Math.round((m.width / m.height) * thumbH));
+  const W = PAD * 2 + LABEL + widths.reduce((a, b) => a + b, 0) + GAP * (widths.length - 1);
+  const H = PAD * 2 + HEAD + locs.length * (thumbH + GAP) - GAP;
+  let text = `<text x="${PAD}" y="${PAD + 44}" font-family="Helvetica Neue, Helvetica, Arial" font-size="44" font-weight="700" fill="#141413">TUTnext · App Store creative assets (green dashes = Apple's art safe area)</text>`;
+  let x = PAD + LABEL;
+  first.forEach((c, i) => {
+    text += `<text x="${x}" y="${PAD + 108}" font-family="Helvetica Neue, Helvetica, Arial" font-size="28" fill="#55524C">${c.label}</text>`;
+    x += widths[i] + GAP;
+  });
+  const layers = [];
+  for (const [r, locale] of locs.entries()) {
+    const top = PAD + HEAD + r * (thumbH + GAP);
+    text += `<text x="${PAD}" y="${top + 40}" font-family="Helvetica Neue, Helvetica, Arial" font-size="30" font-weight="600" fill="#141413">${locale}</text>`;
+    let left = PAD + LABEL;
+    for (const [i, c] of creativeRows[locale].entries()) {
+      layers.push({ input: await sharp(c.buffer).resize(widths[i], thumbH, { fit: "contain", background: "#F4F3EF" }).png().toBuffer(), left, top });
+      left += widths[i] + GAP;
+    }
+  }
+  layers.unshift({ input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${text}</svg>`), left: 0, top: 0 });
+  const sheet = await sharp({ create: { width: W, height: H, channels: 3, background: "#F4F3EF" } }).composite(layers).png().toBuffer();
+  writeFileSync(path.join(outDir, "creative", "contact-sheet.png"), sheet);
+  console.log(`creative: ${locs.length} locales -> ${path.relative(ROOT, path.join(outDir, "creative"))}/`);
 }
 
 const server = await ensureServer(option("--url"));
@@ -113,12 +198,14 @@ try {
       );
       const sheet = path.join(outDir, "contact-sheets", `${device}.png`);
       writeFileSync(sheet, await contactSheet(device, files));
+      if (CREATIVES[device]) await creativeOutputs(device, files);
       console.log(`${device}: ${files.length} PNGs (${sizes.join(", ")}) in ${((Date.now() - started) / 1000).toFixed(0)}s; sheet ${path.relative(ROOT, sheet)}`);
     } catch (error) {
       problems.push(`${device}: export failed - ${error instanceof Error ? error.message : error}`);
       console.error(`${device}: FAILED - ${error instanceof Error ? error.message : error}`);
     }
   }
+  await creativeSheet();
 } finally {
   await browser.close();
   await server.stop();

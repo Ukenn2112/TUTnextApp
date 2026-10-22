@@ -121,7 +121,13 @@ export function ScreenshotEditor() {
         }
       }
       for (const imageElement of s.imageElements || []) {
-        if (imageElement.src && !imageElement.src.startsWith("data:")) paths.add(imageElement.src);
+        if (!imageElement.src || imageElement.src.startsWith("data:")) continue;
+        // Overlays may be localized too (e.g. a framed capture per locale).
+        if (imageElement.src.includes("{locale}")) {
+          for (const loc of state.locales) paths.add(resolveScreenshot(imageElement.src, loc));
+        } else {
+          paths.add(imageElement.src);
+        }
       }
     }
     return Array.from(paths).sort();

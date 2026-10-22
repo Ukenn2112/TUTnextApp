@@ -11,12 +11,13 @@ npm install        # first time only
 npm run release    # import captures + export every deck -> exports/latest/
 ```
 
-`npm run release` runs the import and then the export. It:
+`npm run release` runs three steps (the creative assets section below explains step 2):
 
 1. **Imports** `marketing/captures/**` into `public/screenshots/apple/**` (`import-captures --prune --strict`):
    - It stops if a capture is missing or the wrong pixel size.
    - It deletes editor images no slide references.
-2. **Exports** all four decks in all four locales to `exports/latest/` (`export-bundle --out exports/latest`), then checks every PNG: pixel size matches its folder, no alpha channel, one file per slide × locale × size.
+2. **Builds** the creative-asset overlays: framed Duo, UI panels, accent mark (`build-creative-overlays`).
+3. **Exports** all four screenshot decks and both creative assets in all four locales to `exports/latest/` (`export-bundle --out exports/latest`), then checks every PNG: pixel size matches its folder, no alpha channel, one file per slide × locale × size.
    - It writes `exports/latest/contact-sheets/<deck>.png` (rows = locales) and `exports/latest/manifest.json`.
    - It exits non-zero if any check fails.
 
@@ -77,6 +78,63 @@ Duo inner portrait slides 01 and 02 (`duo-inner-p-01-timetable`, `duo-inner-p-02
 Applying a different look in Style Lab resets these transforms unless **Layout** is locked.
 
 The other candidate looks (A–C, and D without the line gap) are still under **Style Lab -> Saved looks**. `npm run style-candidates` regenerates their comparison boards in `style-candidates/`.
+
+## App Store creative assets (product page header + search results)
+
+**Decks.** There are two dedicated assets, both opaque RGB PNG:
+
+- `creative-header`: 3840×1646 (21:9), safe area 1646×661 @ (1097,493)
+- `creative-search`: 3840×2560 (3:2), safe area 2168×1030 @ (836,765)
+
+The universal deck is empty.
+
+**Direction: "Product lineup"**, in two variants. Each deck currently holds one slide per variant, defined in `scripts/lib/creative-layout.mjs`:
+
+- **A · side by side** (`a-side-by-side`): the open iPhone Duo (inner landscape, timetable + Today) is the centred hero under the headline, bleeding off the bottom.
+  - Two iPhones (next bus left, assignments right) flank it with even gaps, starting higher so the side columns fill the top.
+  - In search (3:2) the iPhones are shown whole. Three bottom-bleeding devices side by side would shrink the Duo hero too much on that canvas.
+- **B · layered** (`b-layered`): the same three devices, with the Duo in front and the iPhones tucked just behind its left and right edges. Their tops and outer sides stay fully visible. A short red rule sits above the label.
+
+**Hard rules, checked in code when the decks are seeded:**
+
+- Every device is an Apple bezel (`public/frames/iphone-portrait.png`, `duo-inner-landscape.png`), straight on.
+- The top and both sides of every frame stay inside the canvas; only the bottom may bleed.
+- Label + headline are inside the safe area, and every device keeps at least 90px from them.
+- Devices overlap only where B layers them.
+
+**Headline sizing**
+
+- The header headline is one line; the search headline is two lines.
+- Sizes come from Chrome-measured widths per locale (the `EM` table). Each locale fills the same width through `typography.localeScale`, and Japanese uses proportional kana (`typography.palt`).
+- In the header, English is the limiting locale: about 120px. ja is about 130px, zh-Hans 145px, ko 152px.
+
+**Isolated screens.** Devices bleed off their canvas edges on purpose, so the project exports isolated screens (`connectedCanvas: false`; no deck uses cross-screen elements). Each export is clipped to its own screen. Switching left the screenshot decks unchanged, apart from ±1-level anti-aliasing noise that also differs between two runs of the same export.
+
+**Commands and outputs**
+
+- `npm run creative-concepts`: builds the overlays and writes presentation boards (ja; `-- --locales ja,en,…` for more) to `exports/latest/creative-concepts/<locale>/`. Each `variant-<key>.png` board shows the header and search, both full and safe-area-only; `overview.png` shows both variants, and `renders/` holds the raw files.
+- `npm run release` keeps that folder. It also writes every variant for all locales to `exports/latest/creative/<locale>/`:
+  - `header-3840x1646-<variant>.png` and `search-3840x2560-<variant>.png`
+  - `…-safe-outline.png` and `…-safe-crop.png` for each
+  - `contact-sheet.png`, one sheet for all locales
+
+**After the pick**
+
+1. `node scripts/lib/seed-creatives.mjs --only <a-side-by-side|b-layered>`. Each deck then has one slide, and the outputs drop the concept suffix (`header-3840x1646.png`, `search-3840x2560.png`).
+2. `npm run release`.
+
+**Assets** (`scripts/build-creative-overlays.mjs`; runs in release, `creative-concepts` and before `npm run dev`; output is gitignored)
+
+- `public/screenshots/creative/duo-open/<locale>.png`: the Duo inner-landscape capture framed in Apple's bezel, with a soft shadow.
+- `public/screenshots/creative/marks/accent.png`: the red accent swatch.
+- Rounded UI panels can still be defined in `scripts/lib/creative-assets.mjs` (`PANELS`); none are used now.
+
+**Editor extensions** (template changes, all small)
+
+- Image overlay `src` accepts `{locale}`.
+- Slide `typography` gained `captionAlign`, `localeScale` and `palt`.
+- Image overlays may overflow their screen like devices do; isolated screens clip them.
+- The exporter's "screenshot never finished rendering" check ignores image areas that a clipping ancestor hides. Before, a neighbouring slide's bleeding device raised false warnings.
 
 ## Individual commands
 

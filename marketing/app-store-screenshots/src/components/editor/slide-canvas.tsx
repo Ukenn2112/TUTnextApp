@@ -342,7 +342,8 @@ function Caption({
   typeUnit?: number;
 }) {
   const { fg, accent } = slideColors(theme, { inverted, backgroundColor: slide.backgroundColor });
-  const { labelScale, headlineScale } = slideFontScales(slide);
+  const { labelScale, headlineScale: baseHeadlineScale } = slideFontScales(slide);
+  const headlineScale = baseHeadlineScale * (slide.typography?.localeScale?.[locale] ?? 1);
   // Scale typography off the *shorter* dimension so landscape layouts don't
   // produce headlines so tall they overlap the device frame.
   const unit = typeUnit ?? Math.min(cW, cH);
@@ -383,6 +384,7 @@ function Caption({
             : 0.96,
           letterSpacing: (scene.headlineCase === "upper" ? unit * 0.0015 : -unit * 0.001) * headlineScale,
           textTransform: scene.headlineCase === "upper" ? "uppercase" : undefined,
+          fontFeatureSettings: slide.typography?.palt ? '"palt"' : undefined,
           color: fg,
         }}
       />
@@ -1318,7 +1320,7 @@ function SlideElements({
         locale={locale}
         editable={editable}
         edit={edit}
-        align={scene.captionAlign === "auto" ? captionRect.align || "center" : scene.captionAlign}
+        align={slide.typography?.captionAlign ?? (scene.captionAlign === "auto" ? captionRect.align || "center" : scene.captionAlign)}
         inverted={inverted}
         scene={scene}
         typeUnit={typeUnit}
@@ -1533,9 +1535,11 @@ function SlideElements({
         zIndex={zIndex}
         selected={selectedElementId === elementId}
         onSelect={() => edit?.onSelectElement?.(elementId)}
-        allowOverflow={allowCrossScreen}
+        // Like devices, image overlays may bleed past the screen edge; in isolated
+        // mode the screen's own clip trims them, so nothing leaks into a neighbour.
+        allowOverflow
       >
-        <ImageElementCanvas element={imageElement} editable={editable} />
+        <ImageElementCanvas element={imageElement} editable={editable} locale={locale} />
       </Movable>
     );
   }

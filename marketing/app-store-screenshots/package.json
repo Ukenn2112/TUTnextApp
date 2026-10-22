@@ -16,7 +16,10 @@
     "import-captures": "node scripts/import-captures.mjs",
     "export": "node scripts/export-bundle.mjs",
     "style-candidates": "node scripts/render-style-candidates.mjs",
-    "release": "node scripts/import-captures.mjs --prune --strict && node scripts/export-bundle.mjs --out exports/latest"
+    "release": "node scripts/import-captures.mjs --prune --strict && node scripts/build-creative-overlays.mjs && node scripts/export-bundle.mjs --out exports/latest",
+    "build-creative-overlays": "node scripts/build-creative-overlays.mjs",
+    "creative-concepts": "node scripts/build-creative-overlays.mjs && node scripts/render-creative-concepts.mjs",
+    "predev": "node scripts/build-creative-overlays.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

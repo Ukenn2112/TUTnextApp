@@ -3,17 +3,20 @@ import * as React from "react";
 import { ImagePlus } from "lucide-react";
 import { createImageMask } from "@/components/editor/create-image-mask";
 import { img } from "@/lib/image-cache";
+import { resolveScreenshot } from "@/lib/locale";
 import type { ImageElement } from "@/lib/types";
 
 type Props = {
   element: ImageElement;
   editable?: boolean;
+  /** Substituted for `{locale}` in the source path, as for screenshots. */
+  locale?: string;
 };
 
 // Image overlay content. Placement, rotation, and drag/resize handles come from
 // the shared Movable wrapper in slide-canvas so overlays behave like text.
-export function ImageElementCanvas({ element, editable }: Props) {
-  const source = img(element.src);
+export function ImageElementCanvas({ element, editable, locale }: Props) {
+  const source = img(locale ? resolveScreenshot(element.src, locale) : element.src);
   const maskImage = createImageMask(element.fade);
 
   if (!source) {

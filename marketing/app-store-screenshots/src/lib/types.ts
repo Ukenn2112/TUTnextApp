@@ -77,6 +77,12 @@ export type SlideTypography = {
   headlineScale?: number;
   /** Feature graphic app name only (default 1). */
   appNameScale?: number;
+  /** Caption alignment for this screen only; overrides the scene's alignment. */
+  captionAlign?: "left" | "center";
+  /** Extra headline size multiplier per locale (e.g. { ja: 1.1 }), on top of headlineScale. */
+  localeScale?: Record<string, number>;
+  /** Use proportional CJK glyph widths (OpenType "palt") in the headline. */
+  palt?: boolean;
 };
 
 export type ImageElement = {

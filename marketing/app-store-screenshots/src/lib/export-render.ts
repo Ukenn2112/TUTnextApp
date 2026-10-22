@@ -58,8 +58,29 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function intersects(a: DOMRect, b: DOMRect) {
+type Edges = { left: number; top: number; right: number; bottom: number };
+
+function intersects(a: Edges, b: Edges) {
   return a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom;
+}
+
+// The part of `node` that can actually paint inside `root`: its box trimmed by
+// every ancestor (up to root) that clips its overflow. Without this, a device
+// bleeding off its own isolated screen looks "visible" in the neighbouring
+// screen's export and is then reported as missing there.
+function paintableRect(node: Element, root: Element): Edges {
+  const r = node.getBoundingClientRect();
+  const box: Edges = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  for (let el = node.parentElement; el && el !== root; el = el.parentElement) {
+    const style = getComputedStyle(el);
+    if (style.overflowX === "visible" && style.overflowY === "visible") continue;
+    const c = el.getBoundingClientRect();
+    box.left = Math.max(box.left, c.left);
+    box.top = Math.max(box.top, c.top);
+    box.right = Math.min(box.right, c.right);
+    box.bottom = Math.min(box.bottom, c.bottom);
+  }
+  return box;
 }
 
 // Same SVG with every <img> pointed at a transparent pixel: what each image
@@ -124,7 +145,7 @@ export async function renderSlide(
   const root = el.getBoundingClientRect();
   const sx = width / (root.width || width);
   const sy = height / (root.height || height);
-  const isVisible = (node: Element) => intersects(node.getBoundingClientRect(), root);
+  const isVisible = (node: Element) => intersects(paintableRect(node, el), root);
 
   const visible = Array.from(el.querySelectorAll("img")).filter(
     (image) => !!image.getAttribute("src") && isVisible(image),
@@ -145,7 +166,7 @@ export async function renderSlide(
       const coverage = alphaCoverage(image, scratch);
       if (coverage === "empty") return null;
       const inset = coverage === "opaque-center" && image.dataset.exportCheck !== "full" ? 0.2 : 0;
-      const r = image.getBoundingClientRect();
+      const r = paintableRect(image, el);
       const left = Math.max(r.left, root.left);
       const top = Math.max(r.top, root.top);
       const w = (Math.min(r.right, root.right) - left) * sx;

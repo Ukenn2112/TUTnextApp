@@ -3,7 +3,7 @@
   "appName": "TUTnext",
   "themeId": "tutnext-washi",
   "fontId": "baskerville",
-  "connectedCanvas": true,
+  "connectedCanvas": false,
   "locales": [
     "ja",
     "en",
@@ -316,8 +316,176 @@
       }
     ],
     "creative-universal": [],
-    "creative-header": [],
-    "creative-search": []
+    "creative-header": [
+      {
+        "id": "creative-header-b-layered",
+        "layout": "two-devices",
+        "label": {
+          "ja": "多摩大非公式アプリ",
+          "en": "Tama Univ. · Unofficial",
+          "zh-Hans": "多摩大学非官方应用",
+          "ko": "타마대학 비공식 앱"
+        },
+        "headline": {
+          "ja": "キャンパスの毎日を、ひとつに",
+          "en": "Campus life, all in one place.",
+          "zh-Hans": "校园的每一天，尽在一处",
+          "ko": "캠퍼스의 하루를 하나로"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/03.png",
+        "typography": {
+          "labelScale": 2,
+          "headlineScale": 1.96,
+          "localeScale": {
+            "en": 0.923,
+            "zh-Hans": 1.117,
+            "ko": 1.172
+          },
+          "palt": true,
+          "captionAlign": "center"
+        },
+        "transforms": {
+          "caption": {
+            "x": 1097,
+            "y": 554,
+            "width": 1646,
+            "height": 263,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 200,
+            "y": 130,
+            "width": 800,
+            "height": 1633,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "deviceSecondary": {
+            "x": 2840,
+            "y": 130,
+            "width": 800,
+            "height": 1633,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "imageElements": [
+          {
+            "id": "rule",
+            "src": "/screenshots/creative/marks/accent.png",
+            "fit": "cover",
+            "transform": {
+              "x": 1850,
+              "y": 507,
+              "width": 140,
+              "height": 7,
+              "rotation": 0,
+              "zIndex": 7
+            }
+          },
+          {
+            "id": "duo-open",
+            "src": "/screenshots/creative/duo-open/{locale}.png",
+            "fit": "contain",
+            "transform": {
+              "x": 577,
+              "y": 689,
+              "width": 2687,
+              "height": 2058,
+              "rotation": 0,
+              "zIndex": 6
+            }
+          }
+        ]
+      }
+    ],
+    "creative-search": [
+      {
+        "id": "creative-search-b-layered",
+        "layout": "two-devices",
+        "label": {
+          "ja": "多摩大非公式アプリ",
+          "en": "Tama Univ. · Unofficial",
+          "zh-Hans": "多摩大学非官方应用",
+          "ko": "타마대학 비공식 앱"
+        },
+        "headline": {
+          "ja": "キャンパスの毎日を、\nひとつに",
+          "en": "Campus life,\nall in one place.",
+          "zh-Hans": "校园的每一天，\n尽在一处",
+          "ko": "캠퍼스의 하루를\n하나로"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/03.png",
+        "typography": {
+          "labelScale": 2,
+          "headlineScale": 1.56,
+          "localeScale": {
+            "en": 1.204,
+            "zh-Hans": 1.239,
+            "ko": 1.198
+          },
+          "palt": true,
+          "captionAlign": "center"
+        },
+        "transforms": {
+          "caption": {
+            "x": 836,
+            "y": 870,
+            "width": 2168,
+            "height": 548,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 100,
+            "y": 360,
+            "width": 1000,
+            "height": 2041,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "deviceSecondary": {
+            "x": 2740,
+            "y": 360,
+            "width": 1000,
+            "height": 2041,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        },
+        "imageElements": [
+          {
+            "id": "rule",
+            "src": "/screenshots/creative/marks/accent.png",
+            "fit": "cover",
+            "transform": {
+              "x": 1830,
+              "y": 805,
+              "width": 180,
+              "height": 9,
+              "rotation": 0,
+              "zIndex": 7
+            }
+          },
+          {
+            "id": "duo-open",
+            "src": "/screenshots/creative/duo-open/{locale}.png",
+            "fit": "contain",
+            "transform": {
+              "x": 518,
+              "y": 1286,
+              "width": 2803,
+              "height": 2147,
+              "rotation": 0,
+              "zIndex": 6
+            }
+          }
+        ]
+      }
+    ]
   },
   "scene": {
     "backdrop": "lines",
