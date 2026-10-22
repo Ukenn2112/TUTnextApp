@@ -13,9 +13,15 @@ struct Assignment: Identifiable, Codable {
     var status: AssignmentStatus
     var url: String
 
+    /// 締切までの残りを測る「今」。
+    /// 通常は実時間そのままで、DEBUGで時計を差し替えたとき（`TodayClock`）だけ「今日」ペインと同じ時刻になる
+    static var now: Date {
+        TodayClock.current.now(Date())
+    }
+
     /// 残り時間のテキスト表示
     var remainingTimeText: String {
-        let now = Date()
+        let now = Self.now
         guard now <= dueDate else {
             return NSLocalizedString("期限切れ", comment: "")
         }
@@ -23,9 +29,10 @@ struct Assignment: Identifiable, Codable {
         let components = Calendar.current.dateComponents([.day, .hour, .minute], from: now, to: dueDate)
 
         if let days = components.day, days > 0 {
-            return String(format: NSLocalizedString("%d日", comment: ""), days)
+            // 英語の単数・複数（1 day / 2 days）はカタログの plural で切り替える
+            return String.localizedStringWithFormat(NSLocalizedString("%d日", comment: ""), days)
         } else if let hours = components.hour, hours > 0 {
-            return String(format: NSLocalizedString("%d時間", comment: ""), hours)
+            return String.localizedStringWithFormat(NSLocalizedString("%d時間", comment: ""), hours)
         } else if let minutes = components.minute {
             return String(format: NSLocalizedString("%d分", comment: ""), minutes)
         }
@@ -35,7 +42,7 @@ struct Assignment: Identifiable, Codable {
 
     /// 期限切れかどうか
     var isOverdue: Bool {
-        Date() > dueDate
+        Self.now > dueDate
     }
 
     /// 未完了かどうか
@@ -46,7 +53,7 @@ struct Assignment: Identifiable, Codable {
     /// 緊急かどうか（残り2時間未満）
     var isUrgent: Bool {
         guard !isOverdue else { return false }
-        let components = Calendar.current.dateComponents([.hour], from: Date(), to: dueDate)
+        let components = Calendar.current.dateComponents([.hour], from: Self.now, to: dueDate)
         return (components.hour ?? 0) < 2
     }
 }
@@ -56,7 +63,7 @@ struct Assignment: Identifiable, Codable {
 extension Assignment {
     /// プレビュー/スクリーンショット用の課題一覧（現在時刻を基準に相対的に生成）
     static var previewAssignments: [Assignment] {
-        let now = Date()
+        let now = Assignment.now
         let calendar = Calendar.current
 
         func date(daysFromNow days: Int, hour: Int = 23, minute: Int = 59) -> Date {

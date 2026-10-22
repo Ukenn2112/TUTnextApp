@@ -15,6 +15,22 @@ final class AssignmentService {
 
     // 実際のAPIを使用する場合の実装
     func getAssignments(completion: @escaping (Result<[Assignment], Error>) -> Void) {
+        #if DEBUG
+        // デモモードでは課題タブ・タブのバッジ・「今日」ペインが同じモックの課題一覧を見る
+        if DemoMode.isEnabled {
+            let assignments = DuoDebugAssignments.mockAssignments
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: AssignmentService.assignmentsUpdatedNotification,
+                    object: nil,
+                    userInfo: ["count": assignments.count]
+                )
+                completion(.success(assignments))
+            }
+            return
+        }
+        #endif
+
         // APIエンドポイント
         let endpoint = "/kadai"
         let baseURL = AppConstants.backendBaseURL

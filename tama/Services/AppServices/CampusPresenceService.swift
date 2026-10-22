@@ -58,6 +58,11 @@ final class CampusPresenceService: NSObject, ObservableObject {
     /// 位置情報の利用を開始する（必要なら「使用中のみ」の許可を求める）。
     /// 使い終わったら必ず `stop()` を呼ぶこと
     func start() {
+        #if DEBUG
+        // スクリーンショットの撮影中に位置情報の許可ダイアログを出さない
+        // （学内かどうかは `-DuoOnCampus` で差し替える）
+        if DemoMode.isEnabled { return }
+        #endif
         useCount += 1
         guard useCount == 1 else { return }
 

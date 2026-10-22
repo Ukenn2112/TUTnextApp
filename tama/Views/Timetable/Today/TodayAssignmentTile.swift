@@ -67,8 +67,8 @@ struct TodayAssignmentTile: View {
     /// 見出しの右端。「今日 2 · 明日 2」と総数
     private var trailing: TodayTileTrailing? {
         let count = model.isLoaded && model.totalPending > 0
-            ? String(
-                format: NSLocalizedString("%d件", comment: "「今日」ペインの課題の件数"),
+            ? String.localizedStringWithFormat(
+                NSLocalizedString("%d件", comment: "「今日」ペインの課題の件数"),
                 model.totalPending)
             : nil
         guard model.isLoaded else { return count.map { TodayTileTrailing($0) } }

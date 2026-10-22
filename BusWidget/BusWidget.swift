@@ -57,6 +57,16 @@ struct Provider: AppIntentTimelineProvider {
     /// 1回のタイムラインで生成する最大エントリ数（安全弁）
     private let maxEntryCount = 120
 
+    /// 次のバスを決める時計のずれ（秒）。
+    /// DEBUGビルドでアプリがデモモードで起動したときだけ、アプリが渡したずれ（`DemoClock`）になる
+    private static var clockOffset: TimeInterval {
+        #if DEBUG
+        return DemoClock.offset
+        #else
+        return 0
+        #endif
+    }
+
     func placeholder(in context: Context) -> SimpleEntry {
         SimpleEntry(
             date: .now,
@@ -71,19 +81,21 @@ struct Provider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        let now = Date()
+        let offset = Self.clockOffset
+        let now = Date().addingTimeInterval(offset)
         let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(now)
 
         if context.isPreview {
             return SimpleEntry(
-                date: now,
+                date: now.addingTimeInterval(-offset),
                 configuration: configuration,
                 nextBusTimes: [
                     .init(hour: 8, minute: 30),
                     .init(hour: 9, minute: 0),
                     .init(hour: 9, minute: 30),
                 ],
-                scheduleType: scheduleType
+                scheduleType: scheduleType,
+                clockOffset: offset
             )
         }
 
@@ -96,12 +108,13 @@ struct Provider: AppIntentTimelineProvider {
             snapshot: data
         )
         return SimpleEntry(
-            date: now, configuration: configuration, nextBusTimes: times,
-            scheduleType: scheduleType, hasScheduleData: data.isAvailable)
+            date: now.addingTimeInterval(-offset), configuration: configuration, nextBusTimes: times,
+            scheduleType: scheduleType, hasScheduleData: data.isAvailable, clockOffset: offset)
     }
 
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
-        let now = Date()
+        // 出発時刻の計算はずらした時計で行い、エントリの日時だけを実時間へ戻す（`makeEntry`）
+        let now = Date().addingTimeInterval(Self.clockOffset)
         let calendar = Calendar.current
         // 時刻表は1回だけ読み込み、以降はローカルデータのみでエントリを生成する
         let data = BusWidgetDataProvider.loadSnapshot()
@@ -134,12 +147,14 @@ struct Provider: AppIntentTimelineProvider {
 
     // MARK: - エントリ生成
 
+    /// - Parameter date: エントリの時刻（ずらした時計の時刻。エントリには実時間へ戻して入れる）
     private func makeEntry(
         at date: Date,
         fetchFrom: Date,
         configuration: ConfigurationAppIntent,
         snapshot: BusWidgetDataProvider.Snapshot
     ) -> SimpleEntry {
+        let offset = Self.clockOffset
         let scheduleType = BusWidgetDataProvider.getScheduleTypeForDate(date)
         let times = BusWidgetDataProvider.getNextBusTimes(
             routeType: configuration.routeType.rawValue,
@@ -148,8 +163,8 @@ struct Provider: AppIntentTimelineProvider {
             snapshot: snapshot
         )
         return SimpleEntry(
-            date: date, configuration: configuration, nextBusTimes: times,
-            scheduleType: scheduleType, hasScheduleData: snapshot.isAvailable)
+            date: date.addingTimeInterval(-offset), configuration: configuration, nextBusTimes: times,
+            scheduleType: scheduleType, hasScheduleData: snapshot.isAvailable, clockOffset: offset)
     }
 
     /// 指定日の全ての出発について「5分前」と「出発時刻」のエントリ時刻を追加する
@@ -197,6 +212,8 @@ struct SimpleEntry: TimelineEntry {
     let scheduleType: String
     /// 時刻表データを読み込めたかどうか（false ならアプリを開くよう促す）
     var hasScheduleData: Bool = true
+    /// 次のバスを決めた時計の実時間からのずれ（秒）。DEBUGのデモモード以外では常に 0
+    var clockOffset: TimeInterval = 0
 
     var deepLinkURL: URL {
         var components = URLComponents()
@@ -214,8 +231,9 @@ struct SimpleEntry: TimelineEntry {
     var upcomingBuses: [BusWidgetSchedule.TimeEntry] { Array(nextBusTimes.dropFirst().prefix(2)) }
     var isServiceEnded: Bool { nextBusTimes.isEmpty }
 
+    /// その便の出発日時（実時間。カウントダウンの `Text(_:style:)` にそのまま渡せる）
     func busDate(for entry: BusWidgetSchedule.TimeEntry) -> Date? {
-        entry.date(relativeTo: date)
+        entry.date(relativeTo: date.addingTimeInterval(clockOffset))?.addingTimeInterval(-clockOffset)
     }
 
     func minutesUntil(_ busEntry: BusWidgetSchedule.TimeEntry) -> Int? {

@@ -23,6 +23,16 @@ struct TamaApp: App {
 
     let modelContainer = SharedModelContainer.shared
 
+    // MARK: - 初期化
+
+    init() {
+        #if DEBUG
+        // デモモードの既定値は、時計のずれなどが最初に読まれるより前に登録しておく
+        DemoMode.activateIfNeeded()
+        DemoMode.publishClockForWidgets()
+        #endif
+    }
+
     // MARK: - ボディ
 
     var body: some Scene {

@@ -49,6 +49,14 @@ final class LiveActivityScheduler: ObservableObject {
         // バス Live Activity の後始末（プロセス再起動後の取りこぼし対策）
         await BusLiveActivityService.shared.cleanupDepartedActivities()
 
+        #if DEBUG
+        // デモモードの時間割はバックエンドに無いので、授業の Live Activity は動かさない
+        if DemoMode.isEnabled {
+            print("【LA】デモモード → スキップ")
+            return
+        }
+        #endif
+
         guard UserService.shared.getCurrentUser()?.encryptedPassword != nil else {
             print("【LA】ユーザー未認証 → スキップ")
             return
@@ -437,6 +445,9 @@ final class LiveActivityScheduler: ObservableObject {
     /// Activity が1つも動いていない状態でもサーバ側から開始できるようになる
     func startPushToStartObservation() {
         guard pushToStartTask == nil else { return }
+        #if DEBUG
+        if DemoMode.isEnabled { return }
+        #endif
         guard UserService.shared.getCurrentUser()?.encryptedPassword != nil else { return }
 
         if #available(iOS 17.2, *) {

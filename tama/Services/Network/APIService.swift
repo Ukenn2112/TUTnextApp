@@ -201,6 +201,10 @@ final class APIService {
     /// セッション期限切れを通知する（重複通知を防止）
     /// フラグの確認・更新・リセットはすべてメインスレッドで行う
     private func notifySessionExpired() {
+        #if DEBUG
+        // デモモードの架空の学生はT-NEXTのセッションを持たないので、期限切れでログアウトさせない
+        if DemoMode.isEnabled { return }
+        #endif
         DispatchQueue.main.async { [weak self] in
             guard let self = self, !self.isSessionExpiredNotified else { return }
             self.isSessionExpiredNotified = true

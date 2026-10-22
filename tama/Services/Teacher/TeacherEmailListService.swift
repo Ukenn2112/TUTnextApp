@@ -7,6 +7,14 @@ final class TeacherEmailListService {
 
     /// 教員一覧を取得する
     func fetchTeachers() -> AnyPublisher<[Teacher], Error> {
+        #if DEBUG
+        // デモモードでは実在の教員のメールアドレスを画面に出さない
+        if DemoMode.isEnabled {
+            return Just(DemoMode.teachers)
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+        #endif
         return Future<[Teacher], Error> { promise in
             guard let url = URL(string: AppConstants.backendBaseURL + "/tmail") else {
                 promise(.failure(URLError(.badURL)))

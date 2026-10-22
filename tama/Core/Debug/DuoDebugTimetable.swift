@@ -56,6 +56,20 @@ enum DuoDebugTimetable {
         UserDefaults.standard.bool(forKey: "DuoPreviewCourseDetail") || usesMockDay
     }
 
+    /// 「今日」ペインの見出しに出す日付。
+    /// 曜日を差し替えているときは、見出しの曜日が表と食い違わないよう、同じ週（月曜始まり）のその曜日の日付に直す
+    static func displayDate(for date: Date) -> Date {
+        guard let overridden = todayWeekday.flatMap(Int.init) else { return date }
+        let weekday = Calendar.current.component(.weekday, from: date)
+        let actual = weekday == 1 ? 7 : weekday - 1
+        return Calendar.current.date(byAdding: .day, value: overridden - actual, to: date) ?? date
+    }
+
+    /// 科目詳細・お知らせに出すモックデータ（デモモードでは時間割に合わせた内容にする）
+    static func mockCourseDetail(for course: CourseModel) -> CourseDetailResponse {
+        DemoMode.isEnabled ? DemoMode.courseDetail(for: course) : .previewMock(for: course)
+    }
+
     /// 「今日」ペインの授業の色を差し替えるプリセットの番号（0〜10）。指定が無ければ nil。
     /// どのプリセットでも文字が読めるかを確かめるために用意してある（現在の読み手は無し）
     static var mockCourseColorIndex: Int? {
@@ -68,6 +82,8 @@ enum DuoDebugTimetable {
     /// 起動時に一度だけ決める時計のずれ（秒）。
     /// `-DuoNowOverride 8:05` を付けると「今」が 8:05 から始まり、そのあとは実時間と同じだけ進む
     static let nowOffset: TimeInterval = {
+        // デモモードでは時刻だけでなく日付ごと火曜日へずらす（`DemoMode.clockOffset`）
+        if DemoMode.isEnabled { return DemoMode.clockOffset }
         guard let text = UserDefaults.standard.string(forKey: "DuoNowOverride"),
               let target = parseTime(text)
         else {

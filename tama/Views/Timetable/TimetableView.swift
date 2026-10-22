@@ -293,16 +293,21 @@ struct TimetableView: View {
         .padding(.bottom, layout.weekdayBottomSpacing)
     }
 
+    /// 今日の曜日の印。
+    ///
+    /// 1文字の曜日（火・화・二）は従来どおり直径20ptの円、
+    /// 英語の「Tue」のような複数文字の曜日は、文字に合わせて横に伸びるカプセルにする
     private func currentDayView(day: String, width: CGFloat, height: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .fill(Color.green)
-                .frame(width: 20, height: 20)
-            Text(weekdayString(from: day))
-                .font(.system(size: 14))
-                .foregroundStyle(.white)
-        }
-        .frame(width: width, height: height)
+        let label = weekdayString(from: day)
+        return Text(label)
+            .font(.system(size: 14))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, label.count > 1 ? 6 : 0)
+            .frame(minWidth: 20, minHeight: 20)
+            .background(Capsule().fill(Color.green))
+            .frame(width: width, height: height)
     }
 
     /// 時間割の表。
@@ -751,7 +756,33 @@ struct TimeSlotCell: View {
                 .modifier(ZoomDestination(id: Self.zoomID, namespace: zoomNamespace))
             }
         }
+        #if DEBUG
+        // `-DemoOpenCourseDetail tue:2` … 授業が届いたら、そのセルの科目詳細をシートで開く
+        .onChange(of: course?.jugyoCd, initial: true) { _, _ in
+            openDemoDetailIfNeeded()
+        }
+        #endif
     }
+
+    #if DEBUG
+    /// デモ用に科目詳細のシートを開いたか（起動ごとに1回だけ開く）
+    private static var hasOpenedDemoDetail = false
+
+    /// 起動引数で指定されたセルなら、1ペインのときだけ科目詳細のシートを開く
+    /// （2ペインでは `-DuoSelectTodayPeriod` / `-DuoSelectFirstCourse` で右ペインに出す）
+    private func openDemoDetailIfNeeded() {
+        guard !Self.hasOpenedDemoDetail, onSelect == nil, course != nil,
+              DemoMode.openedCourseDetail == CourseSelection(day: dayIndex, period: period)
+        else {
+            return
+        }
+        Self.hasOpenedDemoDetail = true
+        // 表がスケルトンから入れ替わり終わってから開く
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            showingDetail = true
+        }
+    }
+    #endif
 
     /// セルを押したとき（2ペインなら右ペインへ、1ペインならシートで科目詳細を出す）
     private func select() {

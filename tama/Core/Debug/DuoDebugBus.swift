@@ -21,6 +21,8 @@ enum DuoDebugBus {
     /// 起動時に一度だけ決める時計のずれ（秒）。
     /// `-DuoBusNowOverride 8:10` を付けると「今」が 8:10 から始まり、そのあとは実時間と同じだけ進む
     static let nowOffset: TimeInterval = {
+        // デモモードでは「今日」ペインと同じ時計（今週の火曜日 9:41）を使う
+        if DemoMode.isEnabled { return DemoMode.clockOffset }
         guard let text = UserDefaults.standard.string(forKey: "DuoBusNowOverride"),
               let target = parseTime(text)
         else {

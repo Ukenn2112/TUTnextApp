@@ -75,6 +75,15 @@ final class PrintSystemViewModel: ObservableObject {
 
     // 印刷システムにログインする
     func login(completion: @escaping (Bool) -> Void) {
+        #if DEBUG
+        // デモモードでは印刷システムへログインせず、すぐに履歴を出す
+        if DemoMode.isEnabled {
+            errorMessage = nil
+            completion(true)
+            return
+        }
+        #endif
+
         isLoading = true
         errorMessage = nil
 
@@ -162,6 +171,12 @@ final class PrintSystemViewModel: ObservableObject {
     func loadRecentUploads() {
         let context = modelContext
         defer { isLoadingRecentUploads = false }
+
+        #if DEBUG
+        if DemoMode.isEnabled {
+            DemoMode.seedPrintUploadsIfNeeded(in: context)
+        }
+        #endif
 
         do {
             let descriptor = FetchDescriptor<PrintUploadRecord>(

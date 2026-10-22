@@ -18,19 +18,35 @@ enum DuoDebugAssignments {
 
     /// グリッド確認用の課題一覧。
     ///
-    /// プレビュー用の6件（期限切れ1件を含む）に、
-    /// 「残り2時間未満の緊急」と「題名が長く2行になる」の2件を足して、
-    /// 題名の長さ・締切の近さがばらついた8件にしてある。
+    /// プレビュー用の課題（期限切れ1件を含む）に、
+    /// 「残り2時間未満の緊急」と「題名が長く2行になる」などを足して、
+    /// 題名の長さ・締切の近さがばらついた一覧にしてある。
     ///
     /// 時間割タブの「今日」ペインが「このあと」「明日まで」の両方を出せるよう、
-    /// 明日が締切の課題も2件入れてある（`-DuoTodayMock` と一緒に指定して使う）
+    /// 明日が締切の課題も2件入れてある（`-DuoTodayMock` と一緒に指定して使う）。
+    ///
+    /// デモモード（`DemoMode`）の時間割に無い授業の課題は、時間割にある授業の課題に差し替えてある
     static var mockAssignments: [Assignment] {
-        let now = Date()
+        // 締切は「今日」ペインと同じ時計（デモモードでは火曜日 9:41）から数える
+        let now = Assignment.now
         let calendar = Calendar.current
         let urgent = calendar.date(byAdding: .minute, value: 70, to: now) ?? now
         let longTitled = calendar.date(byAdding: .day, value: 9, to: now) ?? now
 
-        return Assignment.previewAssignments + tomorrowAssignments(now: now) + [
+        let marketingDue = calendar.date(byAdding: .day, value: 12, to: now) ?? now
+
+        let previews = Assignment.previewAssignments.filter { $0.courseId != "IA001" }
+        return previews + tomorrowAssignments(now: now) + [
+            Assignment(
+                id: "preview-marketing-1",
+                title: "消費者アンケートの調査票（ドラフト）",
+                courseId: "MP001",
+                courseName: "マーケティング・心理実践II",
+                dueDate: marketingDue,
+                description: "グループで作成した調査票の設問案をフォームで提出してください。",
+                status: .pending,
+                url: "https://next.tama.ac.jp/"
+            ),
             Assignment(
                 id: "preview-urgent-1",
                 title: "統計学基礎 小テスト",

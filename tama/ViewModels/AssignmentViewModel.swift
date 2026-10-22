@@ -85,28 +85,28 @@ final class AssignmentViewModel: ObservableObject {
         let calendar = Calendar.current
         return assignments.filter { assignment in
             !assignment.isOverdue && assignment.isPending
-                && calendar.isDateInToday(assignment.dueDate)
+                && calendar.isDate(assignment.dueDate, inSameDayAs: Assignment.now)
         }.sorted { $0.dueDate < $1.dueDate }  // 時間順
     }
 
     // 今週期限の課題をフィルタリング（今日を除く）
     var thisWeekAssignments: [Assignment] {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let today = calendar.startOfDay(for: Assignment.now)
         guard let endOfWeek = calendar.date(byAdding: .day, value: 7, to: today) else {
             return []
         }
 
         return assignments.filter { assignment in
             !assignment.isOverdue && assignment.isPending
-                && !calendar.isDateInToday(assignment.dueDate) && assignment.dueDate <= endOfWeek
+                && !calendar.isDate(assignment.dueDate, inSameDayAs: Assignment.now) && assignment.dueDate <= endOfWeek
         }.sorted { $0.dueDate < $1.dueDate }  // 日付順
     }
 
     // 今月期限の課題をフィルタリング（今週を除く）
     var thisMonthAssignments: [Assignment] {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let today = calendar.startOfDay(for: Assignment.now)
 
         // 今月の範囲は「翌月1日 0:00 の手前まで」。
         // 最終日の 0:00 で切ると、最終日の日中が締切の課題が抜け落ちてしまう

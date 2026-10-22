@@ -66,6 +66,10 @@ final class RatingService: ObservableObject {
     }
 
     private func shouldRequestRating() -> Bool {
+        #if DEBUG
+        // スクリーンショットの撮影中に評価ダイアログを出さない
+        if DemoMode.isEnabled { return false }
+        #endif
         let launchCount = AppDefaults.appLaunchCount
         let significantEventsCount = AppDefaults.significantEventsCount
 

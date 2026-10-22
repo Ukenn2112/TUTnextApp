@@ -10,6 +10,13 @@ final class UserService {
 
     // ユーザーデータを保存
     func saveUser(_ user: User, completion: (() -> Void)? = nil) {
+        #if DEBUG
+        // デモモードの架空の学生は Keychain に書き込まない
+        if DemoMode.isEnabled {
+            DispatchQueue.main.async { completion?() }
+            return
+        }
+        #endif
         DispatchQueue.main.async {
             if let encodedData = try? JSONEncoder().encode(user) {
                 self.keychain.save(encodedData, forKey: "currentUser")
@@ -21,6 +28,9 @@ final class UserService {
 
     // デバイストークンを保存
     func saveDeviceToken(_ token: String) {
+        #if DEBUG
+        if DemoMode.isEnabled { return }
+        #endif
         DispatchQueue.main.async {
             self.keychain.save(token, forKey: "deviceToken")
         }
@@ -40,6 +50,10 @@ final class UserService {
 
     // ユーザーデータを取得
     func getCurrentUser() -> User? {
+        #if DEBUG
+        // デモモードでは Keychain を読まず、架空の学生でログインしている状態にする
+        if DemoMode.isEnabled { return DemoMode.user }
+        #endif
         if let userData = keychain.loadData(forKey: "currentUser") {
             return try? JSONDecoder().decode(User.self, from: userData)
         }
@@ -49,6 +63,9 @@ final class UserService {
     // パスワードを保存（カレンダー購読などの再認証用）
     // getPassword は同期で読むため、書き込みも同期で行う（Keychain はスレッドセーフ）
     func savePassword(_ password: String) {
+        #if DEBUG
+        if DemoMode.isEnabled { return }
+        #endif
         keychain.save(password, forKey: "userPassword")
     }
 
@@ -64,6 +81,10 @@ final class UserService {
 
     // ユーザーデータを削除（ログアウト時）
     func clearCurrentUser() {
+        #if DEBUG
+        // デモモード中のログアウトで、実際に保存してあるユーザーを消さない
+        if DemoMode.isEnabled { return }
+        #endif
         // 前のユーザーの課題一覧・授業のお知らせが残らないように、共用の控えも捨てる
         Task { @MainActor in
             AssignmentStore.shared.clear()

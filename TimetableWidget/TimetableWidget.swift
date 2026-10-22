@@ -72,6 +72,11 @@ struct TimetableEntry: TimelineEntry {
     let weekdays: [String]
     /// 表示する時限（番号・開始時刻・終了時刻）
     let periods: [(String, String, String)]
+    /// 曜日・時限を決める時計の実時間からのずれ（秒）。DEBUGのデモモード以外では常に 0
+    var clockOffset: TimeInterval = 0
+
+    /// 曜日・時限を決める時刻（`date` にずれを足したもの）
+    var clockDate: Date { date.addingTimeInterval(clockOffset) }
 
     /// 時間割データが未取得（アプリ未ログインなど）かどうか
     var hasNoTimetableData: Bool { courses == nil }
@@ -80,13 +85,16 @@ struct TimetableEntry: TimelineEntry {
         date: Date,
         courses: [String: [String: CourseModel]]?,
         lastFetchTime: Date?,
+        clockOffset: TimeInterval = 0,
         dataProvider: TimetableWidgetDataProvider = .shared
     ) {
+        let clockDate = date.addingTimeInterval(clockOffset)
         self.date = date
         self.courses = courses
         self.lastFetchTime = lastFetchTime
-        self.currentWeekday = dataProvider.getCurrentWeekday(for: date)
-        self.currentPeriod = dataProvider.getCurrentPeriod(at: date)
+        self.clockOffset = clockOffset
+        self.currentWeekday = dataProvider.getCurrentWeekday(for: clockDate)
+        self.currentPeriod = dataProvider.getCurrentPeriod(at: clockDate)
         self.weekdays = dataProvider.getWeekdays(from: courses)
         self.periods = dataProvider.getPeriods(from: courses)
     }
@@ -118,6 +126,16 @@ struct Provider: TimelineProvider {
     /// 1回のタイムラインで生成する最大エントリ数（安全弁）
     private let maxEntryCount = 60
 
+    /// 曜日・時限を決める時計のずれ（秒）。
+    /// DEBUGビルドでアプリがデモモードで起動したときだけ、アプリが渡したずれ（`DemoClock`）になる
+    private static var clockOffset: TimeInterval {
+        #if DEBUG
+        return DemoClock.offset
+        #else
+        return 0
+        #endif
+    }
+
     func placeholder(in context: Context) -> Entry {
         TimetableEntry(
             date: Date(),
@@ -135,7 +153,11 @@ struct Provider: TimelineProvider {
         let now = Date()
         // ModelContext は呼び出しスレッド上で生成し、以降はローカルデータのみで計算する
         let loaded = TimetableWidgetDataProvider.shared.loadTimetable()
-        let entryDates = timelineDates(from: now, loaded: loaded, context: context)
+        // 時限の境目はずらした時計で数え、エントリの日時は実時間へ戻す
+        let offset = Self.clockOffset
+        let entryDates = timelineDates(
+            from: now.addingTimeInterval(offset), loaded: loaded, context: context
+        ).map { $0.addingTimeInterval(-offset) }
 
         let entries = entryDates.map { makeEntry(at: $0, loaded: loaded, context: context) }
         completion(Timeline(entries: entries, policy: .atEnd))
@@ -154,7 +176,8 @@ struct Provider: TimelineProvider {
         return TimetableEntry(
             date: date,
             courses: courses,
-            lastFetchTime: loaded.lastFetchTime
+            lastFetchTime: loaded.lastFetchTime,
+            clockOffset: Self.clockOffset
         )
     }
 
@@ -546,8 +569,8 @@ struct SmallTimetableView: View {
     /// エントリの時刻（分単位）。描画時刻ではなくエントリ生成時刻に基づく
     private var entryTimeInMinutes: Int {
         let calendar = Calendar.current
-        return calendar.component(.hour, from: entry.date) * 60
-            + calendar.component(.minute, from: entry.date)
+        return calendar.component(.hour, from: entry.clockDate) * 60
+            + calendar.component(.minute, from: entry.clockDate)
     }
 }
 

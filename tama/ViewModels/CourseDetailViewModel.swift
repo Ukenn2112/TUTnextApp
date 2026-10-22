@@ -32,11 +32,20 @@ final class CourseDetailViewModel: ObservableObject {
         #endif
     }
 
+    /// モックの詳細（DEBUGではデモモード・Duo検証用の内容を使う）
+    private static func mockDetail(for course: CourseModel) -> CourseDetailResponse {
+        #if DEBUG
+        return DuoDebugTimetable.mockCourseDetail(for: course)
+        #else
+        return .previewMock(for: course)
+        #endif
+    }
+
     init(course: CourseModel) {
         self.course = course
         // Xcode Preview ではモックデータを自動セット（時間割プレビューからのタップスルー対応）
         if Self.usesMockDetail {
-            let mock = CourseDetailResponse.previewMock(for: course)
+            let mock = Self.mockDetail(for: course)
             self.isPreview = true
             self.courseDetail = mock
             self.memo = mock.memo
@@ -121,6 +130,14 @@ final class CourseDetailViewModel: ObservableObject {
     func saveMemo() {
         let memoToSave = memo
         errorMessage = nil
+
+        #if DEBUG
+        // デモモードの授業は実在しないので、T-NEXTへは保存しに行かない
+        if DemoMode.isEnabled {
+            savedMemo = memoToSave
+            return
+        }
+        #endif
 
         CourseDetailService.shared.saveMemo(course: course, memo: memoToSave) { [weak self] result in
             DispatchQueue.main.async {

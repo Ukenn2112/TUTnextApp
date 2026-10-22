@@ -107,6 +107,13 @@ final class TimetableService {
         maxRetries: Int,
         completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
     ) {
+        #if DEBUG
+        if DemoMode.isEnabled {
+            applyDemoTimetable(completion: completion)
+            return
+        }
+        #endif
+
         guard let user = UserService.shared.getCurrentUser(),
             let encryptedPassword = user.encryptedPassword
         else {
@@ -739,3 +746,31 @@ final class TimetableService {
         }
     }
 }
+
+// MARK: - デモモード
+
+#if DEBUG
+extension TimetableService {
+
+    /// デモモードの時間割を、T-NEXTから届いたときと同じ道（変換・教室変更の適用・SwiftData への保存・
+    /// ウィジェットの更新・未読件数の更新）で反映する
+    fileprivate func applyDemoTimetable(
+        completion: @escaping (Result<[String: [String: CourseModel]], Error>) -> Void
+    ) {
+        let change = DemoMode.roomChange
+        if roomChanges[change.courseName] == nil {
+            roomChanges[change.courseName] = change
+            saveRoomChanges()
+        }
+        DemoMode.seedCourseColorsIfNeeded()
+
+        let user = DemoMode.user
+        applyCourseListPayload(
+            CourseListPayload(data: DemoMode.timetablePayload, courseList: DemoMode.courseList),
+            source: .tnext,
+            credentials: RequestCredentials(
+                username: user.username, encryptedPassword: user.encryptedPassword ?? ""),
+            completion: completion)
+    }
+}
+#endif

@@ -396,6 +396,15 @@ private struct TodayPaneHeader: View {
         isVerticalBarPose ? VerticalBarLayout.edgeMargin : TodayPaneTokens.Spacing.xSmall
     }
 
+    /// 見出しに出す日付（DEBUGの曜日の差し替えがあれば、同じ週のその曜日の日付にする）
+    private var displayDate: Date {
+        #if DEBUG
+        return DuoDebugTimetable.displayDate(for: date)
+        #else
+        return date
+        #endif
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VerticalBarPageTitle(
@@ -407,7 +416,7 @@ private struct TodayPaneHeader: View {
 
             Color.clear.frame(height: max(0, metrics.weekdayRowTop - titleHeight))
 
-            Text(date.formatted(.dateTime.month().day().weekday(.wide)))
+            Text(displayDate.formatted(.dateTime.month().day().weekday(.wide)))
                 .font(.system(size: metrics.weekdayFontSize))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

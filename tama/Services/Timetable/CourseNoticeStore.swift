@@ -63,7 +63,7 @@ final class CourseNoticeStore: ObservableObject {
         if DuoDebugTimetable.usesMockCourseDetail {
             fetchedAt[code] = Date()
             notices[code] = Self.converted(
-                CourseDetailResponse.previewMock(for: course).announcements)
+                DuoDebugTimetable.mockCourseDetail(for: course).announcements)
             return
         }
         #endif

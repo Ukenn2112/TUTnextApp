@@ -144,6 +144,10 @@ final class TimetableViewModel: ObservableObject {
 
     /// 現在の曜日を取得
     func getCurrentWeekday() -> String {
+        #if DEBUG
+        // 「今日」ペインと同じ曜日の差し替え（`-DuoTodayOverride`）に揃える
+        if let overridden = DuoDebugTimetable.todayWeekday { return overridden }
+        #endif
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: Date())
         let japaneseWeekday = weekday == 1 ? 7 : weekday - 1
@@ -154,7 +158,8 @@ final class TimetableViewModel: ObservableObject {
 
     /// 現在の時限を取得
     func getCurrentPeriod() -> String? {
-        let now = Date()
+        // 「今日」ペインと同じ時計（DEBUGの `-DuoNowOverride` を反映する）
+        let now = TodayClock.current.now(Date())
         let calendar = Calendar.current
         let hour = calendar.component(.hour, from: now)
         let minute = calendar.component(.minute, from: now)

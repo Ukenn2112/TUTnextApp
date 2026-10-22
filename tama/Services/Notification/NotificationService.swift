@@ -78,6 +78,10 @@ final class NotificationService: NSObject, ObservableObject {
 
     /// デバイストークンをサーバーに送信する
     func sendDeviceTokenToServer(token: String, username: String, encryptedPassword: String) {
+        #if DEBUG
+        // デモモードの架空の学生をバックエンドへ登録しない
+        if DemoMode.isEnabled { return }
+        #endif
         guard let url = URL(string: AppConstants.backendBaseURL + "/push/send") else { return }
 
         let body: [String: Any] = [
@@ -160,6 +164,9 @@ final class NotificationService: NSObject, ObservableObject {
 
     /// 通知状態をサーバーと同期する
     func syncNotificationStatusWithServer() {
+        #if DEBUG
+        if DemoMode.isEnabled { return }
+        #endif
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
                 self.isAuthorized = settings.authorizationStatus == .authorized
@@ -384,8 +391,8 @@ extension NotificationService {
             )
         } else {
             content.title = NSLocalizedString("新しい課題が追加されました", comment: "new assignment title")
-            content.body = String(
-                format: NSLocalizedString("%d件の新しい課題が追加されました。", comment: "new assignments body2"),
+            content.body = String.localizedStringWithFormat(
+                NSLocalizedString("%d件の新しい課題が追加されました。", comment: "new assignments body2"),
                 assignments.count
             )
         }

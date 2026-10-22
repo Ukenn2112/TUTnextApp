@@ -69,6 +69,13 @@ final class GoogleOAuthService: ObservableObject {
 
     /// サーバーから認証状態を取得する
     func loadAuthorizationStatus() async {
+        #if DEBUG
+        // デモモードの架空の学生の認証状態はバックエンドに問い合わせない（未認証として扱う）
+        if DemoMode.isEnabled {
+            await MainActor.run { self.isAuthorized = false }
+            return
+        }
+        #endif
         guard let user = UserService.shared.getCurrentUser() else {
             await MainActor.run {
                 self.isAuthorized = false

@@ -33,6 +33,11 @@ final class BusScheduleService {
         setupModelContext()
         // 保存されたデータがあれば読み込む
         loadCachedDataFromSwiftData()
+        #if DEBUG
+        if DemoMode.isEnabled {
+            applyDemoSchedule()
+        }
+        #endif
     }
 
     /// ModelContext を初期化
@@ -45,6 +50,14 @@ final class BusScheduleService {
     /// API取得成功時はcompletionを再度呼び出してデータを更新する。
     /// API取得失敗時はキャッシュが12時間以内なら何もしない。12時間を超えていればエラーを返す。
     func fetchBusScheduleData(completion: @escaping (BusSchedule?, Error?) -> Void) {
+        #if DEBUG
+        // デモモードではバックエンドへ取りに行かず、起動時に入れたデモの時刻表を返す
+        if DemoMode.isEnabled, let cachedSchedule {
+            DispatchQueue.main.async { completion(cachedSchedule, nil) }
+            return
+        }
+        #endif
+
         // キャッシュがあれば先に返す（有効期限に関係なく）
         if let cachedSchedule = cachedSchedule {
             let lastFetch = lastFetchTime.map { formatDate($0) } ?? "不明"
@@ -382,3 +395,19 @@ final class BusScheduleService {
         }
     }
 }
+
+// MARK: - デモモード
+
+#if DEBUG
+extension BusScheduleService {
+
+    /// デモの時刻表を、APIから届いたときと同じように控えと SwiftData（ウィジェット用）へ入れる
+    fileprivate func applyDemoSchedule() {
+        let schedule = DemoMode.busSchedule(specialNotes: createSpecialNotes())
+        let now = Date()
+        cachedSchedule = schedule
+        lastFetchTime = now
+        saveBusDataToSwiftData(busSchedule: schedule, lastFetchTime: now)
+    }
+}
+#endif
