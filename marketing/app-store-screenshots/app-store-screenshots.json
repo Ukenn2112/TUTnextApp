@@ -1,0 +1,466 @@
+{
+  "schemaVersion": 3,
+  "appName": "TUTnext",
+  "themeId": "tutnext-washi",
+  "fontId": "baskerville",
+  "connectedCanvas": true,
+  "locales": [
+    "ja",
+    "en",
+    "zh-Hans",
+    "ko"
+  ],
+  "locale": "ja",
+  "device": "iphone",
+  "orientation": "portrait",
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [
+      {
+        "id": "iphone-01-timetable",
+        "layout": "device-bottom",
+        "label": {
+          "ja": "多摩大非公式アプリ",
+          "en": "Tama Univ. · Unofficial",
+          "zh-Hans": "多摩大学非官方应用",
+          "ko": "타마대학 비공식 앱"
+        },
+        "headline": {
+          "ja": "今日の授業が\nひと目でわかる",
+          "en": "Your classes,\nat a glance.",
+          "zh-Hans": "今天的课\n一眼看清",
+          "ko": "오늘 수업을\n한눈에"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/01.png"
+      },
+      {
+        "id": "iphone-02-bus",
+        "layout": "hero",
+        "label": {
+          "ja": "スクールバス",
+          "en": "School bus",
+          "zh-Hans": "校车",
+          "ko": "스쿨버스"
+        },
+        "headline": {
+          "ja": "スクールバスに\nもう乗り遅れない",
+          "en": "Catch the bus,\nevery time.",
+          "zh-Hans": "下一班校车\n再也不错过",
+          "ko": "스쿨버스,\n이제 안 놓쳐요"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/02.png"
+      },
+      {
+        "id": "iphone-03-assignments",
+        "layout": "device-top",
+        "label": {
+          "ja": "課題",
+          "en": "Assignments",
+          "zh-Hans": "作业",
+          "ko": "과제"
+        },
+        "headline": {
+          "ja": "課題の締め切り\nぜんぶ見える",
+          "en": "Every deadline,\nin one list.",
+          "zh-Hans": "作业截止日\n全部看得见",
+          "ko": "과제 마감을\n한 번에"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/03.png"
+      },
+      {
+        "id": "iphone-04-course",
+        "layout": "device-bottom",
+        "label": {
+          "ja": "授業詳細",
+          "en": "Course details",
+          "zh-Hans": "课程详情",
+          "ko": "수업 상세"
+        },
+        "headline": {
+          "ja": "授業のお知らせ\n見逃さない",
+          "en": "Class news,\nnever missed.",
+          "zh-Hans": "课程通知\n不再漏看",
+          "ko": "수업 공지,\n놓치지 않게"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/04.png",
+        "inverted": true
+      },
+      {
+        "id": "iphone-05-widgets",
+        "layout": "hero",
+        "label": {
+          "ja": "ウィジェット",
+          "en": "Widgets",
+          "zh-Hans": "小组件",
+          "ko": "위젯"
+        },
+        "headline": {
+          "ja": "アプリを開かず\nホーム画面で",
+          "en": "Right on your\nHome Screen.",
+          "zh-Hans": "无需打开App\n主屏幕一目了然",
+          "ko": "앱을 열지 않고\n홈 화면에서"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/05.png"
+      }
+    ],
+    "android": [],
+    "ipad": [],
+    "tvos": [],
+    "watchos": [],
+    "carplay": [],
+    "mac": [],
+    "android-7": [],
+    "android-10": [],
+    "feature-graphic": [],
+    "duo-outer": [
+      {
+        "id": "duo-outer-p-01-timetable",
+        "layout": "hero",
+        "label": {
+          "ja": "多摩大非公式アプリ",
+          "en": "Tama Univ. · Unofficial",
+          "zh-Hans": "多摩大学非官方应用",
+          "ko": "타마대학 비공식 앱"
+        },
+        "headline": {
+          "ja": "今日の授業が\nひと目でわかる",
+          "en": "Your classes,\nat a glance.",
+          "zh-Hans": "今天的课\n一眼看清",
+          "ko": "오늘 수업을\n한눈에"
+        },
+        "screenshot": "/screenshots/apple/duo-outer/portrait/{locale}/01.png"
+      },
+      {
+        "id": "duo-outer-p-02-bus",
+        "layout": "two-devices",
+        "label": {
+          "ja": "スクールバス",
+          "en": "School bus",
+          "zh-Hans": "校车",
+          "ko": "스쿨버스"
+        },
+        "headline": {
+          "ja": "スクールバスに\nもう乗り遅れない",
+          "en": "Catch the bus,\nevery time.",
+          "zh-Hans": "下一班校车\n再也不错过",
+          "ko": "스쿨버스,\n이제 안 놓쳐요"
+        },
+        "screenshot": "/screenshots/apple/duo-outer/portrait/{locale}/02.png",
+        "screenshotSecondary": "/screenshots/apple/duo-inner/landscape/{locale}/02.png",
+        "transforms": {
+          "deviceSecondary": {
+            "x": 80,
+            "y": 520,
+            "width": 1087,
+            "height": 790,
+            "rotation": 0,
+            "zIndex": 2
+          },
+          "device": {
+            "x": 721,
+            "y": 1350,
+            "width": 567,
+            "height": 790,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "duo-outer-p-03-assignments",
+        "layout": "device-top",
+        "label": {
+          "ja": "課題",
+          "en": "Assignments",
+          "zh-Hans": "作业",
+          "ko": "과제"
+        },
+        "headline": {
+          "ja": "課題の締め切り\nぜんぶ見える",
+          "en": "Every deadline,\nin one list.",
+          "zh-Hans": "作业截止日\n全部看得见",
+          "ko": "과제 마감을\n한 번에"
+        },
+        "screenshot": "/screenshots/apple/duo-outer/portrait/{locale}/03.png",
+        "inverted": true
+      }
+    ],
+    "duo-outer-landscape": [],
+    "duo-inner": [
+      {
+        "id": "duo-inner-p-01-timetable",
+        "layout": "hero",
+        "label": {
+          "ja": "時間割",
+          "en": "Timetable",
+          "zh-Hans": "课程表",
+          "ko": "시간표"
+        },
+        "headline": {
+          "ja": "開けば、\n一週間が広がる",
+          "en": "The whole week,\nunfolded.",
+          "zh-Hans": "展开，\n整周课表一览",
+          "ko": "펼치면\n한 주가 한눈에"
+        },
+        "screenshot": "/screenshots/apple/duo-inner/portrait/{locale}/01.png",
+        "transforms": {
+          "device": {
+            "x": 221,
+            "y": 820,
+            "width": 1565,
+            "height": 2154,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "duo-inner-p-02-course",
+        "layout": "device-bottom",
+        "label": {
+          "ja": "授業詳細",
+          "en": "Course details",
+          "zh-Hans": "课程详情",
+          "ko": "수업 상세"
+        },
+        "headline": {
+          "ja": "授業の詳細も\n広い画面で",
+          "en": "Course details,\nroom to read.",
+          "zh-Hans": "课程详情\n大屏细看",
+          "ko": "수업 상세도\n넓은 화면으로"
+        },
+        "screenshot": "/screenshots/apple/duo-inner/portrait/{locale}/02.png",
+        "transforms": {
+          "device": {
+            "x": 221,
+            "y": 820,
+            "width": 1565,
+            "height": 2154,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "duo-inner-p-03-bus",
+        "layout": "device-top",
+        "inverted": true,
+        "label": {
+          "ja": "スクールバス",
+          "en": "School bus",
+          "zh-Hans": "校车",
+          "ko": "스쿨버스"
+        },
+        "headline": {
+          "ja": "行きも帰りも\nひと目で",
+          "en": "Every bus,\nboth ways.",
+          "zh-Hans": "往返校车\n一眼看全",
+          "ko": "등교도 하교도\n한눈에"
+        },
+        "screenshot": "/screenshots/apple/duo-inner/portrait/{locale}/03.png"
+      }
+    ],
+    "duo-inner-landscape": [
+      {
+        "id": "duo-inner-l-01-timetable",
+        "layout": "hero",
+        "label": {
+          "ja": "広げて使う",
+          "en": "Unfold it",
+          "zh-Hans": "展开使用",
+          "ko": "펼쳐서 보기"
+        },
+        "headline": {
+          "ja": "今週と今日を、ひと画面で",
+          "en": "Week and today, side by side.",
+          "zh-Hans": "本周与今天，并排一览",
+          "ko": "이번 주와 오늘을 나란히"
+        },
+        "screenshot": "/screenshots/apple/duo-inner/landscape/{locale}/01.png"
+      },
+      {
+        "id": "duo-inner-l-02-bus",
+        "layout": "two-devices",
+        "label": {
+          "ja": "閉じても、開いても",
+          "en": "Folded + open",
+          "zh-Hans": "合上或展开",
+          "ko": "접어도 펼쳐도"
+        },
+        "headline": {
+          "ja": "行きも帰りも、バスを同時に",
+          "en": "Both bus directions at once.",
+          "zh-Hans": "往返校车，同屏查看",
+          "ko": "등교·하교 버스를 한 번에"
+        },
+        "screenshot": "/screenshots/apple/duo-inner/landscape/{locale}/02.png",
+        "screenshotSecondary": "/screenshots/apple/duo-outer/portrait/{locale}/02.png"
+      },
+      {
+        "id": "duo-inner-l-03-assignments",
+        "layout": "device-top",
+        "label": {
+          "ja": "課題",
+          "en": "Assignments",
+          "zh-Hans": "作业",
+          "ko": "과제"
+        },
+        "headline": {
+          "ja": "課題を2列で、もっと見渡せる",
+          "en": "Two columns of deadlines.",
+          "zh-Hans": "作业两栏排开，一览无遗",
+          "ko": "과제를 두 칸으로 넓게"
+        },
+        "screenshot": "/screenshots/apple/duo-inner/landscape/{locale}/03.png",
+        "inverted": true
+      }
+    ],
+    "creative-universal": [],
+    "creative-header": [],
+    "creative-search": []
+  },
+  "scene": {
+    "backdrop": "lines",
+    "span": false,
+    "decoration": "none",
+    "shadow": 20,
+    "glow": 0,
+    "tilt": 0,
+    "headlineWeight": 600,
+    "headlineScale": 0.95,
+    "headlineCase": "as-typed",
+    "captionAlign": "left",
+    "headlineLineGap": 10
+  },
+  "savedLooks": [
+    {
+      "id": "tutnext-sakura-campus",
+      "name": "A · Sakura Campus",
+      "direction": "dreamy",
+      "themeId": "tutnext-sakura",
+      "fontId": "avenir-next",
+      "scene": {
+        "backdrop": "aurora",
+        "span": true,
+        "decoration": "blobs",
+        "shadow": 35,
+        "glow": 25,
+        "tilt": 0,
+        "headlineWeight": 800,
+        "headlineScale": 1,
+        "headlineCase": "as-typed",
+        "captionAlign": "center"
+      },
+      "layouts": [
+        "hero",
+        "device-bottom",
+        "device-top",
+        "hero",
+        "device-bottom"
+      ],
+      "inverted": [
+        false,
+        false,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "id": "tutnext-timetable-grid",
+      "name": "B · Timetable Grid",
+      "direction": "swiss",
+      "themeId": "tutnext-grid",
+      "fontId": "helvetica-neue",
+      "scene": {
+        "backdrop": "grid",
+        "span": true,
+        "decoration": "none",
+        "shadow": 25,
+        "glow": 0,
+        "tilt": 0,
+        "headlineWeight": 900,
+        "headlineScale": 0.95,
+        "headlineCase": "upper",
+        "captionAlign": "left"
+      },
+      "layouts": [
+        "device-bottom",
+        "device-top",
+        "device-bottom",
+        "device-top",
+        "device-bottom"
+      ],
+      "inverted": [
+        false,
+        true,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "id": "tutnext-night-campus",
+      "name": "C · Night Campus",
+      "direction": "cinematic",
+      "themeId": "tutnext-night",
+      "fontId": "system-sans",
+      "scene": {
+        "backdrop": "spotlight",
+        "span": false,
+        "decoration": "sparkles",
+        "shadow": 75,
+        "glow": 60,
+        "tilt": 0,
+        "headlineWeight": 800,
+        "headlineScale": 1,
+        "headlineCase": "as-typed",
+        "captionAlign": "center"
+      },
+      "layouts": [
+        "hero",
+        "device-bottom",
+        "hero",
+        "device-bottom",
+        "hero"
+      ],
+      "inverted": [
+        false
+      ]
+    },
+    {
+      "id": "tutnext-quiet-washi",
+      "name": "D · Quiet Washi",
+      "direction": "editorial",
+      "themeId": "tutnext-washi",
+      "fontId": "baskerville",
+      "scene": {
+        "backdrop": "lines",
+        "span": false,
+        "decoration": "none",
+        "shadow": 20,
+        "glow": 0,
+        "tilt": 0,
+        "headlineWeight": 600,
+        "headlineScale": 0.95,
+        "headlineCase": "as-typed",
+        "captionAlign": "left",
+        "headlineLineGap": 10
+      },
+      "layouts": [
+        "device-bottom",
+        "hero",
+        "device-top",
+        "device-bottom",
+        "hero"
+      ],
+      "inverted": [
+        false,
+        false,
+        false,
+        true,
+        false
+      ]
+    }
+  ]
+}
